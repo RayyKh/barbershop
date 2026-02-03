@@ -1,0 +1,24 @@
+# Node / Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/tmp/
+frontend/out-tsc/
+frontend/bazel-out/
+frontend/*.log
+
+# Java / Maven
+backend/target/
+backend/*.log
+backend/.project
+backend/.classpath
+backend/.settings/
+backend/bin/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

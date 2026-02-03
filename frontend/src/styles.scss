@@ -1,0 +1,72 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Define Black and Gold Palette */
+:root {
+  --primary-color: #d4af37; /* Gold */
+  --primary-dark: #c5a028; /* Darker Gold */
+  --primary-light: #f3e5ab; /* Light Gold/Cream */
+  --bg-color: #000000;      /* Pure Black */
+  --bg-secondary: #000000;  /* Pure black for cards */
+  --text-color: #ffffff;    /* White */
+  --text-muted: #b3b3b3;    /* Light Gray */
+  --accent-color: #ffffff;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  color: var(--text-color);
+  font-family: 'Roboto', sans-serif;
+  overflow-x: hidden;
+}
+
+.main-content {
+  min-height: 100vh;
+}
+
+/* Overrides for Angular Material to fit Black & Gold */
+.mat-toolbar.mat-primary {
+  background: var(--bg-color) !important;
+  color: var(--primary-color) !important;
+  border-bottom: 1px solid var(--primary-dark);
+}
+
+.mat-mdc-card {
+  background-color: #000000 !important;
+  color: var(--text-color) !important;
+  border: 2px solid var(--primary-color) !important;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.2) !important;
+}
+
+.mat-mdc-button-base.mat-primary {
+    --mdc-text-button-label-text-color: var(--primary-color) !important;
+    --mdc-outlined-button-label-text-color: var(--primary-color) !important;
+}
+
+.mat-mdc-raised-button.mat-primary {
+    background-color: var(--primary-color) !important;
+    color: black !important; /* Text on gold button */
+}
+
+/* Form Fields */
+.mat-mdc-form-field {
+    --mdc-theme-primary: var(--primary-color);
+}
+
+/* Text Colors */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-color);
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s;
+    
+    &:hover {
+        color: var(--primary-light);
+    }
+}

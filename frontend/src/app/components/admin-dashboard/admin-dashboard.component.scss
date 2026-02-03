@@ -1,0 +1,142 @@
+:host {
+  display: block;
+  background-color: #000000;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.admin-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px 20px 40px;
+}
+
+.admin-card {
+  color: #fff;
+}
+
+.admin-card mat-card-header mat-card-title {
+  color: #d4af37;
+  font-size: 1.6rem;
+}
+
+.admin-card mat-card-header mat-card-subtitle {
+  color: #aaaaaa;
+}
+
+.header-actions {
+  margin-left: auto;
+}
+
+.logout-btn {
+  background: transparent;
+  color: #d4af37 !important;
+  border: 1px solid #d4af37;
+}
+
+.logout-btn:hover {
+  filter: brightness(1.1);
+}
+
+.lock-form .full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.hours {
+  margin: 10px 0 20px;
+}
+
+.list {
+  margin-top: 20px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.barber-title {
+  margin: 16px 10px 8px;
+  color: #d4af37;
+  font-weight: 600;
+  border-left: 3px solid #d4af37;
+  padding-left: 8px;
+}
+
+.row.header {
+  font-weight: bold;
+  color: #d4af37;
+  border-bottom: 1px solid #d4af37;
+}
+
+.new-banner {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  background: rgba(212,175,55,0.12);
+  color: #d4af37;
+  border: 1px solid rgba(212,175,55,0.35);
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.pill-new {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid #d4af37;
+  color: #d4af37;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* Material overrides for dark background */
+::ng-deep .mat-mdc-card {
+  background-color: #000000 !important;
+  border: 1px solid #d4af37 !important;
+}
+
+::ng-deep .mat-mdc-form-field-flex {
+  background-color: #121212 !important;
+}
+
+::ng-deep .mat-mdc-form-field-label,
+::ng-deep .mdc-floating-label {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+::ng-deep .mdc-text-field--focused .mdc-floating-label {
+  color: #d4af37 !important;
+}
+
+::ng-deep .mat-mdc-input-element,
+::ng-deep .mat-mdc-select-value {
+  color: #ffffff !important;
+}
+
+::ng-deep .mdc-text-field--outlined .mdc-notched-outline__leading,
+::ng-deep .mdc-text-field--outlined .mdc-notched-outline__notch,
+::ng-deep .mdc-text-field--outlined .mdc-notched-outline__trailing {
+  border-color: rgba(255,255,255,0.3) !important;
+}
+
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__leading,
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__notch,
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__trailing {
+  border-color: #d4af37 !important;
+  border-width: 2px;
+}
+
+::ng-deep .mat-datepicker-toggle,
+::ng-deep .mat-mdc-select-arrow {
+  color: #d4af37 !important;
+}
+
+::ng-deep .cdk-overlay-container,
+::ng-deep .cdk-overlay-pane {
+  z-index: 3000 !important;
+}

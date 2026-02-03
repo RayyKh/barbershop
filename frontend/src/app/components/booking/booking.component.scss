@@ -1,0 +1,263 @@
+.booking-container {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  background-color: transparent;
+  width: 100%;
+}
+
+.booking-card {
+  width: 100%;
+  max-width: 800px;
+  background-color: #121212; /* Dark Grey Background for contrast */
+  border: 1px solid #d4af37; /* Gold Border */
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.2);
+  color: #ffffff;
+  border-radius: 8px;
+
+  mat-card-header {
+    background-color: #000000;
+    padding: 24px;
+    border-bottom: 1px solid #d4af37;
+    margin-bottom: 20px;
+    
+    mat-card-title {
+      color: #d4af37; /* Gold */
+      font-size: 2rem;
+      font-family: 'Playfair Display', serif;
+      margin-bottom: 8px;
+    }
+
+    mat-card-subtitle {
+      color: #cccccc;
+      font-size: 1rem;
+    }
+  }
+
+  mat-card-content {
+      padding: 24px;
+      background-color: #121212;
+  }
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.step-content {
+    margin-top: 16px;
+    margin-bottom: 16px;
+    
+    &.summary {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 4px;
+        border-left: 3px solid #d4af37;
+        
+        p {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: #ffffff;
+        }
+        
+        strong {
+            color: #d4af37;
+        }
+    }
+}
+
+.option-text {
+    font-weight: 500;
+}
+
+.option-price {
+    float: right;
+    color: #d4af37;
+    font-weight: bold;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* Boutons cohérents noir/doré */
+.booking-card .actions button[mat-raised-button] {
+  background-color: #d4af37 !important;
+  color: #000000 !important;
+  border: 1px solid #d4af37 !important;
+}
+
+.booking-card .actions button[mat-button] {
+  border: 1px solid #d4af37 !important;
+  color: #d4af37 !important;
+}
+
+.booking-card .actions button[mat-raised-button]:hover {
+  background-color: #e3c768 !important;
+}
+
+.booking-card .actions button[mat-button]:hover {
+  background-color: rgba(212, 175, 55, 0.1) !important;
+}
+
+.slots-container {
+    margin: 20px 0;
+    
+    h3 {
+        color: #d4af37;
+        margin-bottom: 15px;
+    }
+}
+
+.slots-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* =========================================
+   CRITICAL OVERRIDES FOR VISIBILITY
+   ========================================= */
+
+/* 1. Stepper Header (Icons & Labels) */
+::ng-deep .mat-step-header .mat-step-icon {
+    background-color: #333333;
+    color: #d4af37; /* Gold Icon Content */
+}
+
+::ng-deep .mat-step-header .mat-step-icon-selected,
+::ng-deep .mat-step-header .mat-step-icon-state-edit {
+    background-color: #d4af37 !important;
+    color: #000000 !important;
+}
+
+::ng-deep .mat-step-header .mat-step-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 1rem;
+}
+
+::ng-deep .mat-step-header .mat-step-label.mat-step-label-active {
+    color: #d4af37 !important;
+    font-weight: bold;
+    text-shadow: 0 0 1px rgba(212, 175, 55, 0.5);
+}
+
+/* 2. Form Fields (Inputs, Selects) */
+
+/* Text Color inside inputs */
+::ng-deep .mat-mdc-input-element {
+    color: #ffffff !important;
+    caret-color: #d4af37 !important;
+}
+
+/* Select Value Color */
+::ng-deep .mat-mdc-select-value {
+    color: #ffffff !important;
+}
+
+::ng-deep .mat-mdc-select-placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Floating Label (Resting & Active) */
+::ng-deep .mdc-text-field:not(.mdc-text-field--disabled) .mdc-floating-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+::ng-deep .mdc-text-field--focused:not(.mdc-text-field--disabled) .mdc-floating-label {
+    color: #d4af37 !important;
+}
+
+/* Input Outline/Border */
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__leading,
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__notch,
+::ng-deep .mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__trailing {
+    border-color: #ffffff !important;
+}
+
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__leading,
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__notch,
+::ng-deep .mdc-text-field--outlined.mdc-text-field--focused .mdc-notched-outline__trailing {
+    border-color: #d4af37 !important;
+    border-width: 2px;
+}
+
+/* Icons (Calendar, Dropdown Arrow) */
+::ng-deep .mat-datepicker-toggle,
+::ng-deep .mat-mdc-select-arrow {
+    color: #d4af37 !important;
+}
+
+/* 3. Dropdown Menu / Datepicker Popup */
+::ng-deep .mat-mdc-select-panel {
+    background-color: #1a1a1a !important;
+}
+
+::ng-deep .mat-mdc-option {
+    color: #ffffff !important;
+}
+
+::ng-deep .mat-mdc-option:hover {
+    background-color: rgba(212, 175, 55, 0.1) !important;
+}
+
+::ng-deep .mat-mdc-option.mdc-list-item--selected {
+    background-color: rgba(212, 175, 55, 0.2) !important;
+    color: #d4af37 !important;
+}
+
+::ng-deep .mat-datepicker-content {
+    background-color: #1a1a1a !important;
+    color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-body-label,
+::ng-deep .mat-calendar-period-button {
+    color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-table-header th {
+    color: #aaaaaa !important;
+}
+
+::ng-deep .mat-calendar-body-cell-content {
+    color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-body-selected {
+    background-color: #d4af37 !important;
+    color: #000000 !important;
+}
+
+::ng-deep .cdk-overlay-container,
+::ng-deep .cdk-overlay-pane {
+    z-index: 3000 !important;
+}
+/* Fond du stepper et conteneurs en noir */
+::ng-deep .mat-stepper-vertical,
+::ng-deep .mat-horizontal-content-container,
+::ng-deep .mat-vertical-content-container {
+    background-color: #121212 !important;
+}
+
+/* Supprimer le fond clair du header des steps */
+::ng-deep .mat-step-header {
+    background: transparent !important;
+}
+
+/* Forcer couleur de texte des labels de form */
+.booking-card {
+  ::ng-deep .mat-mdc-form-field-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+  }
+}

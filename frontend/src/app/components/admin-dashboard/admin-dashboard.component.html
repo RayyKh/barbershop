@@ -1,0 +1,123 @@
+<div class="admin-container">
+  <mat-card class="admin-card">
+    <mat-card-header>
+      <mat-card-title>Dashboard Admin</mat-card-title>
+      <mat-card-subtitle>Gestion des réservations et verrouillage de créneaux</mat-card-subtitle>
+      <div class="header-actions">
+        <button mat-button class="logout-btn" (click)="logout()">Déconnexion</button>
+      </div>
+    </mat-card-header>
+    <mat-card-content>
+      <section class="lock-section">
+        <h3>Verrouiller un créneau</h3>
+        <form [formGroup]="lockForm" class="lock-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Barbier</mat-label>
+            <mat-select formControlName="barber">
+              <mat-option *ngFor="let b of barbers" [value]="b">{{ b.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Date</mat-label>
+            <input matInput [matDatepicker]="picker" formControlName="date">
+            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+            <mat-datepicker #picker></mat-datepicker>
+          </mat-form-field>
+
+          <div class="hours">
+            <mat-chip-listbox>
+              <mat-chip-option *ngFor="let h of availableHours" [selected]="lockForm.value.time===h" (click)="lockForm.patchValue({ time: h })">
+                {{ h }}
+              </mat-chip-option>
+            </mat-chip-listbox>
+          </div>
+
+          <div class="actions">
+            <button mat-raised-button color="primary" (click)="lockSlot()" [disabled]="!lockForm.valid">Verrouiller</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="list-section">
+        <h3>Réservations</h3>
+        <form [formGroup]="filterForm" class="lock-form" style="margin-bottom: 16px;">
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <mat-form-field appearance="outline" style="min-width:200px; flex:1;">
+              <mat-label>Barbier</mat-label>
+              <mat-select formControlName="barberId">
+                <mat-option [value]="null">Tous</mat-option>
+                <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="min-width:180px;">
+              <mat-label>Date</mat-label>
+              <input matInput [matDatepicker]="filterPicker" formControlName="date">
+              <mat-datepicker-toggle matIconSuffix [for]="filterPicker"></mat-datepicker-toggle>
+              <mat-datepicker #filterPicker></mat-datepicker>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="min-width:160px;">
+              <mat-label>Statut</mat-label>
+              <mat-select formControlName="status">
+                <mat-option [value]="null">Tous</mat-option>
+                <mat-option value="BOOKED">BOOKED</mat-option>
+                <mat-option value="CANCELLED">CANCELLED</mat-option>
+                <mat-option value="DONE">DONE</mat-option>
+                <mat-option value="BLOCKED">BLOCKED</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="flex:2; min-width:240px;">
+              <mat-label>Recherche (nom/téléphone)</mat-label>
+              <input matInput formControlName="q" placeholder="Tapez pour chercher">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" style="min-width:200px;">
+              <mat-label>Tri</mat-label>
+              <mat-select formControlName="sort">
+                <mat-option value="date,startTime">Date, Heure</mat-option>
+                <mat-option value="barber,date,startTime">Barbier, Date, Heure</mat-option>
+                <mat-option value="status,date,startTime">Statut, Date, Heure</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <div class="actions" style="align-items:center; display:flex; gap:8px;">
+              <button mat-raised-button color="primary" (click)="applyFilters()">Appliquer</button>
+              <button mat-button class="gold-btn" (click)="clearFilters()">Réinitialiser</button>
+            </div>
+          </div>
+        </form>
+        <div class="new-banner" *ngIf="hasNew">Nouvelles réservations</div>
+        <div class="list">
+          <div class="row header">
+            <div>Date</div>
+            <div>Heure</div>
+            <div>Barbier</div>
+            <div>Client</div>
+            <div>Téléphone</div>
+            <div>Statut / Action</div>
+          </div>
+          <ng-container *ngFor="let b of barbers">
+            <div class="barber-title">{{ b.name }}</div>
+            <div class="row" *ngFor="let a of filterByBarber(b.id)">
+              <div>{{ a.date }}</div>
+              <div>{{ a.startTime }} - {{ a.endTime }}</div>
+              <div>{{ a.barber?.name }}</div>
+              <div>{{ a.user?.name || '-' }}</div>
+              <div>{{ a.user?.phone || '-' }}</div>
+              <div>
+                <span class="status">
+                  {{ a.status }}
+                  <span *ngIf="a.status==='BOOKED' && !a.adminViewed" class="pill-new" (click)="markViewed(a)">NEW</span>
+                </span>
+                <button *ngIf="a.status === 'BLOCKED'" mat-button color="warn" (click)="unlock(a)">Déverrouiller</button>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </section>
+    </mat-card-content>
+  </mat-card>
+</div>
