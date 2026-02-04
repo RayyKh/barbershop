@@ -31,6 +31,9 @@ public class AppointmentService {
     @Autowired
     private ServiceRepository serviceRepository;
 
+    @Autowired
+    private PushNotificationService pushNotificationService;
+
     @Transactional
     public Appointment bookAppointment(Long userId, Long barberId, Long serviceId, LocalDate date, LocalTime startTime) {
         User user = userRepository.findById(userId)
@@ -58,7 +61,16 @@ public class AppointmentService {
         appointment.setStatus(AppointmentStatus.BOOKED);
         appointment.setAdminViewed(false);
 
-        return appointmentRepository.save(appointment);
+        Appointment saved = appointmentRepository.save(appointment);
+        
+        // Notification Push
+        pushNotificationService.sendNotificationToAdmins(
+            "Nouveau Rendez-vous !",
+            String.format("%s a réservé pour un %s avec %s le %s à %s", 
+                user.getName(), service.getName(), barber.getName(), date, startTime)
+        );
+
+        return saved;
     }
 
     @Transactional

@@ -51,7 +51,7 @@ export interface AppointmentRequest {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = 'http://localhost:8081/api';
+  private baseUrl = `http://${window.location.hostname}:8081/api`;
   private appointmentBookedSubject = new Subject<Appointment>();
   appointmentBooked$ = this.appointmentBookedSubject.asObservable();
   
@@ -95,6 +95,15 @@ export class ApiService {
       this.evtSource.close();
       this.evtSource = undefined;
     }
+  }
+
+  // Web Push Notifications
+  subscribeToPush(subscription: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/notifications/subscribe`, subscription);
+  }
+
+  unsubscribeFromPush(endpoint: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/notifications/unsubscribe`, endpoint);
   }
 
   notifyAppointmentBooked(appt: Appointment): void {

@@ -4,6 +4,9 @@
       <mat-card-title>Dashboard Admin</mat-card-title>
       <mat-card-subtitle>Gestion des réservations et verrouillage de créneaux</mat-card-subtitle>
       <div class="header-actions">
+        <button mat-icon-button [color]="isPushEnabled ? 'primary' : 'warn'" (click)="togglePush()" [title]="isPushEnabled ? 'Notifications activées' : 'Activer les notifications'">
+          <mat-icon>{{ isPushEnabled ? 'notifications_active' : 'notifications_off' }}</mat-icon>
+        </button>
         <button mat-button class="logout-btn" (click)="logout()">Déconnexion</button>
       </div>
     </mat-card-header>

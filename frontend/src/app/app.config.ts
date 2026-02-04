@@ -3,24 +3,23 @@ import { ApplicationConfig } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter, withInMemoryScrolling, withRouterConfig } from '@angular/router';
 
+import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, 
-      withInMemoryScrolling({ 
+    provideRouter(routes, withInMemoryScrolling({
         anchorScrolling: 'disabled', // Disable native to use our manual logic in app.component.ts
         scrollPositionRestoration: 'enabled'
-      }),
-      withRouterConfig({
+    }), withRouterConfig({
         onSameUrlNavigation: 'reload'
-      })
-    ),
-    provideHttpClient(
-      withFetch(),
-      withInterceptors([authInterceptor])
-    ),
-    provideAnimations()
-  ]
+    })),
+    provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    provideAnimations(),
+    provideServiceWorker('ngsw-worker.js', {
+        enabled: true, // Force enabled for local Push testing
+        registrationStrategy: 'registerWhenStable:30000'
+    })
+]
 };

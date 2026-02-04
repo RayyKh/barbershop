@@ -7,9 +7,12 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { SwPush } from '@angular/service-worker';
 import { Subscription } from 'rxjs';
 import { ApiService, Appointment, Barber } from '../../services/api.service';
 
@@ -27,7 +30,9 @@ import { ApiService, Appointment, Barber } from '../../services/api.service';
     MatButtonModule,
     MatDatepickerModule,
     MatNativeDateModule,
-    MatChipsModule
+    MatChipsModule,
+    MatIconModule,
+    MatSnackBarModule
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
@@ -41,9 +46,18 @@ export class AdminDashboardComponent implements OnInit {
     '09:00:00','10:00:00','11:00:00','12:00:00','13:00:00','14:00:00','15:00:00','16:00:00','17:00:00','18:00:00','19:00:00','20:00:00'
   ];
   hasNew = false;
+  isPushEnabled = false;
+  readonly VAPID_PUBLIC_KEY = "BP07gvsy0ylgW-4T7ch1FOGdTUfPSKKOmsTOzA-ybaHq54q7zovWbzOynSUVQY_7nAg7WAFMS_WfSrgT_yoW2S4";
+
   private sub?: Subscription;
 
-  constructor(private api: ApiService, private fb: FormBuilder, private router: Router) {
+  constructor(
+    private api: ApiService, 
+    private fb: FormBuilder, 
+    private router: Router,
+    private swPush: SwPush,
+    private snackBar: MatSnackBar
+  ) {
     this.lockForm = this.fb.group({
       barber: [null, Validators.required],
       date: [new Date(), Validators.required],
@@ -62,9 +76,63 @@ export class AdminDashboardComponent implements OnInit {
     this.api.getBarbers().subscribe(b => { this.barbers = b; });
     this.loadAppointments();
     
+    // Check push status
+    this.checkPushStatus();
+
     // Listen to changes from central ApiService (SSE or local)
     this.sub = this.api.appointmentsChanged$.subscribe(() => {
       this.loadAppointments();
+    });
+  }
+
+  checkPushStatus() {
+    this.swPush.subscription.subscribe(sub => {
+      this.isPushEnabled = !!sub;
+    });
+  }
+
+  togglePush() {
+    if (this.isPushEnabled) {
+      this.unsubscribeFromPush();
+    } else {
+      this.subscribeToPush();
+    }
+  }
+
+  subscribeToPush() {
+    this.swPush.requestSubscription({
+      serverPublicKey: this.VAPID_PUBLIC_KEY
+    })
+    .then(sub => {
+      this.api.subscribeToPush(sub).subscribe({
+        next: () => {
+          this.isPushEnabled = true;
+          this.snackBar.open('Notifications activées sur cet appareil !', 'OK', { duration: 3000 });
+        },
+        error: (err) => {
+          console.error('Could not subscribe to push', err);
+          this.snackBar.open('Erreur lors de l\'activation des notifications.', 'Fermer', { duration: 3000 });
+        }
+      });
+    })
+    .catch(err => {
+      console.error('Could not request subscription', err);
+      this.snackBar.open('Permission de notification refusée ou non supportée.', 'Fermer', { duration: 3000 });
+    });
+  }
+
+  unsubscribeFromPush() {
+    this.swPush.subscription.subscribe(sub => {
+      if (sub) {
+        this.api.unsubscribeFromPush(sub.endpoint).subscribe({
+          next: () => {
+            sub.unsubscribe().then(() => {
+              this.isPushEnabled = false;
+              this.snackBar.open('Notifications désactivées sur cet appareil.', 'OK', { duration: 3000 });
+            });
+          }
+        });
+      }
     });
   }
 
