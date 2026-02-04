@@ -16,9 +16,9 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  color: var(--text-color);
   font-family: 'Roboto', sans-serif;
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 .main-content {
@@ -34,7 +34,7 @@ html, body {
 
 .mat-mdc-card {
   background-color: #000000 !important;
-  color: var(--text-color) !important;
+  color: #ffffff !important;
   border: 2px solid var(--primary-color) !important;
   box-shadow: 0 0 20px rgba(212, 175, 55, 0.2) !important;
 }
@@ -54,11 +54,20 @@ html, body {
     --mdc-theme-primary: var(--primary-color);
 }
 
-/* Text Colors */
-h1, h2, h3, h4, h5, h6 {
-  color: var(--primary-color);
-  font-weight: 300;
-  letter-spacing: 1px;
+/* Text Colors - Restricted to avoid breaking home page */
+.admin-dashboard, .client-dashboard, .login-container {
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--primary-color);
+    font-weight: 300;
+    letter-spacing: 1px;
+  }
+  
+  color: #ffffff;
+}
+
+/* Ensure sections have a minimum height */
+.section {
+  min-height: 200px;
 }
 
 a {

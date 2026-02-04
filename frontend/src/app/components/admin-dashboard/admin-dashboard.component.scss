@@ -56,6 +56,107 @@
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   padding: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
+  align-items: center;
+}
+
+.desktop-only { display: grid; }
+.mobile-only { display: none; }
+
+.filter-form {
+  margin-bottom: 24px;
+}
+
+.filter-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-item {
+  flex: 1;
+  min-width: 180px;
+}
+
+.search-item {
+  flex: 2;
+  min-width: 250px;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -16px; // Align with form fields
+  padding-bottom: 16px;
+}
+
+.admin-mobile-card {
+  background: #121212 !important;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.admin-card-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-card-row:last-child {
+  border-bottom: none;
+}
+
+.admin-card-row .label {
+  color: #d4af37;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.admin-card-row .value {
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.admin-card-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pill-new.mini {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
+@media (max-width: 1024px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: block !important; }
+  
+  .filter-item {
+    min-width: 100%;
+  }
+  
+  .search-item {
+    min-width: 100%;
+  }
+  
+  .filter-actions {
+    width: 100%;
+    margin-top: 0;
+    justify-content: center;
+  }
+  
+  .filter-actions button {
+    flex: 1;
+  }
+  
+  .admin-container {
+    padding: 100px 10px 20px;
+  }
 }
 
 .barber-title {

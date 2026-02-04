@@ -1,11 +1,11 @@
 <!-- Hero Section -->
-<div class="hero">
+<div class="hero" id="top">
   <div class="hero-overlay"></div>
   <div class="hero-content">
-    <h1 data-aos="fade-up" data-aos-delay="200">Aladin BarberShop</h1>
-    <p class="subtitle" data-aos="fade-up" data-aos-delay="400">L'Art de l'Élégance Masculine</p>
-    <p class="description" data-aos="fade-up" data-aos-delay="600">Une expérience de coiffure unique, où tradition et modernité se rencontrent.</p>
-    <div class="cta-buttons" data-aos="fade-up" data-aos-delay="800">
+    <h1 appScrollReveal [delay]="200">Aladin BarberShop</h1>
+    <p class="subtitle" appScrollReveal [delay]="400">L'Art de l'Élégance Masculine</p>
+    <p class="description" appScrollReveal [delay]="600">Une expérience de coiffure unique, où tradition et modernité se rencontrent.</p>
+    <div class="cta-buttons" appScrollReveal [delay]="800">
       <button mat-raised-button color="primary" (click)="scrollToBooking()" class="cta-btn">RÉSERVER MAINTENANT</button>
       <button mat-stroked-button class="cta-btn-outline" (click)="scrollToBooking()">DÉCOUVRIR</button>
     </div>
@@ -13,44 +13,44 @@
 </div>
 
 <!-- Services Section -->
-<div class="section services-section" id="services">
+<div class="section services-section" id="services-section">
   <div class="container">
-    <div class="section-header" data-aos="fade-up">
+    <div class="section-header" appScrollReveal>
       <h2>Nos Services</h2>
       <div class="divider"></div>
       <p>Des soins sur mesure pour votre barbe et vos cheveux</p>
     </div>
 
-    <div class="price-list-wrapper" data-aos="zoom-in" data-aos-delay="200">
+    <div class="price-list-wrapper" appScrollReveal [delay]="200">
       <img src="assets/pricelist.jpeg" alt="Liste des prix" class="price-list-img">
     </div>
   </div>
 </div>
 
 <!-- Why Choose Us -->
-<div class="section why-us-section">
+<div class="section why-us-section" id="why-us">
   <div class="container">
-    <div class="section-header light-text" data-aos="fade-up">
+    <div class="section-header light-text" appScrollReveal>
       <h2>Pourquoi Nous Choisir</h2>
       <div class="divider gold"></div>
     </div>
     
     <div class="features-grid">
-      <div class="feature-item" data-aos="fade-up" data-aos-delay="100">
+      <div class="feature-item" appScrollReveal [delay]="100">
         <div class="icon-circle">
           <mat-icon>star</mat-icon>
         </div>
         <h3>Expertise</h3>
         <p>Des barbiers passionnés avec plus de 6 ans d'expérience.</p>
       </div>
-      <div class="feature-item" data-aos="fade-up" data-aos-delay="200">
+      <div class="feature-item" appScrollReveal [delay]="200">
         <div class="icon-circle">
           <mat-icon>weekend</mat-icon>
         </div>
         <h3>Confort</h3>
         <p>Un salon luxueux conçu pour votre détente absolue.</p>
       </div>
-      <div class="feature-item" data-aos="fade-up" data-aos-delay="300">
+      <div class="feature-item" appScrollReveal [delay]="300">
         <div class="icon-circle">
           <mat-icon>verified</mat-icon>
         </div>
@@ -64,14 +64,14 @@
 <!-- Barbers Section -->
 <div class="section barbers-section" id="barbers">
   <div class="container">
-    <div class="section-header" data-aos="fade-up">
+    <div class="section-header" appScrollReveal>
       <h2>Nos Experts</h2>
       <div class="divider"></div>
       <p>Rencontrez l'équipe qui sublimera votre style</p>
     </div>
 
     <div class="barbers-grid">
-      <div class="barber-card" *ngFor="let barber of barbers; let i = index" data-aos="fade-up" [attr.data-aos-delay]="(i+1) * 100">
+      <div class="barber-card" *ngFor="let barber of barbers; let i = index" appScrollReveal [delay]="(i+1) * 100">
         <div class="barber-img-container">
             <!-- Placeholder image if no photo provided -->
             <img [src]="barber.photo || 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" alt="{{ barber.name }}">
@@ -83,7 +83,7 @@
       </div>
 
       <!-- Fallback if no barbers loaded -->
-      <div class="barber-card" *ngIf="barbers.length === 0" data-aos="fade-up" data-aos-delay="100">
+      <div class="barber-card" *ngIf="barbers.length === 0" appScrollReveal [delay]="100">
         <div class="barber-img-container">
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
         </div>
@@ -92,21 +92,12 @@
           <p class="specialty">Barbier</p>
         </div>
       </div>
-      <div class="barber-card" *ngIf="barbers.length === 0" data-aos="fade-up" data-aos-delay="200">
+      <div class="barber-card" *ngIf="barbers.length === 0" appScrollReveal [delay]="200">
         <div class="barber-img-container">
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
         </div>
         <div class="barber-info">
           <h3>Ala</h3>
-          <p class="specialty">Barbier</p>
-        </div>
-      </div>
-      <div class="barber-card" *ngIf="barbers.length === 0" data-aos="fade-up" data-aos-delay="300">
-        <div class="barber-img-container">
-            <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
-        </div>
-        <div class="barber-info">
-          <h3>Ahmed</h3>
           <p class="specialty">Barbier</p>
         </div>
       </div>
@@ -117,13 +108,13 @@
 <!-- Booking Section -->
 <div class="section booking-section-wrapper" id="booking-section">
   <div class="container">
-    <div class="section-header light-text" data-aos="fade-up">
+    <div class="section-header light-text" appScrollReveal>
       <h2>Réservez Votre Rendez-vous</h2>
       <div class="divider gold"></div>
       <p>Simple, Rapide et Efficace</p>
     </div>
     
-    <div class="booking-container-embed" data-aos="zoom-in" data-aos-delay="200">
+    <div class="booking-container-embed" appScrollReveal [delay]="200">
       <app-booking></app-booking>
     </div>
   </div>
@@ -132,12 +123,12 @@
 <!-- Gallery Section -->
 <div class="section gallery-section" id="gallery">
   <div class="container">
-    <div class="section-header light-text" data-aos="fade-up">
+    <div class="section-header light-text" appScrollReveal>
       <h2>GALLERY</h2>
       <div class="divider gold"></div>
     </div>
 
-    <div class="gallery-slider" data-aos="fade-up" data-aos-delay="200">
+    <div class="gallery-slider" appScrollReveal [delay]="200">
       <button class="nav prev" (click)="prevGallery()" aria-label="Précédent">
         <mat-icon>chevron_left</mat-icon>
       </button>
@@ -164,14 +155,14 @@
 <!-- Feedbacks Section -->
 <div class="section feedbacks-section" id="feedbacks">
   <div class="container">
-    <div class="section-header" data-aos="fade-up">
+    <div class="section-header" appScrollReveal>
       <h2>Feedbacks</h2>
       <div class="divider"></div>
       <p>Ce que disent nos clients</p>
     </div>
 
     <div class="feedbacks-grid">
-      <mat-card class="feedback-card" *ngFor="let f of feedbacks; let i = index" data-aos="fade-up" [attr.data-aos-delay]="(i+1) * 100">
+      <mat-card class="feedback-card" *ngFor="let f of feedbacks; let i = index" appScrollReveal [delay]="(i+1) * 100">
         <mat-card-content>
           <div class="stars">
             <mat-icon *ngFor="let s of [].constructor(f.rating)">star</mat-icon>
@@ -187,14 +178,13 @@
 <!-- Videos Section -->
 <div class="section videos-section" id="videos">
   <div class="container">
-    <div class="section-header light-text" data-aos="fade-up">
+    <div class="section-header light-text" appScrollReveal>
       <h2>Nos Vidéos</h2>
-      <div class="divider gold"></div>
-      <p>Le travail de nos coiffeurs</p>
+      
     </div>
 
     <div class="videos-grid">
-      <mat-card class="video-card" *ngFor="let v of videos; let i = index" data-aos="fade-up" [attr.data-aos-delay]="(i+1) * 100">
+      <mat-card class="video-card" *ngFor="let v of videos; let i = index" appScrollReveal [delay]="(i+1) * 100">
         <div class="video-wrapper">
           <ng-container *ngIf="!isMp4(v.url); else localVideo">
             <iframe [attr.src]="toEmbed(v.url)" title="{{ v.title }}" frameborder="0"
@@ -217,21 +207,21 @@
 <footer class="footer">
   <div class="container">
     <div class="footer-content">
-      <div class="footer-col brand" data-aos="fade-up" data-aos-delay="100">
+      <div class="footer-col brand">
         <h3>AladinBarberShop</h3>
         <p>L'excellence au service de votre style.</p>
       </div>
-      <div class="footer-col hours" data-aos="fade-up" data-aos-delay="200">
+      <div class="footer-col hours">
         <h3>Horaires</h3>
         <p><mat-icon>schedule</mat-icon> Mardi - Dimanche: 9h - 21h</p>
         <p><mat-icon>schedule</mat-icon> Lundi: 12h - 18h</p>
       </div>
-      <div class="footer-col contact" data-aos="fade-up" data-aos-delay="300">
+      <div class="footer-col contact">
         <h3>Contact</h3>
         <p><mat-icon>place</mat-icon> Rue Jilani Merchen, Ez Zahra 2034, Tunisie</p>
         <p><mat-icon>call</mat-icon> +216 27365496</p>
       </div>
-      <div class="footer-col maps" data-aos="fade-up" data-aos-delay="400">
+      <div class="footer-col maps">
         <h3>Localisation</h3>
         <div class="map-container">
           <iframe 
@@ -246,7 +236,7 @@
         </div>
       </div>
     </div>
-    <div class="social" data-aos="fade-up" data-aos-delay="200">
+    <div class="social">
       <a href="https://www.youtube.com/@AladinBarber" aria-label="YouTube" target="_blank" rel="noopener">
         <mat-icon>smart_display</mat-icon>
       </a>

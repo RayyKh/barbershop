@@ -89,7 +89,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
       this.appointments = list;
-      this.hasNew = list.some(a => a.status === 'BOOKED' && !a.adminViewed);
+      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED') && !a.adminViewed);
     });
   }
 
@@ -137,7 +137,7 @@ export class AdminDashboardComponent implements OnInit {
       this.api.markAdminViewed(a.id).subscribe({
         next: (updated) => {
           a.adminViewed = true;
-          this.hasNew = this.appointments.some(x => x.status === 'BOOKED' && !x.adminViewed);
+          this.hasNew = this.appointments.some(x => (x.status === 'BOOKED' || x.status === 'MODIFIED') && !x.adminViewed);
         }
       });
     }
@@ -170,7 +170,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
       this.appointments = list;
-      this.hasNew = list.some(a => a.status === 'BOOKED' && !a.adminViewed);
+      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED') && !a.adminViewed);
     });
   }
 

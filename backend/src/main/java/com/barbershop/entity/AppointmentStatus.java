@@ -4,5 +4,6 @@ public enum AppointmentStatus {
     BOOKED,
     CANCELLED,
     DONE,
-    BLOCKED
+    BLOCKED,
+    MODIFIED
 }

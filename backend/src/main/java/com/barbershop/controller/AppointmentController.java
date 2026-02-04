@@ -184,6 +184,17 @@ public class AppointmentController {
         return appt;
     }
 
+    @PutMapping("/{id}/modify")
+    public Appointment modifyAppointment(
+            @PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime
+    ) {
+        Appointment appt = appointmentService.modifyAppointment(id, date, startTime);
+        notifyEmitters(appt);
+        return appt;
+    }
+
     // Admin: lock a slot so it cannot be booked
     @PostMapping("/lock")
     @PreAuthorize("hasRole('ADMIN')")

@@ -64,6 +64,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/appointments/book").permitAll()
                     .requestMatchers("/api/appointments/by-contact").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/cancel").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/modify").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
                     .anyRequest().authenticated() // All other requests require auth
             );

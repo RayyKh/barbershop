@@ -45,7 +45,7 @@ $white: #ffffff;
   flex: 1 1 auto;
 }
 
-.nav-links {
+.nav-links.desktop-only {
   display: flex;
   align-items: center;
   
@@ -81,34 +81,59 @@ $white: #ffffff;
   }
 }
 
-.social-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-right: 16px;
-
-  a {
-    color: $white;
-    opacity: 0.9;
-    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    .material-icons {
-      font-size: 20px;
-    }
-
-    &:hover {
-      opacity: 1;
-      transform: scale(1.1);
-      color: $gold;
-    }
+.mobile-only {
+  display: none;
+  
+  button {
+    color: $gold;
   }
 }
 
-@media (max-width: 992px) {
-  .nav-links {
+// Global responsive adjustments
+@media (max-width: 1024px) {
+  .nav-links.desktop-only {
     display: none;
+  }
+  
+  .mobile-only {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-img {
+    height: 45px;
+  }
+  
+  .navbar {
+    height: 60px;
+  }
+}
+
+:host ::ng-deep .mobile-nav-menu {
+  background-color: rgba(0, 0, 0, 0.95) !important;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  
+  .mat-mdc-menu-item {
+    color: $gold !important;
+    font-family: 'Playfair Display', serif;
+    
+    mat-icon {
+      color: $gold !important;
+    }
+    
+    &:hover {
+      background-color: rgba(212, 175, 55, 0.1) !important;
+    }
+  }
+  
+  .mobile-book-item {
+    border-top: 1px solid rgba(212, 175, 55, 0.2);
+    margin-top: 5px;
+    padding-top: 5px;
+    
+    span {
+      font-weight: bold;
+    }
   }
 }

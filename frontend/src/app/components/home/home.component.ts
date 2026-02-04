@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
+import { ScrollRevealDirective } from '../../directives/scroll-reveal.directive';
 import { ApiService, Barber, Service } from '../../services/api.service';
 import { BookingComponent } from '../booking/booking.component';
 
@@ -16,7 +17,8 @@ import { BookingComponent } from '../booking/booking.component';
     MatCardModule, 
     MatIconModule, 
     RouterModule, 
-    BookingComponent
+    BookingComponent,
+    ScrollRevealDirective
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
@@ -61,8 +63,12 @@ export class HomeComponent implements OnInit {
   constructor(private apiService: ApiService) {}
 
   ngOnInit() {
-    this.apiService.getServices().subscribe(data => this.services = data);
-    this.apiService.getBarbers().subscribe(data => this.barbers = data);
+    this.apiService.getServices().subscribe(data => {
+      this.services = data;
+    });
+    this.apiService.getBarbers().subscribe(data => {
+      this.barbers = data;
+    });
     this.galleryChunks = this.chunkImages(this.galleryImages, 4);
   }
 

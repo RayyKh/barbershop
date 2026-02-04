@@ -23,7 +23,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("SELECT a FROM Appointment a WHERE a.barber.id = :barberId " +
            "AND a.date = :date " +
-           "AND a.status IN ('BOOKED','BLOCKED') " +
+           "AND a.status IN ('BOOKED','BLOCKED','MODIFIED') " +
            "AND ((:startTime < a.endTime) AND (:endTime > a.startTime))")
     List<Appointment> findConflictingAppointments(
             @Param("barberId") Long barberId,

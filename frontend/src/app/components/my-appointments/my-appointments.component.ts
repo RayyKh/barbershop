@@ -24,74 +24,132 @@ import { ApiService, Appointment } from '../../services/api.service';
         </mat-card-header>
         <mat-card-content>
       
-      
-      <table mat-table [dataSource]="appointments" class="mat-elevation-z8">
-        
-        <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef> Date </th>
-          <td mat-cell *matCellDef="let element"> {{element.date | date}} </td>
-        </ng-container>
+      <!-- Affichage Tableau pour Desktop -->
+      <div class="desktop-only">
+        <table mat-table [dataSource]="appointments" class="mat-elevation-z8">
+          
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef> Date </th>
+            <td mat-cell *matCellDef="let element"> {{element.date | date}} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="time">
-          <th mat-header-cell *matHeaderCellDef> Heure </th>
-          <td mat-cell *matCellDef="let element"> {{element.startTime}} </td>
-        </ng-container>
+          <ng-container matColumnDef="time">
+            <th mat-header-cell *matHeaderCellDef> Heure </th>
+            <td mat-cell *matCellDef="let element"> {{element.startTime}} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="service">
-          <th mat-header-cell *matHeaderCellDef> Service </th>
-          <td mat-cell *matCellDef="let element"> {{element.service.name}} </td>
-        </ng-container>
+          <ng-container matColumnDef="service">
+            <th mat-header-cell *matHeaderCellDef> Service </th>
+            <td mat-cell *matCellDef="let element"> {{element.service.name}} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="barber">
-          <th mat-header-cell *matHeaderCellDef> Barbier </th>
-          <td mat-cell *matCellDef="let element"> {{element.barber.name}} </td>
-        </ng-container>
+          <ng-container matColumnDef="barber">
+            <th mat-header-cell *matHeaderCellDef> Barbier </th>
+            <td mat-cell *matCellDef="let element"> {{element.barber.name}} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef> Statut </th>
-          <td mat-cell *matCellDef="let element"> {{element.status}} </td>
-        </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef> Statut </th>
+            <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+          </ng-container>
 
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
-          <td mat-cell *matCellDef="let element">
-            <button mat-button color="warn" 
-                    *ngIf="element.status === 'BOOKED'"
-                    (click)="cancel(element.id)">
-              Annuler
-            </button>
-            <button mat-button color="primary"
-                    *ngIf="element.status === 'BOOKED'"
-                    (click)="toggleModify(element.id)">
-              Modifier
-            </button>
-
-            <div class="modify-panel" *ngIf="isModifying(element.id)">
-              <mat-form-field appearance="outline">
-                <mat-label>Nouvelle date</mat-label>
-                <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange(element)" [value]="getModifyDate(element.id)">
-                <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-                <mat-datepicker #picker></mat-datepicker>
-              </mat-form-field>
-
-              <div class="hours">
-                <mat-chip-listbox>
-                  <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
-                    {{ h }}
-                  </mat-chip-option>
-                </mat-chip-listbox>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef> Actions </th>
+            <td mat-cell *matCellDef="let element">
+              <div class="action-buttons">
+                <button mat-button color="warn" 
+                        *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'"
+                        (click)="cancel(element.id)">
+                  Annuler
+                </button>
+                <button mat-button color="primary"
+                        *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'"
+                        (click)="toggleModify(element.id)">
+                  Modifier
+                </button>
               </div>
 
-              <button mat-raised-button color="primary" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
-            </div>
-          </td>
-        </ng-container>
+              <div class="modify-panel" *ngIf="isModifying(element.id)">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nouvelle date</mat-label>
+                  <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange(element)" [value]="getModifyDate(element.id)">
+                  <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+                  <mat-datepicker #picker></mat-datepicker>
+                </mat-form-field>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-      </table>
+                <div class="hours">
+                  <mat-chip-listbox>
+                    <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
+                      {{ h }}
+                    </mat-chip-option>
+                  </mat-chip-listbox>
+                </div>
+
+                <button mat-raised-button color="primary" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </div>
+
+      <!-- Affichage Cartes pour Mobile -->
+      <div class="mobile-only">
+        <div class="appointment-cards">
+          <mat-card class="mobile-appointment-card" *ngFor="let element of appointments">
+            <mat-card-content>
+              <div class="card-row">
+                <span class="label">Date:</span>
+                <span class="value">{{element.date | date}}</span>
+              </div>
+              <div class="card-row">
+                <span class="label">Heure:</span>
+                <span class="value">{{element.startTime}}</span>
+              </div>
+              <div class="card-row">
+                <span class="label">Service:</span>
+                <span class="value">{{element.service.name}}</span>
+              </div>
+              <div class="card-row">
+                <span class="label">Barbier:</span>
+                <span class="value">{{element.barber.name}}</span>
+              </div>
+              <div class="card-row">
+                <span class="label">Statut:</span>
+                <span class="value status-badge" [ngClass]="element.status.toLowerCase()">{{element.status}}</span>
+              </div>
+              
+              <div class="card-actions" *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'">
+                <button mat-raised-button color="warn" (click)="cancel(element.id)">Annuler</button>
+                <button mat-raised-button color="primary" (click)="toggleModify(element.id)">Modifier</button>
+              </div>
+
+              <div class="modify-panel mobile" *ngIf="isModifying(element.id)">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Nouvelle date</mat-label>
+                  <input matInput [matDatepicker]="mobilePicker" (dateChange)="onModifyDateChange(element)" [value]="getModifyDate(element.id)">
+                  <mat-datepicker-toggle matIconSuffix [for]="mobilePicker"></mat-datepicker-toggle>
+                  <mat-datepicker #mobilePicker></mat-datepicker>
+                </mat-form-field>
+
+                <div class="hours">
+                  <mat-chip-listbox class="mobile-chips">
+                    <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
+                      {{ h }}
+                    </mat-chip-option>
+                  </mat-chip-listbox>
+                </div>
+
+                <button mat-raised-button color="primary" class="full-width" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </div>
       
-      <div *ngIf="appointments.length === 0">
+      <div *ngIf="appointments.length === 0" class="empty-state">
           <p>Vous n'avez aucun rendez-vous (ou vous n'êtes pas connecté).</p>
       </div>
         </mat-card-content>
@@ -101,20 +159,52 @@ import { ApiService, Appointment } from '../../services/api.service';
   styles: [`
     :host { display: block; background: #000; min-height: 100vh; width: 100%; }
     .container { max-width: 1200px; margin: 0 auto; padding: 120px 20px 40px; }
-    .client-card { color: #fff; background: #000 !important; border: 1px solid #d4af37 !important; }
-    .client-card mat-card-header mat-card-title { color: #d4af37; font-size: 1.6rem; }
+    .client-card { color: #fff; background: #000 !important; border: 1px solid #d4af37 !important; border-radius: 12px; }
+    .client-card mat-card-header { margin-bottom: 20px; }
+    .client-card mat-card-header mat-card-title { color: #d4af37; font-size: 1.8rem; font-family: 'Playfair Display', serif; }
     .client-card mat-card-header mat-card-subtitle { color: #aaaaaa; }
-    ::ng-deep .mat-mdc-table { background: #121212 !important; color: #fff !important; }
-    ::ng-deep .mat-mdc-header-cell { color: #d4af37 !important; font-weight: bold; }
-    ::ng-deep .mat-mdc-cell { color: #fff !important; }
-    ::ng-deep .mat-mdc-form-field-flex { background-color: #121212 !important; }
     
-    table { width: 100%; }
-    .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-    .hours { margin: 4px 0 8px; }
-    :host ::ng-deep .mat-mdc-table { background: #121212; }
-  :host ::ng-deep .mat-mdc-header-cell { color: #d4af37; border-bottom: 1px solid #d4af37; }
-  :host ::ng-deep .mat-mdc-cell { color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .desktop-only { display: block; }
+    .mobile-only { display: none; }
+
+    ::ng-deep .mat-mdc-table { background: #121212 !important; color: #fff !important; }
+    ::ng-deep .mat-mdc-header-cell { color: #d4af37 !important; font-weight: bold; border-bottom: 1px solid #d4af37 !important; }
+    ::ng-deep .mat-mdc-cell { color: #fff !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; padding: 12px 8px !important; }
+    
+    .action-buttons { display: flex; gap: 8px; }
+    .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+    .hours { margin: 8px 0; }
+    .full-width { width: 100%; }
+    .empty-state { text-align: center; padding: 40px; color: #aaa; }
+
+    /* Mobile Styles */
+    @media (max-width: 768px) {
+      .desktop-only { display: none; }
+      .mobile-only { display: block; }
+      .container { padding: 100px 10px 20px; }
+      .client-card mat-card-header mat-card-title { font-size: 1.4rem; }
+    }
+
+    .appointment-cards { display: flex; flex-direction: column; gap: 16px; }
+    .mobile-appointment-card { background: #121212 !important; border: 1px solid rgba(212, 175, 55, 0.3) !important; color: #fff; }
+    .card-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .card-row:last-of-type { border-bottom: none; }
+    .label { color: #d4af37; font-weight: 600; font-size: 0.9rem; }
+    .value { color: #fff; font-size: 0.95rem; }
+    .card-actions { display: flex; gap: 12px; margin-top: 16px; }
+    .card-actions button { flex: 1; }
+    
+    .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+    .status-badge.booked { background: rgba(0, 123, 255, 0.2); color: #007bff; border: 1px solid #007bff; }
+    .status-badge.modified { background: rgba(212, 175, 55, 0.2); color: #d4af37; border: 1px solid #d4af37; }
+    .status-badge.cancelled { background: rgba(220, 53, 69, 0.2); color: #dc3545; border: 1px solid #dc3545; }
+
+    .modify-panel.mobile { background: rgba(0,0,0,0.3); padding: 12px; border: 1px solid rgba(212, 175, 55, 0.2); margin-top: 16px; }
+    .mobile-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    ::ng-deep .mat-mdc-form-field-flex { background-color: #1a1a1a !important; }
+    ::ng-deep .mat-mdc-form-field-label { color: #aaa !important; }
+    ::ng-deep .mat-mdc-input-element { color: #fff !important; }
   `]
 })
 export class MyAppointmentsComponent implements OnInit {
@@ -243,19 +333,12 @@ export class MyAppointmentsComponent implements OnInit {
     const mm = String(state.date.getMonth() + 1).padStart(2, '0');
     const dd = String(state.date.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
-    const request = {
-      serviceId: a.service.id,
-      barberId: a.barber.id,
-      date: dateStr,
-      startTime: state.time
-    };
-      this.apiService.bookAppointment(request as any).subscribe({
-        next: () => {
-          this.apiService.cancelAppointment(a.id).subscribe(() => {
-          delete this.modifying[a.id];
-          this.snackBar.open('Rendez-vous modifié', 'OK', { duration: 3000 });
-          this.reloadAppointments();
-        });
+    
+    this.apiService.modifyAppointment(a.id, dateStr, state.time).subscribe({
+      next: () => {
+        delete this.modifying[a.id];
+        this.snackBar.open('Rendez-vous modifié', 'OK', { duration: 3000 });
+        this.reloadAppointments();
       },
       error: (err) => {
         this.snackBar.open('Erreur modification: ' + err.message, 'OK', { duration: 3500 });

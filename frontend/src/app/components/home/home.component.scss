@@ -9,6 +9,7 @@ $light-grey: #f5f5f5;
 .section {
   padding: 80px 0;
   position: relative;
+  scroll-margin-top: 70px; // Offset for fixed navbar
 }
 
 .container {
@@ -20,6 +21,7 @@ $light-grey: #f5f5f5;
 .section-header {
   text-align: center;
   margin-bottom: 60px;
+  padding: 0 10px;
 
   h2 {
     font-family: 'Playfair Display', serif;
@@ -27,6 +29,15 @@ $light-grey: #f5f5f5;
     margin-bottom: 20px;
     text-transform: uppercase;
     letter-spacing: 2px;
+    color: $black; // Force black for light sections
+    
+    @media (max-width: 768px) {
+      font-size: 2.2em;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1.8em;
+    }
   }
 
   .divider {
@@ -42,20 +53,22 @@ $light-grey: #f5f5f5;
 
   p {
     font-size: 1.2em;
-    color: #666;
+    color: #444; // Darker grey for readability on white
     font-weight: 300;
   }
   
   &.light-text {
-    h2 { color: $white; }
-    p { color: #ccc; }
+    h2 { color: $white !important; }
+    p { color: #ccc !important; }
+    .divider:not(.gold) { background-color: $white !important; }
   }
 }
 
 // Hero Section
 .hero {
-  height: 100vh;
+  min-height: 100vh;
   position: relative;
+  scroll-margin-top: 70px; // Offset for fixed navbar
   display: flex;
   align-items: center;
   justify-content: center;
@@ -65,7 +78,9 @@ $light-grey: #f5f5f5;
   background-attachment: fixed; // Parallax effect
   color: $white;
   text-align: center;
-  margin-top: 0px;
+  margin-top: 0;
+  padding: 100px 20px 60px; // More top padding for navbar, and bottom padding
+  box-sizing: border-box;
 }
 
 .hero-overlay {
@@ -82,12 +97,12 @@ $light-grey: #f5f5f5;
   position: relative;
   z-index: 2;
   max-width: 1000px;
-  padding: 40px 20px 20px 20px;
+  padding: 20px;
 
   h1 {
     font-family: 'Playfair Display', serif;
     font-size: 5em;
-    margin-bottom: 10px;
+    margin-bottom: 30px; // Increased margin
     color: $gold;
     letter-spacing: 5px;
     text-transform: uppercase;
@@ -99,11 +114,12 @@ $light-grey: #f5f5f5;
   }
 
   .subtitle {
-    font-size: 2em;
-    margin-bottom: 20px;
+    font-size: 2.2em; // Slightly larger
+    margin-bottom: 25px; // Increased margin
     font-weight: 300;
     color: $white;
     letter-spacing: 2px;
+    font-family: 'Playfair Display', serif;
   }
 
   .description {
@@ -113,6 +129,7 @@ $light-grey: #f5f5f5;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    font-family: 'Playfair Display', serif;
   }
 }
 
@@ -175,6 +192,14 @@ $light-grey: #f5f5f5;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+  
+  @media (max-width: 992px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .img {
@@ -433,6 +458,7 @@ $light-grey: #f5f5f5;
       font-family: 'Playfair Display', serif;
       font-size: 1.5em;
       margin-bottom: 5px;
+      color: $black; // Ensure black text on light background
     }
 
     .specialty {

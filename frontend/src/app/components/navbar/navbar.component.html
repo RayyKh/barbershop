@@ -6,14 +6,50 @@
 
     <span class="spacer"></span>
 
-    <div class="nav-links">
-      <a mat-button routerLink="/" fragment="top">ACCUEIL</a>
-      <a mat-button routerLink="/" fragment="services">SERVICES</a>
-      <a mat-button routerLink="/" fragment="barbers">BARBIERS</a>
-      <a mat-button routerLink="/my-appointments">MES RDV</a>
-      <a mat-button routerLink="/" fragment="feedbacks">FEEDBACKS</a>
-      <a mat-button routerLink="/" fragment="videos">VIDÉOS</a>
-      <a mat-button routerLink="/" fragment="booking-section" class="book-btn">RÉSERVER</a>
+    <div class="nav-links desktop-only">
+      <a mat-button (click)="navigateToSection('top')">ACCUEIL</a>
+      <a mat-button (click)="navigateToSection('services-section')">SERVICES</a>
+      <a mat-button (click)="navigateToSection('barbers')">BARBIERS</a>
+      <a mat-button [routerLink]="['/my-appointments']">MES RDV</a>
+      <a mat-button (click)="navigateToSection('feedbacks')">FEEDBACKS</a>
+      <a mat-button (click)="navigateToSection('videos')">VIDÉOS</a>
+      <a mat-button (click)="navigateToSection('booking-section')" class="book-btn">RÉSERVER</a>
+    </div>
+
+    <div class="mobile-only">
+      <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu de navigation">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <mat-menu #menu="matMenu" class="mobile-nav-menu">
+        <a mat-menu-item (click)="navigateToSection('top')">
+          <mat-icon>home</mat-icon>
+          <span>ACCUEIL</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('services-section')">
+          <mat-icon>content_cut</mat-icon>
+          <span>SERVICES</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('barbers')">
+          <mat-icon>group</mat-icon>
+          <span>BARBIERS</span>
+        </a>
+        <a mat-menu-item [routerLink]="['/my-appointments']">
+          <mat-icon>event_note</mat-icon>
+          <span>MES RDV</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('feedbacks')">
+          <mat-icon>star</mat-icon>
+          <span>FEEDBACKS</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('videos')">
+          <mat-icon>play_circle</mat-icon>
+          <span>VIDÉOS</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('booking-section')" class="mobile-book-item">
+          <mat-icon color="primary">calendar_today</mat-icon>
+          <span>RÉSERVER</span>
+        </a>
+      </mat-menu>
     </div>
   </div>
 </mat-toolbar>

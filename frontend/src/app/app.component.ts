@@ -1,9 +1,8 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, ViewportScroller } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet, Scroll } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { NavbarComponent } from './components/navbar/navbar.component';
-
-declare var AOS: any;
 
 @Component({
   selector: 'app-root',
@@ -20,26 +19,29 @@ declare var AOS: any;
 export class AppComponent implements OnInit {
   title = 'frontend';
 
+  constructor(private router: Router, private viewportScroller: ViewportScroller) {}
+
   ngOnInit() {
-    // Wait for AOS script to be available if not already
-    if (typeof AOS !== 'undefined') {
-      AOS.init({
-        duration: 1000,
-        once: true,
-        offset: 100,
-        easing: 'ease-out-quad'
-      });
-    } else {
-      setTimeout(() => {
-        if (typeof AOS !== 'undefined') {
-          AOS.init({
-            duration: 1000,
-            once: true,
-            offset: 100,
-            easing: 'ease-out-quad'
-          });
-        }
-      }, 500);
-    }
+    this.router.events.pipe(
+      filter((e: any): e is Scroll => e instanceof Scroll)
+    ).subscribe(e => {
+      if (e.anchor) {
+        // More robust manual scroll
+        setTimeout(() => {
+          const element = document.getElementById(e.anchor!);
+          if (element) {
+            // Using scrollIntoView which is more reliable than scrollToAnchor in some cases
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            // Fallback to native viewport scroller
+            this.viewportScroller.scrollToAnchor(e.anchor!);
+          }
+        }, 200);
+      } else if (e.position) {
+        this.viewportScroller.scrollToPosition(e.position);
+      } else {
+        this.viewportScroller.scrollToPosition([0, 0]);
+      }
+    });
   }
 }

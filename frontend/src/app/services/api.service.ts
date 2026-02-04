@@ -30,7 +30,7 @@ export interface Appointment {
   date: string;
   startTime: string;
   endTime: string;
-  status: 'BOOKED' | 'CANCELLED' | 'DONE' | 'BLOCKED';
+  status: 'BOOKED' | 'CANCELLED' | 'DONE' | 'BLOCKED' | 'MODIFIED';
   user: User;
   barber: Barber;
   service: Service;
@@ -174,6 +174,11 @@ export class ApiService {
 
   cancelAppointment(id: number): Observable<Appointment> {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/cancel`, {});
+  }
+
+  modifyAppointment(id: number, date: string, startTime: string): Observable<Appointment> {
+    const params = new URLSearchParams({ date, startTime });
+    return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/modify?${params.toString()}`, {});
   }
 
   getNewAppointmentsCount(): Observable<number> {

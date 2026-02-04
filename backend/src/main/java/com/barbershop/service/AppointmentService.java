@@ -98,7 +98,7 @@ public class AppointmentService {
             LocalTime slotEnd = slot.plusHours(1);
             
             for (Appointment appt : bookedAppointments) {
-                if (appt.getStatus() == AppointmentStatus.BOOKED || appt.getStatus() == AppointmentStatus.BLOCKED) {
+                if (appt.getStatus() == AppointmentStatus.BOOKED || appt.getStatus() == AppointmentStatus.BLOCKED || appt.getStatus() == AppointmentStatus.MODIFIED) {
                      // Check overlap
                      // (newStart < oldEnd) and (newEnd > oldStart)
                      if (slot.isBefore(appt.getEndTime()) && slotEnd.isAfter(appt.getStartTime())) {
@@ -112,6 +112,37 @@ public class AppointmentService {
             }
         }
         return availableSlots;
+    }
+
+    @Transactional
+    public Appointment modifyAppointment(Long appointmentId, LocalDate newDate, LocalTime newStartTime) {
+        Appointment oldAppt = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+        
+        // 1. Mark old appointment as CANCELLED (so it becomes available for others)
+        oldAppt.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(oldAppt);
+
+        // 2. Create new appointment with same details but new date/time
+        Appointment newAppt = new Appointment();
+        newAppt.setUser(oldAppt.getUser());
+        newAppt.setBarber(oldAppt.getBarber());
+        newAppt.setService(oldAppt.getService());
+        newAppt.setDate(newDate);
+        newAppt.setStartTime(newStartTime);
+        newAppt.setEndTime(newStartTime.plusMinutes(oldAppt.getService().getDuration()));
+        newAppt.setStatus(AppointmentStatus.MODIFIED); // Marked as MODIFIED
+        newAppt.setAdminViewed(false);
+
+        // Check conflicts for the new slot
+        List<Appointment> conflicts = appointmentRepository.findConflictingAppointments(
+            newAppt.getBarber().getId(), newAppt.getDate(), newAppt.getStartTime(), newAppt.getEndTime()
+        );
+        if (!conflicts.isEmpty()) {
+            throw new ConflictException("New slot not available");
+        }
+
+        return appointmentRepository.save(newAppt);
     }
 
     @Transactional

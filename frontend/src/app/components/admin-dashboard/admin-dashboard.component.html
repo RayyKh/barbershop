@@ -41,9 +41,9 @@
 
       <section class="list-section">
         <h3>Réservations</h3>
-        <form [formGroup]="filterForm" class="lock-form" style="margin-bottom: 16px;">
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <mat-form-field appearance="outline" style="min-width:200px; flex:1;">
+        <form [formGroup]="filterForm" class="filter-form">
+          <div class="filter-grid">
+            <mat-form-field appearance="outline" class="filter-item">
               <mat-label>Barbier</mat-label>
               <mat-select formControlName="barberId">
                 <mat-option [value]="null">Tous</mat-option>
@@ -51,30 +51,31 @@
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline" style="min-width:180px;">
+            <mat-form-field appearance="outline" class="filter-item">
               <mat-label>Date</mat-label>
               <input matInput [matDatepicker]="filterPicker" formControlName="date">
               <mat-datepicker-toggle matIconSuffix [for]="filterPicker"></mat-datepicker-toggle>
               <mat-datepicker #filterPicker></mat-datepicker>
             </mat-form-field>
 
-            <mat-form-field appearance="outline" style="min-width:160px;">
+            <mat-form-field appearance="outline" class="filter-item">
               <mat-label>Statut</mat-label>
               <mat-select formControlName="status">
                 <mat-option [value]="null">Tous</mat-option>
                 <mat-option value="BOOKED">BOOKED</mat-option>
+                <mat-option value="MODIFIED">MODIFIED</mat-option>
                 <mat-option value="CANCELLED">CANCELLED</mat-option>
                 <mat-option value="DONE">DONE</mat-option>
                 <mat-option value="BLOCKED">BLOCKED</mat-option>
               </mat-select>
             </mat-form-field>
 
-            <mat-form-field appearance="outline" style="flex:2; min-width:240px;">
+            <mat-form-field appearance="outline" class="filter-item search-item">
               <mat-label>Recherche (nom/téléphone)</mat-label>
               <input matInput formControlName="q" placeholder="Tapez pour chercher">
             </mat-form-field>
 
-            <mat-form-field appearance="outline" style="min-width:200px;">
+            <mat-form-field appearance="outline" class="filter-item">
               <mat-label>Tri</mat-label>
               <mat-select formControlName="sort">
                 <mat-option value="date,startTime">Date, Heure</mat-option>
@@ -83,15 +84,18 @@
               </mat-select>
             </mat-form-field>
 
-            <div class="actions" style="align-items:center; display:flex; gap:8px;">
+            <div class="filter-actions">
               <button mat-raised-button color="primary" (click)="applyFilters()">Appliquer</button>
               <button mat-button class="gold-btn" (click)="clearFilters()">Réinitialiser</button>
             </div>
           </div>
         </form>
+
         <div class="new-banner" *ngIf="hasNew">Nouvelles réservations</div>
+        
         <div class="list">
-          <div class="row header">
+          <!-- Header (Desktop Only) -->
+          <div class="row header desktop-only">
             <div>Date</div>
             <div>Heure</div>
             <div>Barbier</div>
@@ -99,21 +103,62 @@
             <div>Téléphone</div>
             <div>Statut / Action</div>
           </div>
+
           <ng-container *ngFor="let b of barbers">
             <div class="barber-title">{{ b.name }}</div>
-            <div class="row" *ngFor="let a of filterByBarber(b.id)">
+            
+            <!-- Desktop Rows -->
+            <div class="row desktop-only" *ngFor="let a of filterByBarber(b.id)">
               <div>{{ a.date }}</div>
               <div>{{ a.startTime }} - {{ a.endTime }}</div>
               <div>{{ a.barber?.name }}</div>
-              <div>{{ a.user?.name || '-' }}</div>
-              <div>{{ a.user?.phone || '-' }}</div>
+              <div>{{ a.user.name || '-' }}</div>
+              <div>{{ a.user.phone || '-' }}</div>
               <div>
                 <span class="status">
                   {{ a.status }}
-                  <span *ngIf="a.status==='BOOKED' && !a.adminViewed" class="pill-new" (click)="markViewed(a)">NEW</span>
+                  <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new" (click)="markViewed(a)">
+                    {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
+                  </span>
                 </span>
                 <button *ngIf="a.status === 'BLOCKED'" mat-button color="warn" (click)="unlock(a)">Déverrouiller</button>
               </div>
+            </div>
+
+            <!-- Mobile Cards -->
+            <div class="mobile-only">
+              <mat-card class="admin-mobile-card" *ngFor="let a of filterByBarber(b.id)">
+                <mat-card-content>
+                  <div class="admin-card-row">
+                    <span class="label">Date:</span>
+                    <span class="value">{{ a.date }}</span>
+                  </div>
+                  <div class="admin-card-row">
+                    <span class="label">Heure:</span>
+                    <span class="value">{{ a.startTime }} - {{ a.endTime }}</span>
+                  </div>
+                  <div class="admin-card-row">
+                    <span class="label">Client:</span>
+                    <span class="value">{{ a.user.name || '-' }}</span>
+                  </div>
+                  <div class="admin-card-row">
+                    <span class="label">Téléphone:</span>
+                    <span class="value">{{ a.user.phone || '-' }}</span>
+                  </div>
+                  <div class="admin-card-row">
+                    <span class="label">Statut:</span>
+                    <div class="value">
+                      <span class="status-text">{{ a.status }}</span>
+                      <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new mini" (click)="markViewed(a)">
+                        {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="admin-card-actions" *ngIf="a.status === 'BLOCKED'">
+                    <button mat-raised-button color="warn" size="small" (click)="unlock(a)">Déverrouiller</button>
+                  </div>
+                </mat-card-content>
+              </mat-card>
             </div>
           </ng-container>
         </div>
