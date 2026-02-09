@@ -40,6 +40,29 @@
   }
 }
 
+.success-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  min-height: 400px;
+
+  .success-title {
+    color: #d4af37;
+    font-size: 2.5rem;
+    font-family: 'Playfair Display', serif;
+    margin: 20px 0;
+  }
+
+  p {
+    font-size: 1.2rem;
+    color: #cccccc;
+    margin: 5px 0;
+  }
+}
+
 .full-width {
   width: 100%;
   margin-bottom: 16px;
@@ -75,6 +98,216 @@
     float: right;
     color: #d4af37;
     font-weight: bold;
+}
+
+.service-option {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    
+    .service-price {
+        color: #d4af37;
+        font-weight: bold;
+        margin-left: 20px;
+    }
+}
+
+.loyalty-reward-selection {
+    margin: 20px 0;
+    padding: 15px;
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid #d4af37;
+    border-radius: 8px;
+    animation: pulse-border 2s infinite;
+
+    .reward-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #d4af37;
+        font-weight: 500;
+
+        mat-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+        }
+    }
+
+    ::ng-deep .mdc-checkbox .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+        background-color: #d4af37 !important;
+        border-color: #d4af37 !important;
+    }
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}
+
+.total-summary {
+    margin: 15px 0;
+    padding: 10px 15px;
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px dashed #d4af37;
+    border-radius: 4px;
+    text-align: right;
+    
+    p {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #ffffff;
+        
+        strong {
+            color: #d4af37;
+            font-size: 1.3rem;
+        }
+    }
+}
+
+.summary-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    
+    ul {
+        list-style: none;
+        padding: 0;
+        margin: 10px 0;
+        
+        li {
+            padding: 5px 0;
+            color: #cccccc;
+            display: flex;
+            justify-content: space-between;
+            
+            &::before {
+                content: "•";
+                color: #d4af37;
+                margin-right: 10px;
+            }
+        }
+    }
+    
+    .summary-total {
+        text-align: right;
+        font-size: 1.2rem;
+        margin-top: 10px;
+        
+        strong {
+            font-size: 1.4rem;
+        }
+    }
+}
+
+/* Optimisations pour la version mobile */
+@media (max-width: 600px) {
+  .booking-card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+
+    mat-card-header {
+      padding: 16px;
+      
+      mat-card-title {
+        font-size: 1.5rem;
+      }
+    }
+
+    mat-card-content {
+      padding: 8px; /* Encore moins de padding pour maximiser l'espace */
+    }
+  }
+
+  .step-content {
+    padding: 0; /* Zéro padding pour le contenu de l'étape */
+  }
+
+  /* Élargir le champ de sélection lui-même */
+  .full-width {
+    margin-left: -10px;
+    width: calc(100% + 20px);
+  }
+
+  /* Rendre le panel de sélection encore plus large */
+  ::ng-deep .mat-mdc-select-panel {
+    min-width: calc(100% + 60px) !important;
+    margin-left: -30px;
+    padding: 0 !important;
+  }
+
+  ::ng-deep .mat-mdc-option {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  mat-option {
+    margin-bottom: 12px !important;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    height: auto !important;
+    min-height: 60px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+    
+    &:last-child {
+      margin-bottom: 0 !important;
+      border-bottom: none;
+    }
+  }
+
+  .service-option {
+    padding: 8px 0;
+    font-size: 1rem; /* Taille de police légèrement réduite pour tout faire tenir sur une ligne si possible */
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .service-name {
+      font-weight: 500;
+      flex: 1;
+      white-space: normal;
+      line-height: 1.2;
+      padding-right: 5px; /* Petit espace avant le prix */
+    }
+
+    .service-price {
+      font-size: 1.1rem;
+      margin-left: 10px;
+      white-space: nowrap; /* Le prix ne doit pas se couper */
+      color: #d4af37;
+    }
+  }
+
+  /* Ajustement des boutons sur mobile */
+  .actions {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+    
+    button {
+      flex: 1;
+      padding: 0 8px !important;
+      font-size: 0.9rem;
+    }
+  }
+
+  /* Optimisation de l'espace du stepper */
+  ::ng-deep .mat-step-header {
+    padding: 12px 8px !important;
+  }
+
+  ::ng-deep .mat-vertical-content {
+    padding: 0 4px 12px 12px !important; /* Réduction drastique de l'indentation à gauche (de 24px à 12px) */
+  }
+
+  ::ng-deep .mat-step-icon {
+    margin-right: 8px !important;
+  }
 }
 
 .actions {
@@ -117,6 +350,16 @@
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+::ng-deep .mat-mdc-chip {
+    --mdc-chip-label-text-color: #ffffff !important;
+    background-color: #333333 !important;
+}
+
+::ng-deep .mat-mdc-standard-chip.mat-mdc-chip-selected.mat-primary {
+    --mdc-chip-selected-label-text-color: #000000 !important;
+    background-color: #d4af37 !important;
 }
 
 /* =========================================

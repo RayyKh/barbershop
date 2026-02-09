@@ -1,0 +1,124 @@
+<div class="revenue-container">
+  <mat-card class="revenue-card">
+    <mat-card-header>
+      <mat-card-title>Historique des Revenus</mat-card-title>
+      <mat-card-subtitle>Suivi des performances par barbier</mat-card-subtitle>
+      <div class="header-actions">
+        <button mat-button color="primary" routerLink="/admin">Retour Dashboard</button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="filter-section">
+        <div class="nav-actions">
+          <button mat-icon-button (click)="previousWeek()" title="Semaine précédente">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+          <span class="current-date-display">{{ getWeekRangeDisplay() }}</span>
+          <button mat-icon-button (click)="nextWeek()" title="Semaine suivante">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Choisir un Barbier</mat-label>
+          <mat-select [(ngModel)]="selectedBarberId" (selectionChange)="onBarberChange()">
+            <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <div *ngIf="loading" class="loading-spinner">
+        Chargement des données...
+      </div>
+
+      <mat-tab-group *ngIf="!loading && report" color="primary">
+        <!-- VUE JOURNALIÈRE -->
+        <mat-tab label="Vue Journalière">
+          <div class="tab-content">
+            <div *ngIf="report.dailyRevenues.length === 0" class="no-data">
+              Aucun revenu enregistré pour ce barbier.
+            </div>
+
+            <div *ngFor="let day of report.dailyRevenues" class="period-section">
+              <h3 class="period-title">{{ day.date | date:'EEEE d MMMM yyyy' }}</h3>
+              
+              <table mat-table [dataSource]="day.details" class="revenue-table mat-elevation-z1">
+                <ng-container matColumnDef="client">
+                  <th mat-header-cell *matHeaderCellDef> Client </th>
+                  <td mat-cell *matCellDef="let element"> {{element.clientName}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="service">
+                  <th mat-header-cell *matHeaderCellDef> Service </th>
+                  <td mat-cell *matCellDef="let element"> {{element.services}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="price">
+                  <th mat-header-cell *matHeaderCellDef> Prix </th>
+                  <td mat-cell *matCellDef="let element"> {{element.price}} DT </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['client', 'service', 'price']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['client', 'service', 'price'];"></tr>
+              </table>
+
+              <div class="total-row">
+                <span>Total de la journée :</span>
+                <strong>{{ day.totalRevenue }} DT</strong>
+              </div>
+              <mat-divider></mat-divider>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- VUE HEBDOMADAIRE -->
+        <mat-tab label="Vue Hebdomadaire">
+          <div class="tab-content">
+            <div *ngIf="report.weeklyRevenues.length === 0" class="no-data">
+              Aucun revenu enregistré pour ce barbier.
+            </div>
+
+            <div *ngFor="let week of report.weeklyRevenues" class="period-section">
+              <div class="period-header">
+                <h3 class="period-title">Semaine {{ week.weekNumber }} ({{ week.year }})</h3>
+                <span class="week-range">{{ week.weekRange }}</span>
+              </div>
+              
+              <table mat-table [dataSource]="week.details" class="revenue-table mat-elevation-z1">
+                <ng-container matColumnDef="date">
+                  <th mat-header-cell *matHeaderCellDef> Date </th>
+                  <td mat-cell *matCellDef="let element"> {{element.date | date:'dd/MM'}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="client">
+                  <th mat-header-cell *matHeaderCellDef> Client </th>
+                  <td mat-cell *matCellDef="let element"> {{element.clientName}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="service">
+                  <th mat-header-cell *matHeaderCellDef> Service </th>
+                  <td mat-cell *matCellDef="let element"> {{element.services}} </td>
+                </ng-container>
+
+                <ng-container matColumnDef="price">
+                  <th mat-header-cell *matHeaderCellDef> Prix </th>
+                  <td mat-cell *matCellDef="let element"> {{element.price}} DT </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="['date', 'client', 'service', 'price']"></tr>
+                <tr mat-row *matRowDef="let row; columns: ['date', 'client', 'service', 'price'];"></tr>
+              </table>
+
+              <div class="total-row week-total">
+                <span>Total de la semaine :</span>
+                <strong>{{ week.totalRevenue }} DT</strong>
+              </div>
+              <mat-divider></mat-divider>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card-content>
+  </mat-card>
+</div>

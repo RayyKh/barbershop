@@ -21,6 +21,9 @@ public class Barber {
 
     private String photo; // URL to photo
 
+    @Column(length = 1000)
+    private String description;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }

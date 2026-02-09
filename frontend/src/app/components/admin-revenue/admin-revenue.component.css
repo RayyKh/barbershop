@@ -1,0 +1,193 @@
+:host {
+  display: block;
+  background-color: #000;
+  min-height: 100vh;
+}
+
+.revenue-container {
+  padding: 160px 20px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #000;
+}
+
+.revenue-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  border: 1px solid #ffffff;
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+.mat-mdc-card-title {
+  color: #ffffff !important;
+}
+
+.mat-mdc-card-subtitle {
+  color: #aaa !important;
+}
+
+.filter-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background-color: #262626;
+  padding: 5px 15px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-actions button {
+  color: #ffffff !important;
+}
+
+.current-date-display {
+  color: #ffffff;
+  font-weight: 500;
+  min-width: 140px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.period-section {
+  margin-bottom: 40px;
+}
+
+.period-title {
+  color: #ffffff;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-transform: capitalize;
+  display: flex;
+  align-items: center;
+}
+
+.period-title::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 24px;
+  background-color: #ffffff;
+  margin-right: 12px;
+  border-radius: 2px;
+}
+
+.revenue-table {
+  width: 100%;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #262626 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mat-mdc-header-row {
+  background-color: #333 !important;
+}
+
+.mat-mdc-header-cell {
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+.mat-mdc-cell {
+  color: #fff !important;
+}
+
+.total-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 15px;
+  background-color: #262626;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-size: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.total-row span {
+  margin-right: 15px;
+  color: #aaa;
+}
+
+.total-row strong {
+  color: #ffffff;
+  font-size: 1.3rem;
+}
+
+.no-data {
+  color: #aaa;
+  text-align: center;
+  padding: 40px;
+  font-style: italic;
+}
+
+.period-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.week-range {
+  color: #aaa;
+  font-style: italic;
+  background: #333;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.loading-spinner {
+  padding: 40px;
+  text-align: center;
+  color: #fff;
+}
+
+.header-actions {
+  margin-left: auto;
+  padding: 16px;
+}
+
+.header-actions button {
+  color: #ffffff !important;
+}
+
+.tab-content {
+  padding: 20px 0;
+}
+
+/* Fix Mat Tab theme for white borders */
+:host ::ng-deep .mat-mdc-tab-group {
+  --mdc-tab-indicator-active-indicator-color: #ffffff;
+  --mat-tab-header-active-label-text-color: #ffffff;
+  --mat-tab-header-inactive-label-text-color: #aaa;
+}
+
+:host ::ng-deep .mat-mdc-tab-body-content {
+  color: #fff;
+}
+
+/* Fix Mat Select for white borders */
+:host ::ng-deep .mat-mdc-form-field {
+  --mdc-outlined-text-field-label-text-color: #aaa;
+  --mdc-outlined-text-field-focused-label-text-color: #ffffff;
+  --mdc-outlined-text-field-outline-color: rgba(255, 255, 255, 0.3);
+  --mdc-outlined-text-field-focused-outline-color: #ffffff;
+}
+
+:host ::ng-deep .mat-mdc-select-value,
+:host ::ng-deep .mat-mdc-select-arrow {
+  color: #fff !important;
+}

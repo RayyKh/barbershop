@@ -8,7 +8,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const token = sessionStorage.getItem('token');
 
   let authReq = req;
-  if (token && token !== 'ADMIN_SUPER') {
+  if (token) {
     authReq = req.clone({
       headers: req.headers.set('Authorization', `Bearer ${token}`)
     });

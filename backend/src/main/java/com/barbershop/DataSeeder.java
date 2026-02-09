@@ -40,16 +40,28 @@ public class DataSeeder implements CommandLineRunner {
 
         // Create Default Services
         if (serviceRepository.count() == 0) {
-            serviceRepository.save(new Service(null, "Coupe Classique", "Coupe aux ciseaux et tondeuse", 25.0, 60));
-            serviceRepository.save(new Service(null, "Barbe & Soin", "Taille de barbe et soin complet", 20.0, 60));
-            serviceRepository.save(new Service(null, "Complet", "Coupe + Barbe", 40.0, 60));
+            serviceRepository.save(new Service(null, "Coupe", "Coupe aux ciseaux ou tondeuse", 10.0, 30));
+            serviceRepository.save(new Service(null, "Barbe", "Taille de barbe", 7.0, 20));
+            serviceRepository.save(new Service(null, "Coupe + Barbe avec machine (Zéro)", "Pack complet tondeuse", 10.0, 40));
+            serviceRepository.save(new Service(null, "Coupe + Barbe Dégradé", "Pack dégradé précis", 13.0, 45));
+            serviceRepository.save(new Service(null, "Coupe + Barbe Dégradé + Fixation", "Pack complet avec finition", 15.0, 50));
+            serviceRepository.save(new Service(null, "Coupe + Barbe + Brushing", "Style complet", 20.0, 60));
+            serviceRepository.save(new Service(null, "Coupe + Barbe + Masque Noir", "Soin complet", 20.0, 60));
+            serviceRepository.save(new Service(null, "Patchs pour les yeux", "Soin contour des yeux", 5.0, 10));
+            serviceRepository.save(new Service(null, "Coupe d'enfant (jusqu'à 5 ans)", "Coupe junior", 7.0, 20));
+            serviceRepository.save(new Service(null, "Brushing", "Mise en forme", 7.0, 15));
+            serviceRepository.save(new Service(null, "Masque Noir", "Soin purifiant", 8.0, 15));
+            serviceRepository.save(new Service(null, "Épilation à la cire", "Nettoyage précis", 3.0, 10));
+            serviceRepository.save(new Service(null, "Soin du visage (Vapozone, Scrub, Gommage, Masque Noir)", "Soin relaxant", 25.0, 40));
+            serviceRepository.save(new Service(null, "Soin du visage (Vapozone, Scrub, Gommage, Argile Verte, Mask Gold, Patchs pour les yeux)", "Soin prestige", 50.0, 60));
+            serviceRepository.save(new Service(null, "Protéine", "Traitement capillaire", 80.0, 90));
         }
 
-        // Create Default Barbers (Ala, Hamouda, Ahmed)
+        // Create Default Barbers (Aladin, Hamouda, Ahmed)
         if (barberRepository.count() == 0) {
-            barberRepository.save(new Barber(null, "Ala", "Barbier", ""));
-            barberRepository.save(new Barber(null, "Hamouda", "Barbier", ""));
-            barberRepository.save(new Barber(null, "Ahmed", "Barbier", ""));
+            barberRepository.save(new Barber(null, "Aladin", "Barbier", "ala.jpeg", "Spécialiste en coupes modernes et dégradés de précision. 10 ans d'expérience."));
+            barberRepository.save(new Barber(null, "Hamouda", "Barbier", "hamouda.jpeg", "Expert en taille de barbe traditionnelle et soins du visage. Un savoir-faire unique."));
+            barberRepository.save(new Barber(null, "Ahmed", "Barbier", "ahmed.jpeg", "Maîtrise parfaite des coupes classiques et des styles vintage. Le souci du détail."));
         }
     }
 }

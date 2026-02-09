@@ -11,10 +11,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { Subscription } from 'rxjs';
-import { ApiService, Appointment, Barber } from '../../services/api.service';
+import { ApiService, Appointment, Barber, BlockedSlot } from '../../services/api.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -32,7 +32,8 @@ import { ApiService, Appointment, Barber } from '../../services/api.service';
     MatNativeDateModule,
     MatChipsModule,
     MatIconModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    RouterLink
   ],
   templateUrl: './admin-dashboard.component.html',
   styleUrls: ['./admin-dashboard.component.scss']
@@ -40,11 +41,18 @@ import { ApiService, Appointment, Barber } from '../../services/api.service';
 export class AdminDashboardComponent implements OnInit {
   appointments: Appointment[] = [];
   barbers: Barber[] = [];
+  blockedSlots: BlockedSlot[] = [];
   lockForm: FormGroup;
   filterForm: FormGroup;
-  availableHours: string[] = [
-    '09:00:00','10:00:00','11:00:00','12:00:00','13:00:00','14:00:00','15:00:00','16:00:00','17:00:00','18:00:00','19:00:00','20:00:00'
+  adminBlockForm: FormGroup;
+  availableHours: string[] = [];
+  allAvailableHours: string[] = [
+    "09:00:00", "09:30:00", "10:00:00", "10:30:00", "11:00:00", "11:30:00",
+    "12:00:00", "12:30:00", "13:00:00", "13:30:00", "14:00:00", "14:30:00",
+    "15:00:00", "15:30:00", "16:00:00", "16:30:00", "17:00:00", "17:30:00",
+    "18:00:00", "18:30:00", "19:00:00", "19:30:00"
   ];
+  activeTab: 'manual' | 'block' = 'manual';
   hasNew = false;
   isPushEnabled = false;
   readonly VAPID_PUBLIC_KEY = "BP07gvsy0ylgW-4T7ch1FOGdTUfPSKKOmsTOzA-ybaHq54q7zovWbzOynSUVQY_7nAg7WAFMS_WfSrgT_yoW2S4";
@@ -61,27 +69,126 @@ export class AdminDashboardComponent implements OnInit {
     this.lockForm = this.fb.group({
       barber: [null, Validators.required],
       date: [new Date(), Validators.required],
-      time: [null, Validators.required]
+      time: [null, Validators.required],
+      name: [''],
+      phone: ['']
     });
     this.filterForm = this.fb.group({
       barberId: [null],
-      date: [null],
+      date: [new Date()], // Aujourd'hui par défaut
       status: [null],
       q: [''],
       sort: ['date,startTime']
     });
+    this.adminBlockForm = this.fb.group({
+      barberId: [null],
+      date: [new Date(), Validators.required],
+      startTime: [null], // null means whole day
+      endTime: [{ value: null, disabled: true }],
+      reason: ['']
+    });
+
+    this.generateAvailableHours();
   }
 
   ngOnInit(): void {
-    this.api.getBarbers().subscribe(b => { this.barbers = b; });
-    this.loadAppointments();
+    this.api.getBarbers().subscribe(b => { 
+      this.barbers = b; 
+      // Sélectionner le premier barbier par défaut si disponible
+      if (this.barbers.length > 0) {
+        this.lockForm.patchValue({ barber: this.barbers[0] });
+      }
+    });
+    this.applyFilters(); // Utiliser applyFilters au lieu de loadAppointments pour respecter la date par défaut
+    this.loadBlockedSlots();
     
+    // Update hours when date changes
+    this.lockForm.get('date')?.valueChanges.subscribe(() => {
+      this.generateAvailableHours();
+    });
+
+    // Update hours when barber changes
+    this.lockForm.get('barber')?.valueChanges.subscribe(() => {
+      this.generateAvailableHours();
+    });
+
+    // Mettre à jour les réservations quand la date du filtre change
+    this.filterForm.get('date')?.valueChanges.subscribe(() => {
+      this.applyFilters();
+    });
+
     // Check push status
     this.checkPushStatus();
 
     // Listen to changes from central ApiService (SSE or local)
     this.sub = this.api.appointmentsChanged$.subscribe(() => {
-      this.loadAppointments();
+      this.applyFilters(); // Re-appliquer les filtres lors d'un changement
+      this.generateAvailableHours(); // Mettre à jour les créneaux disponibles pour le verrouillage
+    });
+
+    this.api.blockedSlotsChanged$.subscribe(() => {
+      this.loadBlockedSlots();
+    });
+
+    // Handle enable/disable of endTime based on startTime
+    this.adminBlockForm.get('startTime')?.valueChanges.subscribe(val => {
+      const endTimeCtrl = this.adminBlockForm.get('endTime');
+      if (val) {
+        endTimeCtrl?.enable();
+      } else {
+        endTimeCtrl?.setValue(null);
+        endTimeCtrl?.disable();
+      }
+    });
+  }
+
+  loadBlockedSlots() {
+    this.api.getBlockedSlots().subscribe(slots => {
+      this.blockedSlots = slots;
+    });
+  }
+
+  addAdminBlock() {
+    if (this.adminBlockForm.valid) {
+      const val = this.adminBlockForm.value;
+      const dateStr = this.formatDateLocal(val.date as Date);
+      this.api.blockSlot(dateStr, val.startTime, val.endTime, val.barberId, val.reason).subscribe({
+        next: () => {
+          this.snackBar.open('Blocage ajouté avec succès', 'OK', { duration: 3000 });
+          this.adminBlockForm.reset({ date: new Date(), barberId: null, startTime: null, endTime: null, reason: '' });
+        },
+        error: (err) => {
+          this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+        }
+      });
+    }
+  }
+
+  deleteBlockedSlot(id: number) {
+    if (confirm('Voulez-vous supprimer ce blocage ?')) {
+      this.api.deleteBlockedSlot(id).subscribe({
+        next: () => {
+          this.snackBar.open('Blocage supprimé', 'OK', { duration: 3000 });
+        },
+        error: (err) => {
+          this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+        }
+      });
+    }
+  }
+
+  generateAvailableHours() {
+    const barber = this.lockForm.get('barber')?.value;
+    const date = this.lockForm.get('date')?.value;
+    
+    if (!barber || !date) {
+      this.availableHours = [];
+      return;
+    }
+    
+    const dateStr = this.formatDateLocal(new Date(date));
+    this.api.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
+      this.availableHours = slots;
     });
   }
 
@@ -166,12 +273,17 @@ export class AdminDashboardComponent implements OnInit {
       const barberId = this.lockForm.value.barber.id;
       const dateStr = this.formatDateLocal(this.lockForm.value.date as Date);
       const timeStr = this.lockForm.value.time;
-      this.api.lockSlot(barberId, dateStr, timeStr).subscribe({
+      const name = this.lockForm.value.name;
+      const phone = this.lockForm.value.phone;
+
+      this.api.lockSlot(barberId, dateStr, timeStr, name, phone).subscribe({
         next: () => {
-          this.loadAppointments();
-          alert('Créneau verrouillé');
+          this.applyFilters(); // Re-charger la liste filtrée
+          this.generateAvailableHours(); // Re-charger les créneaux libres
+          this.lockForm.patchValue({ name: '', phone: '', time: null });
+          alert('Opération réussie');
         },
-        error: (err) => alert('Erreur lors du verrouillage: ' + err.message)
+        error: (err) => alert('Erreur: ' + err.message)
       });
     }
   }
@@ -182,7 +294,8 @@ export class AdminDashboardComponent implements OnInit {
     const timeStr = a.startTime;
     this.api.unlockSlot(barberId, dateStr, timeStr).subscribe({
       next: () => {
-        this.loadAppointments();
+        this.applyFilters(); // Re-charger la liste filtrée
+        this.generateAvailableHours(); // Re-charger les créneaux libres
         alert('Créneau déverrouillé');
       },
       error: (err) => alert('Erreur lors du déverrouillage: ' + err.message)
@@ -206,6 +319,33 @@ export class AdminDashboardComponent implements OnInit {
         next: (updated) => {
           a.adminViewed = true;
           this.hasNew = this.appointments.some(x => (x.status === 'BOOKED' || x.status === 'MODIFIED') && !x.adminViewed);
+        }
+      });
+    }
+  }
+
+  markDone(a: Appointment) {
+    this.api.updateAppointmentStatus(a.id, 'DONE').subscribe({
+      next: () => {
+        this.snackBar.open('Rendez-vous marqué comme terminé', 'OK', { duration: 3000 });
+        this.applyFilters();
+      },
+      error: (err) => {
+        this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+      }
+    });
+  }
+
+  deleteAppointment(a: Appointment) {
+    if (confirm('Voulez-vous vraiment supprimer cette réservation ?')) {
+      this.api.deleteAppointment(a.id).subscribe({
+        next: () => {
+          this.snackBar.open('Réservation supprimée', 'Fermer', { duration: 3000 });
+          this.applyFilters(); // Refresh the list
+        },
+        error: (err) => {
+          console.error('Delete failed', err);
+          this.snackBar.open('Erreur lors de la suppression', 'Fermer', { duration: 3000 });
         }
       });
     }

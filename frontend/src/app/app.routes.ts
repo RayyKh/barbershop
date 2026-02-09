@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, Routes } from '@angular/router';
 import { AdminDashboardComponent } from './components/admin-dashboard/admin-dashboard.component';
+import { AdminRevenueComponent } from './components/admin-revenue/admin-revenue.component';
 import { BarberListComponent } from './components/barber-list/barber-list.component';
 import { BookingComponent } from './components/booking/booking.component';
 import { HomeComponent } from './components/home/home.component';
@@ -29,5 +30,6 @@ export const routes: Routes = [
     { path: 'my-appointments', component: MyAppointmentsComponent },
     { path: 'login', component: LoginComponent },
     { path: 'admin', component: AdminDashboardComponent, canActivate: [adminGuard] },
+    { path: 'admin/revenue', component: AdminRevenueComponent, canActivate: [adminGuard] },
     { path: '**', redirectTo: '' }
 ];

@@ -1,4 +1,4 @@
-<mat-toolbar class="navbar">
+<mat-toolbar class="navbar" [class.scrolled]="isScrolled">
   <div class="container navbar-container">
     <a routerLink="/" class="logo-link">
       <img src="assets/logo.png" alt="Aladin Barber Shop" class="logo-img">
@@ -10,12 +10,15 @@
       <a mat-button (click)="navigateToSection('top')">ACCUEIL</a>
       <a mat-button (click)="navigateToSection('services-section')">SERVICES</a>
       <a mat-button (click)="navigateToSection('barbers')">BARBIERS</a>
-      <a mat-button [routerLink]="['/my-appointments']">MES RDV</a>
+      <a mat-button [routerLink]="['/my-appointments']" routerLinkActive="active-link">MES RDV</a>
       <a mat-button (click)="navigateToSection('feedbacks')">FEEDBACKS</a>
       <a mat-button (click)="navigateToSection('videos')">VIDÉOS</a>
-      <a mat-button (click)="navigateToSection('booking-section')" class="book-btn">RÉSERVER</a>
+      <a mat-button (click)="navigateToSection('booking-section')" class="book-btn">
+        RÉSERVER
+      </a>
     </div>
 
+    <!-- Mobile Menu -->
     <div class="mobile-only">
       <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="Menu de navigation">
         <mat-icon>menu</mat-icon>

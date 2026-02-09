@@ -1,11 +1,26 @@
 <!-- Hero Section -->
 <div class="hero" id="top">
+  <div class="video-container">
+    <video 
+      autoplay 
+      muted 
+      loop 
+      playsinline 
+      preload="auto"
+      [muted]="true"
+      class="hero-video">
+      <source src="assets/videos/hero.mp4" type="video/mp4">
+      Votre navigateur ne supporte pas la vidéo.
+    </video>
+  </div>
   <div class="hero-overlay"></div>
-  <div class="hero-content">
-    <h1 appScrollReveal [delay]="200">Aladin BarberShop</h1>
-    <p class="subtitle" appScrollReveal [delay]="400">L'Art de l'Élégance Masculine</p>
-    <p class="description" appScrollReveal [delay]="600">Une expérience de coiffure unique, où tradition et modernité se rencontrent.</p>
-    <div class="cta-buttons" appScrollReveal [delay]="800">
+  <div class="hero-content" [style.transform]="'translateY(' + parallaxOffset + 'px)'">
+    <div class="reveal-wrapper">
+      <h1 class="text-reveal">Aladin BarberShop</h1>
+    </div>
+    <p class="subtitle fade-in-up delay-2">L'Art de l'Élégance Masculine</p>
+    <p class="description fade-in-up delay-3">Une expérience de coiffure unique, où tradition et modernité se rencontrent.</p>
+    <div class="cta-buttons fade-in-up delay-4">
       <button mat-raised-button color="primary" (click)="scrollToBooking()" class="cta-btn">RÉSERVER MAINTENANT</button>
       <button mat-stroked-button class="cta-btn-outline" (click)="scrollToBooking()">DÉCOUVRIR</button>
     </div>
@@ -22,7 +37,7 @@
     </div>
 
     <div class="price-list-wrapper" appScrollReveal [delay]="200">
-      <img src="assets/pricelist.jpeg" alt="Liste des prix" class="price-list-img">
+      <img src="assets/pricelist2.jpeg" alt="Liste des prix" class="price-list-img">
     </div>
   </div>
 </div>
@@ -41,7 +56,7 @@
           <mat-icon>star</mat-icon>
         </div>
         <h3>Expertise</h3>
-        <p>Des barbiers passionnés avec plus de 6 ans d'expérience.</p>
+        <p>Des barbiers passionnés avec plus de 9 ans d'expérience.</p>
       </div>
       <div class="feature-item" appScrollReveal [delay]="200">
         <div class="icon-circle">
@@ -73,12 +88,13 @@
     <div class="barbers-grid">
       <div class="barber-card" *ngFor="let barber of barbers; let i = index" appScrollReveal [delay]="(i+1) * 100">
         <div class="barber-img-container">
-            <!-- Placeholder image if no photo provided -->
-            <img [src]="barber.photo || 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'" alt="{{ barber.name }}">
+            <img [src]="'assets/' + barber.photo" *ngIf="barber.photo" alt="{{ barber.name }}">
+            <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" *ngIf="!barber.photo" alt="{{ barber.name }}">
         </div>
         <div class="barber-info">
           <h3>{{ barber.name }}</h3>
           <p class="specialty">{{ barber.speciality }}</p>
+          <p class="description" *ngIf="barber.description">{{ barber.description }}</p>
         </div>
       </div>
 
@@ -97,7 +113,7 @@
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
         </div>
         <div class="barber-info">
-          <h3>Ala</h3>
+          <h3>Aladin</h3>
           <p class="specialty">Barbier</p>
         </div>
       </div>
@@ -195,9 +211,7 @@
             <video controls [src]="v.url"></video>
           </ng-template>
         </div>
-        <mat-card-content>
-          <h4>{{ v.title }}</h4>
-        </mat-card-content>
+        
       </mat-card>
     </div>
   </div>
@@ -213,12 +227,12 @@
       </div>
       <div class="footer-col hours">
         <h3>Horaires</h3>
-        <p><mat-icon>schedule</mat-icon> Mardi - Dimanche: 9h - 21h</p>
+        <p><mat-icon>schedule</mat-icon> Mardi - Dimanche: 10h - 20h</p>
         <p><mat-icon>schedule</mat-icon> Lundi: 12h - 18h</p>
       </div>
       <div class="footer-col contact">
         <h3>Contact</h3>
-        <p><mat-icon>place</mat-icon> Rue Jilani Merchen, Ez Zahra 2034, Tunisie</p>
+        <p><mat-icon>place</mat-icon>20 Rue Jilani Merchen, Ez Zahra 2034, Tunisie</p>
         <p><mat-icon>call</mat-icon> +216 27365496</p>
       </div>
       <div class="footer-col maps">

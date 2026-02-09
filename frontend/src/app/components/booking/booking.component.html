@@ -1,4 +1,5 @@
 <div class="booking-container">
+  <app-loader [visible]="isLoading" message="Finalisation de votre rendez-vous..."></app-loader>
   <mat-card class="booking-card">
     <mat-card-header>
       <mat-card-title>Réserver votre Moment</mat-card-title>
@@ -6,10 +7,53 @@
     </mat-card-header>
 
     <mat-card-content>
-      <form [formGroup]="bookingFormGroup">
+      <div *ngIf="isBookingSuccess" class="success-container fade-in-up">
+        <ng-lottie [options]="options" height="200px" width="200px"></ng-lottie>
+        <h2 class="success-title">Réservation Réussie !</h2>
+        <p>Un email de confirmation vous a été envoyé.</p>
+        <p>Redirection vers l'accueil...</p>
+      </div>
+
+      <form [formGroup]="bookingFormGroup" *ngIf="!isBookingSuccess">
         <mat-stepper orientation="vertical" linear #stepper class="custom-stepper">
           
-          <!-- Step 1: Barber -->
+          <!-- Step 1: Services -->
+          <mat-step [stepControl]="bookingFormGroup.get('servicesCtrl')!">
+            <ng-template matStepLabel>Choisir vos services</ng-template>
+            <div class="step-content">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Services</mat-label>
+                <mat-select formControlName="servicesCtrl" multiple>
+                  <mat-option *ngFor="let service of services" [value]="service">
+                    <div class="service-option">
+                      <span class="service-name">{{service.name}}</span>
+                      <span class="service-price">{{service.price}} DT</span>
+                    </div>
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+              
+              <div class="total-summary" *ngIf="totalSelectedPrice > 0">
+                <p>Total estimé : <strong>{{totalSelectedPrice}} DT</strong></p>
+              </div>
+
+              <!-- Loyalty Reward Application -->
+              <div class="loyalty-reward-selection" *ngIf="canApplyReward">
+                <mat-checkbox formControlName="useRewardCtrl" color="primary">
+                  <div class="reward-info">
+                    <mat-icon>card_giftcard</mat-icon>
+                    <span>Utiliser ma récompense de fidélité (Coupe + Barbe GRATUITE)</span>
+                  </div>
+                </mat-checkbox>
+              </div>
+
+              <div class="actions">
+                <button mat-raised-button color="primary" matStepperNext [disabled]="bookingFormGroup.get('servicesCtrl')?.value?.length === 0">Suivant</button>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 2: Barber -->
           <mat-step [stepControl]="bookingFormGroup.get('barberCtrl')!">
             <ng-template matStepLabel>Choisir un barbier</ng-template>
             <div class="step-content">
@@ -22,6 +66,7 @@
                 </mat-select>
               </mat-form-field>
               <div class="actions">
+                <button mat-button matStepperPrevious>Retour</button>
                 <button mat-raised-button color="primary" matStepperNext>Suivant</button>
               </div>
             </div>
@@ -34,19 +79,19 @@
             <div class="step-content">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Date</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="dateCtrl" (dateChange)="onDateChange()">
+                <input matInput [matDatepicker]="picker" formControlName="dateCtrl" (dateChange)="onDateChange()" [min]="minDate">
                 <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
               </mat-form-field>
       
               <div *ngIf="availableSlots.length > 0" class="slots-container">
-                <h3>Créneaux disponibles :</h3>
+                <h3>Créneaux horaires :</h3>
                 <mat-chip-listbox class="slots-list">
                   <mat-chip-option *ngFor="let slot of availableSlots" 
                             (click)="selectSlot(slot)"
                             [selected]="bookingFormGroup.get('timeCtrl')?.value === slot"
                             color="primary">
-                    {{slot}}
+                    {{slot.substring(0, 5)}}
                   </mat-chip-option>
                 </mat-chip-listbox>
               </div>
@@ -75,11 +120,6 @@
                 <mat-label>Téléphone</mat-label>
                 <input matInput formControlName="phone" required>
               </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Email</mat-label>
-                <input matInput formControlName="email" required>
-              </mat-form-field>
       
               <div class="actions">
                 <button mat-button matStepperPrevious>Retour</button>
@@ -93,9 +133,19 @@
             <ng-template matStepLabel>Confirmation</ng-template>
             <div class="step-content summary">
               <h3>Résumé de votre réservation</h3>
-              <!-- Service is hidden but still technically required by backend, we might need to default it or hide it -->
+              
+              <div class="summary-section">
+                <p><strong>Services:</strong></p>
+                <ul>
+                  <li *ngFor="let s of bookingFormGroup.get('servicesCtrl')?.value">
+                    {{s.name}} ({{s.price}} DT)
+                  </li>
+                </ul>
+                <p class="summary-total">Total : <strong>{{totalSelectedPrice}} DT</strong></p>
+              </div>
+
               <p><strong>Barbier:</strong> {{bookingFormGroup.get('barberCtrl')?.value?.name}}</p>
-              <p><strong>Date:</strong> {{bookingFormGroup.get('dateCtrl')?.value | date}} à {{bookingFormGroup.get('timeCtrl')?.value}}</p>
+              <p><strong>Date:</strong> {{bookingFormGroup.get('dateCtrl')?.value | date:'dd/MM/yyyy'}} à {{bookingFormGroup.get('timeCtrl')?.value}}</p>
               <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
               
               <div class="actions">

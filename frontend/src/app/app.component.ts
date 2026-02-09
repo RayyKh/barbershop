@@ -23,14 +23,14 @@ export class AppComponent implements OnInit {
 
   ngOnInit() {
     this.router.events.pipe(
-      filter((e: any): e is Scroll => e instanceof Scroll)
+      filter((e): e is Scroll => e instanceof Scroll)
     ).subscribe(e => {
       if (e.anchor) {
         // More robust manual scroll
         setTimeout(() => {
           const element = document.getElementById(e.anchor!);
           if (element) {
-            // Using scrollIntoView which is more reliable than scrollToAnchor in some cases
+            // Revert to simple scrollIntoView which worked for the user before
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } else {
             // Fallback to native viewport scroller

@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Entity
 @Data
@@ -35,11 +36,19 @@ public class Appointment {
     @JoinColumn(name = "barber_id")
     private Barber barber;
 
-    @ManyToOne
-    @JoinColumn(name = "service_id")
-    private Service service;
+    @ManyToMany
+    @JoinTable(
+        name = "appointment_services",
+        joinColumns = @JoinColumn(name = "appointment_id"),
+        inverseJoinColumns = @JoinColumn(name = "service_id")
+    )
+    private List<Service> services = new java.util.ArrayList<>();
+
+    private Double totalPrice;
 
     private boolean adminViewed = false;
+
+    private boolean rewardApplied = false;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -55,8 +64,12 @@ public class Appointment {
     public void setUser(User user) { this.user = user; }
     public Barber getBarber() { return barber; }
     public void setBarber(Barber barber) { this.barber = barber; }
-    public Service getService() { return service; }
-    public void setService(Service service) { this.service = service; }
+    public List<Service> getServices() { return services; }
+    public void setServices(List<Service> services) { this.services = services; }
+    public Double getTotalPrice() { return totalPrice; }
+    public void setTotalPrice(Double totalPrice) { this.totalPrice = totalPrice; }
     public boolean isAdminViewed() { return adminViewed; }
     public void setAdminViewed(boolean adminViewed) { this.adminViewed = adminViewed; }
+    public boolean isRewardApplied() { return rewardApplied; }
+    public void setRewardApplied(boolean rewardApplied) { this.rewardApplied = rewardApplied; }
 }

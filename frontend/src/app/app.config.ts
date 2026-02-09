@@ -4,6 +4,8 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideRouter, withInMemoryScrolling, withRouterConfig } from '@angular/router';
 
 import { provideServiceWorker } from '@angular/service-worker';
+import player from 'lottie-web';
+import { provideLottieOptions } from 'ngx-lottie';
 import { routes } from './app.routes';
 import { authInterceptor } from './interceptors/auth.interceptor';
 
@@ -17,6 +19,9 @@ export const appConfig: ApplicationConfig = {
     })),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     provideAnimations(),
+    provideLottieOptions({
+        player: () => player,
+    }),
     provideServiceWorker('ngsw-worker.js', {
         enabled: true, // Force enabled for local Push testing
         registrationStrategy: 'registerWhenStable:30000'

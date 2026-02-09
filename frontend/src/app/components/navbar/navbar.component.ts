@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -17,9 +17,25 @@ import { ApiService } from '../../services/api.service';
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   newCount = 0;
+  isScrolled = false;
   private sub?: Subscription;
 
-  constructor(private api: ApiService, private router: Router) {}
+  constructor(
+    private api: ApiService, 
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {}
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    const scrollOffset = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    const newState = scrollOffset > 20;
+    
+    if (this.isScrolled !== newState) {
+      this.isScrolled = newState;
+      this.cdr.detectChanges(); // Forcer Angular à mettre à jour la vue
+    }
+  }
 
   ngOnInit(): void {
     this.refreshCount();

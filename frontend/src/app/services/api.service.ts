@@ -8,6 +8,11 @@ export interface User {
   name: string;
   email?: string;
   phone: string;
+  totalAppointments?: number;
+  availableRewards?: number;
+  usedRewards?: number;
+  roles?: string[];
+  role?: 'ADMIN' | 'CLIENT';
 }
 
 export interface Service {
@@ -23,6 +28,7 @@ export interface Barber {
   name: string;
   speciality: string;
   photo: string;
+  description?: string;
 }
 
 export interface Appointment {
@@ -31,20 +37,61 @@ export interface Appointment {
   startTime: string;
   endTime: string;
   status: 'BOOKED' | 'CANCELLED' | 'DONE' | 'BLOCKED' | 'MODIFIED';
-  user: User;
+  user?: User;
   barber: Barber;
-  service: Service;
+  services: Service[];
+  totalPrice: number;
   adminViewed?: boolean;
+  rewardApplied?: boolean;
 }
 
 export interface AppointmentRequest {
   barberId: number;
-  serviceId: number;
+  serviceIds: number[];
   date: string;
   startTime: string;
   userName?: string;
   userPhone?: string;
   userEmail?: string;
+  useReward?: boolean;
+}
+
+export interface RevenueDetail {
+  appointmentId: number;
+  clientName: string;
+  services: string;
+  price: number;
+  date: string;
+}
+
+export interface DailyRevenue {
+  date: string;
+  details: RevenueDetail[];
+  totalRevenue: number;
+}
+
+export interface WeeklyRevenue {
+  weekNumber: number;
+  year: number;
+  weekRange: string;
+  details: RevenueDetail[];
+  totalRevenue: number;
+}
+
+export interface RevenueReport {
+  barberId: number;
+  barberName: string;
+  dailyRevenues: DailyRevenue[];
+  weeklyRevenues: WeeklyRevenue[];
+}
+
+export interface BlockedSlot {
+  id?: number;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  barber?: Barber;
+  reason?: string;
 }
 
 @Injectable({
@@ -57,6 +104,9 @@ export class ApiService {
   
   private appointmentsChangedSubject = new Subject<void>();
   appointmentsChanged$ = this.appointmentsChangedSubject.asObservable();
+
+  private blockedSlotsChangedSubject = new Subject<void>();
+  blockedSlotsChanged$ = this.blockedSlotsChangedSubject.asObservable();
 
   private evtSource?: EventSource;
 
@@ -106,6 +156,10 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/notifications/unsubscribe`, endpoint);
   }
 
+  getCurrentUser(): Observable<User> {
+    return this.http.get<User>(`${this.baseUrl}/auth/me`);
+  }
+
   notifyAppointmentBooked(appt: Appointment): void {
     this.appointmentBookedSubject.next(appt);
     this.appointmentsChangedSubject.next();
@@ -118,22 +172,44 @@ export class ApiService {
   getBarbers(): Observable<Barber[]> {
     return this.http.get<Barber[]>(`${this.baseUrl}/barbers`).pipe(
       map((barbers) => {
-        const desiredNames = ['Ala', 'Hamouda', 'Ahmed'];
+        const descriptions: { [key: string]: { specialty: string, desc: string } } = {
+          'Aladin': {
+            specialty: 'Barber – Expert en Détails',
+            desc: 'Perfectionniste dans les moindres détails : contours, barbe, finitions et rasage. Chaque coupe est soignée jusqu’à la dernière touche.'
+          },
+          'Hamouda': {
+            specialty: 'Barber – Style & Créativité',
+            desc: 'Passionné par les tendances et la créativité. Il propose des looks uniques et modernes, avec une touche artistique qui fait la différence.'
+          },
+          'Ahmed': {
+            specialty: 'Barber – Spécialiste Type Fade',
+            desc: 'Spécialisé dans le Type Fade, ce barbier maîtrise les dégradés précis et équilibrés, parfaitement adaptés à la morphologie du visage. Idéal pour un style moderne et net.'
+          }
+        };
+
+        const desiredNames = ['Aladin', 'Hamouda', 'Ahmed'];
         const transformed = barbers.slice(0);
+        
         for (let i = 0; i < Math.min(desiredNames.length, transformed.length); i++) {
+          const name = desiredNames[i];
           transformed[i] = {
             ...transformed[i],
-            name: desiredNames[i],
-            speciality: transformed[i].speciality || 'Barbier',
+            name: name,
+            speciality: descriptions[name]?.specialty || transformed[i].speciality || 'Barbier',
+            description: descriptions[name]?.desc || transformed[i].description,
+            photo: name === 'Aladin' ? 'ala.jpeg' : `${name.toLowerCase()}.jpeg`
           };
         }
+        
         if (transformed.length < desiredNames.length) {
           for (let i = transformed.length; i < desiredNames.length; i++) {
+            const name = desiredNames[i];
             transformed.push({
               id: 1000 + i,
-              name: desiredNames[i],
-              speciality: 'Barbier',
-              photo: ''
+              name: name,
+              speciality: descriptions[name]?.specialty || 'Barbier',
+              description: descriptions[name]?.desc,
+              photo: `${name.toLowerCase()}.jpeg`
             });
           }
         }
@@ -171,8 +247,14 @@ export class ApiService {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/view`, {});
   }
 
-  lockSlot(barberId: number, date: string, startTime: string): Observable<Appointment> {
+  updateAppointmentStatus(id: number, status: string): Observable<Appointment> {
+    return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/status?status=${status}`, {});
+  }
+
+  lockSlot(barberId: number, date: string, startTime: string, name?: string, phone?: string): Observable<Appointment> {
     const params = new URLSearchParams({ barberId: String(barberId), date, startTime });
+    if (name) params.set('name', name);
+    if (phone) params.set('phone', phone);
     return this.http.post<Appointment>(`${this.baseUrl}/appointments/lock?${params.toString()}`, {});
   }
 
@@ -185,6 +267,10 @@ export class ApiService {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/cancel`, {});
   }
 
+  deleteAppointment(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/appointments/${id}`);
+  }
+
   modifyAppointment(id: number, date: string, startTime: string): Observable<Appointment> {
     const params = new URLSearchParams({ date, startTime });
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/modify?${params.toString()}`, {});
@@ -192,6 +278,13 @@ export class ApiService {
 
   getNewAppointmentsCount(): Observable<number> {
     return this.http.get<number>(`${this.baseUrl}/appointments/new-count`);
+  }
+
+  getRevenueReport(barberId: number, date?: string): Observable<RevenueReport> {
+    const url = date 
+      ? `${this.baseUrl}/appointments/revenue-report/${barberId}?date=${date}`
+      : `${this.baseUrl}/appointments/revenue-report/${barberId}`;
+    return this.http.get<RevenueReport>(url);
   }
 
   filterAppointments(params: { barberId?: number; date?: string; status?: string; q?: string; sort?: string }): Observable<Appointment[]> {
@@ -203,6 +296,36 @@ export class ApiService {
     if (params.sort) usp.set('sort', params.sort);
     const qs = usp.toString();
     return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/filter${qs ? '?' + qs : ''}`);
+  }
+
+  // Blocked Slots (Admin)
+  getBlockedSlots(): Observable<BlockedSlot[]> {
+    return this.http.get<BlockedSlot[]>(`${this.baseUrl}/appointments/blocked`);
+  }
+
+  blockSlot(date: string, startTime?: string, endTime?: string, barberId?: number, reason?: string): Observable<BlockedSlot> {
+    const params = new URLSearchParams({ date });
+    if (startTime) params.set('startTime', startTime);
+    if (endTime) params.set('endTime', endTime);
+    if (barberId) params.set('barberId', String(barberId));
+    if (reason) params.set('reason', reason);
+    return this.http.post<BlockedSlot>(`${this.baseUrl}/appointments/blocked?${params.toString()}`, {}).pipe(
+      map(res => {
+        this.blockedSlotsChangedSubject.next();
+        this.appointmentsChangedSubject.next();
+        return res;
+      })
+    );
+  }
+
+  deleteBlockedSlot(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/appointments/blocked/${id}`).pipe(
+      map(res => {
+        this.blockedSlotsChangedSubject.next();
+        this.appointmentsChangedSubject.next();
+        return res;
+      })
+    );
   }
 
   // Auth

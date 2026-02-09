@@ -58,15 +58,24 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> 
                 auth.requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/services/**").permitAll() // Public Read
-                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/barbers/**").permitAll() // Public Read
-                    .requestMatchers("/api/appointments/available").permitAll() // Public
+                    .requestMatchers("/api/appointments/available").permitAll()
                     .requestMatchers("/api/appointments/book").permitAll()
                     .requestMatchers("/api/appointments/by-contact").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/services/**").permitAll()
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/barbers/**").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/cancel").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/modify").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
-                    .anyRequest().authenticated() // All other requests require auth
+                    // All other admin endpoints
+                    .requestMatchers("/api/appointments/revenue-report/**").hasRole("ADMIN")
+                    .requestMatchers("/api/appointments/blocked", "/api/appointments/blocked/**").hasRole("ADMIN")
+                    .requestMatchers("/api/appointments/new-count").hasRole("ADMIN")
+                    .requestMatchers("/api/appointments/*/view").hasRole("ADMIN")
+                    .requestMatchers("/api/appointments/stream").hasRole("ADMIN")
+                    .requestMatchers("/api/appointments", "/api/appointments/**").hasRole("ADMIN")
+                    .requestMatchers("/api/services/**").hasRole("ADMIN")
+                    .requestMatchers("/api/barbers/**").hasRole("ADMIN")
+                    .anyRequest().authenticated()
             );
         
         // fix H2 console
@@ -82,17 +91,10 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Allow localhost and the specific network IP, or use patterns for development
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:4200",
-            "http://127.0.0.1:4200",
-            "http://192.168.*:4200",
-            "http://192.168.100.*:4200",
-            "http://192.168.100.9:4200",
-            "http://*:4200"
-        ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("*")); // Plus permissif pour le debug
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

@@ -8,7 +8,7 @@
 .admin-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 120px 20px 40px;
+  padding: 160px 20px 40px;
 }
 
 .admin-card {
@@ -26,6 +26,18 @@
 
 .header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.revenue-btn {
+  color: #d4af37 !important;
+  margin-right: 8px;
+  
+  mat-icon {
+    margin-right: 4px;
+  }
 }
 
 .logout-btn {
@@ -38,25 +50,166 @@
   filter: brightness(1.1);
 }
 
+.lock-tabs {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  
+  button {
+    color: #fff;
+    opacity: 0.6;
+    border-radius: 0;
+    padding: 8px 16px;
+    
+    &.active {
+      opacity: 1;
+      color: #d4af37;
+      border-bottom: 2px solid #d4af37;
+    }
+  }
+}
+
+.blocked-slots-list {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  
+  h4 {
+    color: #d4af37;
+    margin-bottom: 16px;
+  }
+}
+
+.blocked-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  
+  .info {
+    font-size: 0.95rem;
+    color: #fff;
+    
+    strong { color: #d4af37; }
+    em { color: #aaa; margin-left: 8px; font-style: normal; font-size: 0.85rem; }
+  }
+}
+
+.lock-form {
+  ::ng-deep {
+    .mat-mdc-form-field-label {
+      color: rgba(255, 255, 255, 0.7) !important;
+    }
+    .mat-mdc-select-value {
+      color: #fff !important;
+    }
+    .mat-mdc-select-arrow {
+      color: #d4af37 !important;
+    }
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing {
+      border-color: rgba(212, 175, 55, 0.5) !important;
+    }
+
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused):hover .mdc-notched-outline__leading,
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused):hover .mdc-notched-outline__notch,
+    .mdc-text-field--outlined:not(.mdc-text-field--disabled):not(.mdc-text-field--focused):hover .mdc-notched-outline__trailing {
+      border-color: rgba(212, 175, 55, 0.8) !important;
+    }
+
+    .mat-mdc-form-field-flex {
+      background-color: rgba(255, 255, 255, 0.05) !important;
+      border-radius: 4px;
+    }
+  }
+}
+
 .lock-form .full-width {
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+}
+
+.manual-booking-fields {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+
+  .half-width {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .manual-booking-fields {
+    flex-direction: column;
+    gap: 0;
+  }
 }
 
 .hours {
   margin: 10px 0 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 8px;
 }
 
-.list {
+.actions {
+  display: flex;
+  justify-content: flex-end;
   margin-top: 20px;
+  
+  button {
+    min-width: 150px;
+    height: 45px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+}
+
+.list-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  
+  h3 {
+    margin: 0;
+    color: #d4af37;
+    font-size: 1.4rem;
+  }
+}
+
+.list-section {
+  margin-top: 40px;
+  border-top: 1px solid rgba(212, 175, 55, 0.3);
+  padding-top: 20px;
 }
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1.5fr 1fr;
   padding: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.1);
   align-items: center;
+}
+
+.services-list {
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.total-amount {
+  color: #d4af37;
+  font-weight: bold;
+  margin-top: 4px;
 }
 
 .desktop-only { display: grid; }
@@ -124,6 +277,25 @@
   margin-top: 12px;
   display: flex;
   justify-content: flex-end;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-btn {
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  padding: 0 !important;
+  
+  mat-icon {
+    font-size: 18px !important;
+    width: 18px !important;
+    height: 18px !important;
+  }
 }
 
 .pill-new.mini {

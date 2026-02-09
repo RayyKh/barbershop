@@ -81,8 +81,10 @@ public class PushNotificationService {
 
                 Notification notification = new Notification(
                     subscription,
-                    String.format("{\"notification\":{\"title\":\"%s\", \"body\":\"%s\", \"icon\":\"/assets/logo.png\", \"badge\":\"/assets/logo.png\"}}", title, message)
+                    String.format("{\"notification\":{\"title\":\"%s\", \"body\":\"%s\", \"icon\":\"/assets/logo.png\"}}", title, message)
                 );
+                
+                System.out.println("DEBUG: JSON envoyé -> " + notification.getPayload());
 
                 pushService.send(notification);
                 System.out.println("DEBUG: Notification envoyée avec succès à l'endpoint: " + sub.getEndpoint());

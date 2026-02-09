@@ -1,11 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
@@ -14,9 +15,48 @@ import { ApiService, Appointment } from '../../services/api.service';
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule, MatChipsModule, MatCardModule, MatSnackBarModule],
+  imports: [CommonModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule, MatChipsModule, MatCardModule, MatSnackBarModule, MatIconModule],
   template: `
     <div class="container">
+      <!-- Loyalty Progress Section -->
+      <mat-card class="loyalty-card" *ngIf="user">
+        <mat-card-content>
+          <div class="loyalty-header">
+            <h3>Votre Fidélité</h3>
+            <div class="reward-badge" *ngIf="user.availableRewards > 0">
+              <mat-icon>card_giftcard</mat-icon>
+              <span>{{ user.availableRewards }} Récompense(s) disponible(s) !</span>
+            </div>
+          </div>
+          
+          <div class="loyalty-stats">
+            <div class="stat-item">
+              <span class="stat-value">{{ user.totalAppointments || 0 }}</span>
+              <span class="stat-label">Rendez-vous terminés</span>
+            </div>
+            <div class="stat-item progress-container">
+              <div class="progress-info">
+                <span>Progression vers la prochaine récompense</span>
+                <span>{{ (user.totalAppointments || 0) % 10 }}/10</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" [style.width.%]="((user.totalAppointments || 0) % 10) * 10"></div>
+              </div>
+              <p class="loyalty-tip" *ngIf="user.availableRewards > 0">
+                Une "Coupe + Barbe" gratuite sera appliquée à votre prochaine réservation de ce service !
+              </p>
+              <p class="loyalty-tip" *ngIf="user.availableRewards === 0">
+                Encore {{ 10 - ((user.totalAppointments || 0) % 10) }} rendez-vous pour votre prochaine récompense !
+              </p>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ user.usedRewards || 0 }}</span>
+              <span class="stat-label">Récompenses utilisées</span>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
       <mat-card class="client-card">
         <mat-card-header>
           <mat-card-title>Mes Rendez-vous</mat-card-title>
@@ -35,12 +75,18 @@ import { ApiService, Appointment } from '../../services/api.service';
 
           <ng-container matColumnDef="time">
             <th mat-header-cell *matHeaderCellDef> Heure </th>
-            <td mat-cell *matCellDef="let element"> {{element.startTime}} </td>
+            <td mat-cell *matCellDef="let element"> {{element.startTime.substring(0, 5)}} </td>
           </ng-container>
 
           <ng-container matColumnDef="service">
-            <th mat-header-cell *matHeaderCellDef> Service </th>
-            <td mat-cell *matCellDef="let element"> {{element.service.name}} </td>
+            <th mat-header-cell *matHeaderCellDef> Services </th>
+            <td mat-cell *matCellDef="let element">
+              <div *ngFor="let s of element.services">• {{s.name}}</div>
+              <div class="total-price" [class.free]="element.rewardApplied">
+                {{element.totalPrice}} DT
+                <span class="reward-tag" *ngIf="element.rewardApplied">OFFERT (Fidélité)</span>
+              </div>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="barber">
@@ -80,7 +126,7 @@ import { ApiService, Appointment } from '../../services/api.service';
                 <div class="hours">
                   <mat-chip-listbox>
                     <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
-                      {{ h }}
+                      {{ h.substring(0, 5) }}
                     </mat-chip-option>
                   </mat-chip-listbox>
                 </div>
@@ -106,11 +152,14 @@ import { ApiService, Appointment } from '../../services/api.service';
               </div>
               <div class="card-row">
                 <span class="label">Heure:</span>
-                <span class="value">{{element.startTime}}</span>
+                <span class="value">{{element.startTime.substring(0, 5)}}</span>
               </div>
               <div class="card-row">
-                <span class="label">Service:</span>
-                <span class="value">{{element.service.name}}</span>
+                <span class="label">Services:</span>
+                <span class="value">
+                  <div *ngFor="let s of element.services" style="text-align: right">• {{s.name}}</div>
+                  <div style="text-align: right; font-weight: bold; color: #d4af37; margin-top: 4px;">{{element.totalPrice}} DT</div>
+                </span>
               </div>
               <div class="card-row">
                 <span class="label">Barbier:</span>
@@ -137,7 +186,7 @@ import { ApiService, Appointment } from '../../services/api.service';
                 <div class="hours">
                   <mat-chip-listbox class="mobile-chips">
                     <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
-                      {{ h }}
+                      {{ h.substring(0, 5) }}
                     </mat-chip-option>
                   </mat-chip-listbox>
                 </div>
@@ -160,6 +209,43 @@ import { ApiService, Appointment } from '../../services/api.service';
     :host { display: block; background: #000; min-height: 100vh; width: 100%; }
     .container { max-width: 1200px; margin: 0 auto; padding: 120px 20px 40px; }
     .client-card { color: #fff; background: #000 !important; border: 1px solid #d4af37 !important; border-radius: 12px; }
+    
+    .loyalty-card { 
+      color: #fff; 
+      background: #121212 !important; 
+      border: 1px solid #d4af37 !important; 
+      border-radius: 12px; 
+      margin-bottom: 24px;
+      padding: 8px;
+    }
+    .loyalty-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .loyalty-header h3 { color: #d4af37; margin: 0; font-family: 'Playfair Display', serif; font-size: 1.5rem; }
+    .reward-badge { 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      background: rgba(212, 175, 55, 0.2); 
+      color: #d4af37; 
+      padding: 8px 16px; 
+      border-radius: 20px; 
+      border: 1px solid #d4af37;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+      70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+    }
+    .loyalty-stats { display: flex; gap: 24px; align-items: flex-start; }
+    .stat-item { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: bold; color: #d4af37; }
+    .stat-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+    .progress-container { flex: 1; align-items: stretch; text-align: left; }
+    .progress-info { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #fff; }
+    .progress-bar-bg { background: rgba(255,255,255,0.1); height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+    .progress-bar-fill { background: linear-gradient(90deg, #d4af37, #f1c40f); height: 100%; transition: width 0.5s ease-out; }
+    .loyalty-tip { font-size: 0.85rem; color: #d4af37; font-style: italic; margin: 0; }
+
     .client-card mat-card-header { margin-bottom: 20px; }
     .client-card mat-card-header mat-card-title { color: #d4af37; font-size: 1.8rem; font-family: 'Playfair Display', serif; }
     .client-card mat-card-header mat-card-subtitle { color: #aaaaaa; }
@@ -172,6 +258,19 @@ import { ApiService, Appointment } from '../../services/api.service';
     ::ng-deep .mat-mdc-cell { color: #fff !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; padding: 12px 8px !important; }
     
     .action-buttons { display: flex; gap: 8px; }
+    .total-price { color: #d4af37; font-weight: bold; margin-top: 4px; font-size: 1.1rem; }
+    .total-price.free { color: #2ecc71; text-decoration: line-through; opacity: 0.7; font-size: 0.9rem; }
+    .reward-tag { 
+      display: inline-block; 
+      background: #2ecc71; 
+      color: #fff; 
+      padding: 2px 8px; 
+      border-radius: 4px; 
+      font-size: 0.75rem; 
+      margin-left: 8px; 
+      text-decoration: none !important;
+      opacity: 1 !important;
+    }
     .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
     .hours { margin: 8px 0; }
     .full-width { width: 100%; }
@@ -207,12 +306,14 @@ import { ApiService, Appointment } from '../../services/api.service';
     ::ng-deep .mat-mdc-input-element { color: #fff !important; }
   `]
 })
-export class MyAppointmentsComponent implements OnInit {
+export class MyAppointmentsComponent implements OnInit, OnDestroy {
   appointments: Appointment[] = [];
+  user: any = null;
   displayedColumns: string[] = ['date', 'time', 'service', 'barber', 'status', 'actions'];
   modifying: Record<number, { date: Date; slots: string[]; time?: string }> = {};
   contactEmail: string = '';
   contactPhone: string = '';
+  private refreshInterval: any;
 
   constructor(private apiService: ApiService, private snackBar: MatSnackBar) {}
 
@@ -221,7 +322,28 @@ export class MyAppointmentsComponent implements OnInit {
       this.snackBar.open('Nouveau rendez-vous ajouté', 'OK', { duration: 3000 });
       this.reloadAppointments();
     });
+
+    this.apiService.appointmentsChanged$.subscribe(() => {
+      this.reloadAppointments();
+    });
+    
+    const userJson = sessionStorage.getItem('user');
+    if (userJson) {
+      this.user = JSON.parse(userJson);
+    }
+
     this.reloadAppointments();
+
+    // Refresh every 30 seconds to catch status updates from admin
+    this.refreshInterval = setInterval(() => {
+      this.reloadAppointments();
+    }, 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   reloadAppointments() {
@@ -231,6 +353,19 @@ export class MyAppointmentsComponent implements OnInit {
     
     this.contactEmail = savedEmail || '';
     this.contactPhone = savedPhone || '';
+
+    // Refresh user profile if logged in to get latest loyalty points
+    if (token) {
+      console.log('Refreshing user profile for logged in user...');
+      this.apiService.getCurrentUser().subscribe({
+        next: (user) => {
+          console.log('User profile refreshed:', user);
+          this.user = user;
+          sessionStorage.setItem('user', JSON.stringify(user));
+        },
+        error: (err) => console.error('Error refreshing user profile', err)
+      });
+    }
 
     if (token) {
       this.apiService.getMyAppointments().subscribe({
@@ -253,18 +388,48 @@ export class MyAppointmentsComponent implements OnInit {
   }
 
   private fetchByContact(email?: string, phone?: string) {
+    const token = sessionStorage.getItem('token');
     this.apiService.getAppointmentsByContact(email, phone).subscribe({
       next: (list) => {
-        // Merge results and avoid duplicates
-        const currentIds = new Set(this.appointments.map(a => a.id));
-        const newItems = list.filter(a => !currentIds.has(a.id));
-        this.appointments = [...this.appointments, ...newItems];
+        // Merge results and avoid duplicates, but update existing ones with fresh data
+        const updatedAppointments = [...this.appointments];
+        list.forEach(newApp => {
+          const index = updatedAppointments.findIndex(a => a.id === newApp.id);
+          if (index > -1) {
+            updatedAppointments[index] = newApp;
+          } else {
+            updatedAppointments.push(newApp);
+          }
+        });
+
         // Sort by date and time
-        this.appointments.sort((a, b) => {
+        updatedAppointments.sort((a, b) => {
           const dateA = new Date(a.date + 'T' + a.startTime);
           const dateB = new Date(b.date + 'T' + b.startTime);
           return dateB.getTime() - dateA.getTime(); // Newest first
         });
+
+        this.appointments = updatedAppointments;
+
+        // Extract latest user info from the most recent appointment to ensure loyalty points are updated.
+        // We do this if we are not logged in, OR if the logged-in user is an ADMIN (to allow testing the client dashboard).
+        const isGuestMode = !token;
+        const isAdminMode = this.user && (this.user.role === 'ADMIN' || (this.user.roles && this.user.roles.includes('ROLE_ADMIN')));
+        
+        if ((isGuestMode || isAdminMode) && this.appointments.length > 0) {
+          console.log('Extracting user from latest appointment (Mode: ' + (isGuestMode ? 'Guest' : 'Admin Test') + ')...');
+          // Sort locally first to find the most recent one with user data
+          const sorted = [...this.appointments].sort((a, b) => b.id - a.id);
+          const latestWithUser = sorted.find(a => a.user);
+          if (latestWithUser && latestWithUser.user) {
+            console.log('Found user in appointment:', latestWithUser.user);
+            this.user = { ...latestWithUser.user };
+            // Also update session storage if in guest mode
+            if (isGuestMode) {
+              sessionStorage.setItem('user', JSON.stringify(this.user));
+            }
+          }
+        }
       },
       error: (err) => {
         console.error('Error fetching appointments by contact', err);

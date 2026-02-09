@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,8 +26,9 @@ import { BookingComponent } from '../booking/booking.component';
 export class HomeComponent implements OnInit {
   services: Service[] = [];
   barbers: Barber[] = [];
+  parallaxOffset = 0;
   videos: { title: string; url: string }[] = [
-    { title: 'Salon de coiffure', url: 'assets/shop.mp4' },
+    { title: 'Salon de coiffure', url: 'assets/short7.mp4' },
     { title: 'Taille de barbe', url: 'assets/short4.mp4' },
     { title: 'Fade moderne', url: 'assets/short3.mp4' },
     { title: 'Coupe classique', url: 'assets/short1.mp4' },
@@ -43,7 +44,7 @@ export class HomeComponent implements OnInit {
     'assets/pic5.png',
     'assets/pic6.png',
     'assets/pic7.png',
-    'assets/pic2.png'
+    'assets/pic8.png'
   ];
 
   galleryChunks: string[][] = [];
@@ -61,6 +62,15 @@ export class HomeComponent implements OnInit {
   ];
 
   constructor(private apiService: ApiService) {}
+
+  @HostListener('window:scroll', [])
+  onWindowScroll() {
+    const scrollOffset = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+    // On n'applique le parallaxe que si on est dans le haut de la page (Hero section visible)
+    if (scrollOffset < window.innerHeight) {
+      this.parallaxOffset = scrollOffset * 0.4; // Ajuster le 0.4 pour plus ou moins de décalage
+    }
+  }
 
   ngOnInit() {
     this.apiService.getServices().subscribe(data => {

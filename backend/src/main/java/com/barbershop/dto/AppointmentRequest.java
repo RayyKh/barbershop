@@ -7,7 +7,7 @@ import java.time.LocalTime;
 @Data
 public class AppointmentRequest {
     private Long barberId;
-    private Long serviceId;
+    private java.util.List<Long> serviceIds;
     private LocalDate date;
     private LocalTime startTime;
     
@@ -15,12 +15,15 @@ public class AppointmentRequest {
     private String userName;
     private String userPhone;
     private String userEmail;
+    private boolean useReward;
 
     public Long getBarberId() { return barberId; }
-    public Long getServiceId() { return serviceId; }
+    public java.util.List<Long> getServiceIds() { return serviceIds; }
     public LocalDate getDate() { return date; }
     public LocalTime getStartTime() { return startTime; }
     public String getUserName() { return userName; }
     public String getUserPhone() { return userPhone; }
     public String getUserEmail() { return userEmail; }
+    public boolean isUseReward() { return useReward; }
+    public void setUseReward(boolean useReward) { this.useReward = useReward; }
 }

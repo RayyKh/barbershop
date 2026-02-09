@@ -56,7 +56,10 @@ public class AuthController {
                     user.getId(),
                     user.getUsername(),
                     user.getEmail(),
-                    roles));
+                    roles,
+                    user.getTotalAppointments(),
+                    user.getAvailableRewards(),
+                    user.getUsedRewards()));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(401).body(new MessageResponse("Authentication failed: " + e.getMessage()));
@@ -91,5 +94,27 @@ public class AuthController {
         userRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully!");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body(new MessageResponse("Not authenticated"));
+        }
+
+        String username = authentication.getName();
+        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        List<String> roles = user.getRole() == User.Role.ADMIN ? List.of("ROLE_ADMIN") : List.of("ROLE_CLIENT");
+
+        return ResponseEntity.ok(new JwtResponse("",
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                roles,
+                user.getTotalAppointments(),
+                user.getAvailableRewards(),
+                user.getUsedRewards()));
     }
 }

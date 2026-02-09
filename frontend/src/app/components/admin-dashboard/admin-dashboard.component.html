@@ -7,43 +7,136 @@
         <button mat-icon-button [color]="isPushEnabled ? 'primary' : 'warn'" (click)="togglePush()" [title]="isPushEnabled ? 'Notifications activées' : 'Activer les notifications'">
           <mat-icon>{{ isPushEnabled ? 'notifications_active' : 'notifications_off' }}</mat-icon>
         </button>
+        <button mat-button class="revenue-btn" routerLink="/admin/revenue">
+          <mat-icon>monetization_on</mat-icon>
+          Revenus
+        </button>
         <button mat-button class="logout-btn" (click)="logout()">Déconnexion</button>
       </div>
     </mat-card-header>
     <mat-card-content>
       <section class="lock-section">
-        <h3>Verrouiller un créneau</h3>
-        <form [formGroup]="lockForm" class="lock-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Barbier</mat-label>
-            <mat-select formControlName="barber">
-              <mat-option *ngFor="let b of barbers" [value]="b">{{ b.name }}</mat-option>
-            </mat-select>
-          </mat-form-field>
+        <div class="lock-tabs">
+          <button mat-button [class.active]="activeTab === 'manual'" (click)="activeTab = 'manual'">Réservation Manuelle</button>
+          <button mat-button [class.active]="activeTab === 'block'" (click)="activeTab = 'block'">Bloquer Jours/Heures</button>
+        </div>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="date">
-            <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-          </mat-form-field>
+        <div *ngIf="activeTab === 'manual'">
+          <h3>Verrouiller un créneau (Client Direct)</h3>
+          <form [formGroup]="lockForm" class="lock-form">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Barbier</mat-label>
+              <mat-select formControlName="barber">
+                <mat-option *ngFor="let b of barbers" [value]="b">{{ b.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
 
-          <div class="hours">
-            <mat-chip-listbox>
-              <mat-chip-option *ngFor="let h of availableHours" [selected]="lockForm.value.time===h" (click)="lockForm.patchValue({ time: h })">
-                {{ h }}
-              </mat-chip-option>
-            </mat-chip-listbox>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Date</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="date">
+              <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-datepicker #picker></mat-datepicker>
+            </mat-form-field>
+
+            <div class="manual-booking-fields">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Nom (Optionnel)</mat-label>
+                <input matInput formControlName="name" placeholder="Nom du client">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Téléphone (Optionnel)</mat-label>
+                <input matInput formControlName="phone" placeholder="Numéro de téléphone">
+              </mat-form-field>
+            </div>
+
+            <div class="hours">
+              <mat-chip-listbox>
+                <mat-chip-option *ngFor="let h of availableHours" [selected]="lockForm.value.time===h" (click)="lockForm.patchValue({ time: h })">
+                  {{ h.substring(0, 5) }}
+                </mat-chip-option>
+              </mat-chip-listbox>
+            </div>
+
+            <div class="actions">
+              <button mat-raised-button color="primary" (click)="lockSlot()" [disabled]="!lockForm.valid">Verrouiller</button>
+            </div>
+          </form>
+        </div>
+
+        <div *ngIf="activeTab === 'block'">
+          <h3>Bloquer des jours ou des heures</h3>
+          <form [formGroup]="adminBlockForm" class="lock-form">
+            <div class="manual-booking-fields">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Barbier (Optionnel - Tous si vide)</mat-label>
+                <mat-select formControlName="barberId">
+                  <mat-option [value]="null">Tous les barbiers</mat-option>
+                  <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Date</mat-label>
+                <input matInput [matDatepicker]="blockPicker" formControlName="date">
+                <mat-datepicker-toggle matIconSuffix [for]="blockPicker"></mat-datepicker-toggle>
+                <mat-datepicker #blockPicker></mat-datepicker>
+              </mat-form-field>
+            </div>
+
+            <div class="manual-booking-fields">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Heure de début (Optionnel)</mat-label>
+                <mat-select formControlName="startTime">
+                  <mat-option [value]="null">Journée entière</mat-option>
+                  <mat-option *ngFor="let h of allAvailableHours" [value]="h">{{ h.substring(0, 5) }}</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Heure de fin (Optionnel)</mat-label>
+                <mat-select formControlName="endTime">
+                  <mat-option [value]="null">Créneau unique (30 min)</mat-option>
+                  <mat-option *ngFor="let h of allAvailableHours" [value]="h" [disabled]="h <= adminBlockForm.value.startTime">
+                    {{ h.substring(0, 5) }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+            </div>
+
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Raison (Optionnel)</mat-label>
+              <input matInput formControlName="reason" placeholder="ex: Day off, Congé">
+            </mat-form-field>
+
+            <div class="actions">
+              <button mat-raised-button color="warn" (click)="addAdminBlock()" [disabled]="!adminBlockForm.valid">Bloquer</button>
+            </div>
+          </form>
+
+          <div class="blocked-slots-list" *ngIf="blockedSlots.length > 0">
+            <h4>Blocages Actifs</h4>
+            <div class="blocked-item" *ngFor="let s of blockedSlots">
+              <div class="info">
+                <strong>{{ s.date }}</strong>
+                <span *ngIf="s.startTime"> de {{ s.startTime.substring(0, 5) }}</span>
+                <span *ngIf="s.endTime"> à {{ s.endTime.substring(0, 5) }}</span>
+                <span *ngIf="s.startTime && !s.endTime"> (30 min)</span>
+                <span *ngIf="!s.startTime"> (Toute la journée)</span>
+                <span *ngIf="s.barber"> - {{ s.barber.name }}</span>
+                <span *ngIf="!s.barber"> - Tous les barbiers</span>
+                <em *ngIf="s.reason"> ({{ s.reason }})</em>
+              </div>
+              <button mat-icon-button color="warn" (click)="deleteBlockedSlot(s.id!)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </div>
-
-          <div class="actions">
-            <button mat-raised-button color="primary" (click)="lockSlot()" [disabled]="!lockForm.valid">Verrouiller</button>
-          </div>
-        </form>
+        </div>
       </section>
 
       <section class="list-section">
-        <h3>Réservations</h3>
+        <div class="list-header-row">
+          <h3>Réservations du {{ filterForm.value.date | date:'dd/MM/yyyy' }}</h3>
+        </div>
+        
         <form [formGroup]="filterForm" class="filter-form">
           <div class="filter-grid">
             <mat-form-field appearance="outline" class="filter-item">
@@ -104,6 +197,7 @@
             <div>Barbier</div>
             <div>Client</div>
             <div>Téléphone</div>
+            <div>Services / Total</div>
             <div>Statut / Action</div>
           </div>
 
@@ -113,16 +207,38 @@
             <!-- Desktop Rows -->
             <div class="row desktop-only" *ngFor="let a of filterByBarber(b.id)">
               <div>{{ a.date }}</div>
-              <div>{{ a.startTime }} - {{ a.endTime }}</div>
-              <div>{{ a.barber?.name }}</div>
-              <div>{{ a.user.name || '-' }}</div>
-              <div>{{ a.user.phone || '-' }}</div>
+              <div>{{ a.startTime.substring(0, 5) }} - {{ a.endTime.substring(0, 5) }}</div>
+              <div>{{ a.barber.name }}</div>
+              <div>
+                {{ a.user?.name || '-' }}
+                <div class="client-loyalty" *ngIf="a.user">
+                  <mat-icon title="Total rendez-vous">event_available</mat-icon>
+                  <span>{{ a.user?.totalAppointments || 0 }}</span>
+                  <mat-icon class="reward-icon" *ngIf="(a.user?.availableRewards || 0) > 0" [title]="a.user?.availableRewards + ' récompense(s) disponible(s)'">card_giftcard</mat-icon>
+                </div>
+              </div>
+              <div>{{ a.user?.phone || '-' }}</div>
+              <div>
+                <div class="services-list">
+                  <div *ngFor="let s of a.services">• {{s.name}}</div>
+                </div>
+                <div class="total-amount" [class.free]="a.rewardApplied">
+                  {{a.totalPrice}} DT
+                  <span class="reward-applied-tag" *ngIf="a.rewardApplied">FIDÉLITÉ</span>
+                </div>
+              </div>
               <div>
                 <span class="status">
                   {{ a.status }}
                   <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new" (click)="markViewed(a)">
                     {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
                   </span>
+                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-icon-button color="primary" (click)="markDone(a)" title="Marquer comme terminé">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                  <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED') && a.adminViewed)" mat-icon-button color="warn" class="delete-btn" (click)="deleteAppointment(a)" title="Supprimer de la liste">
+                    <mat-icon>close</mat-icon>
+                  </button>
                 </span>
                 <button *ngIf="a.status === 'BLOCKED'" mat-button color="warn" (click)="unlock(a)">Déverrouiller</button>
               </div>
@@ -138,15 +254,31 @@
                   </div>
                   <div class="admin-card-row">
                     <span class="label">Heure:</span>
-                    <span class="value">{{ a.startTime }} - {{ a.endTime }}</span>
+                    <span class="value">{{ a.startTime.substring(0, 5) }} - {{ a.endTime.substring(0, 5) }}</span>
                   </div>
                   <div class="admin-card-row">
                     <span class="label">Client:</span>
-                    <span class="value">{{ a.user.name || '-' }}</span>
+                    <span class="value">
+                      {{ a.user?.name || '-' }}
+                      <span class="client-loyalty-mini" *ngIf="a.user">
+                        ({{ a.user?.totalAppointments || 0 }} <mat-icon>event_available</mat-icon>)
+                        <mat-icon class="reward-icon" *ngIf="(a.user?.availableRewards || 0) > 0">card_giftcard</mat-icon>
+                      </span>
+                    </span>
                   </div>
                   <div class="admin-card-row">
                     <span class="label">Téléphone:</span>
-                    <span class="value">{{ a.user.phone || '-' }}</span>
+                    <span class="value">{{ a.user?.phone || '-' }}</span>
+                  </div>
+                  <div class="admin-card-row">
+                    <span class="label">Services:</span>
+                    <div class="value">
+                      <div *ngFor="let s of a.services">• {{ s.name }}</div>
+                      <div class="total-amount" [class.free]="a.rewardApplied" style="font-weight: bold; color: #d4af37; margin-top: 4px;">
+                        {{ a.totalPrice }} DT
+                        <span class="reward-applied-tag" *ngIf="a.rewardApplied">FIDÉLITÉ</span>
+                      </div>
+                    </div>
                   </div>
                   <div class="admin-card-row">
                     <span class="label">Statut:</span>
@@ -155,10 +287,17 @@
                       <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new mini" (click)="markViewed(a)">
                         {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
                       </span>
+                      <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-icon-button color="primary" size="small" (click)="markDone(a)" title="Terminer">
+                        <mat-icon>check_circle</mat-icon>
+                      </button>
+                      <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED') && a.adminViewed)" mat-icon-button color="warn" size="small" (click)="deleteAppointment(a)" title="Supprimer de la liste">
+                        <mat-icon>close</mat-icon>
+                      </button>
                     </div>
                   </div>
-                  <div class="admin-card-actions" *ngIf="a.status === 'BLOCKED'">
-                    <button mat-raised-button color="warn" size="small" (click)="unlock(a)">Déverrouiller</button>
+                  <div class="admin-card-actions" *ngIf="a.status === 'BLOCKED' || a.status === 'BOOKED' || a.status === 'MODIFIED'">
+                    <button *ngIf="a.status === 'BLOCKED'" mat-raised-button color="warn" size="small" (click)="unlock(a)">Déverrouiller</button>
+                    <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-raised-button color="primary" size="small" (click)="markDone(a)">Marquer Terminé</button>
                   </div>
                 </mat-card-content>
               </mat-card>

@@ -2,6 +2,7 @@ package com.barbershop.controller;
 
 import com.barbershop.dto.AppointmentRequest;
 import com.barbershop.entity.Appointment;
+import com.barbershop.entity.BlockedSlot;
 import com.barbershop.entity.User;
 import com.barbershop.repository.UserRepository;
 import com.barbershop.service.AppointmentService;
@@ -19,9 +20,12 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
+import com.barbershop.dto.RevenueReportDTO;
+
 @RestController
 @RequestMapping("/api/appointments")
 public class AppointmentController {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppointmentController.class);
 
     @Autowired
     private AppointmentService appointmentService;
@@ -60,21 +64,14 @@ public class AppointmentController {
                 guestUser = userRepository.findByPhone(request.getUserPhone()).orElse(null);
             }
             
-            // 2. Try to find by email if phone didn't work
-            if (guestUser == null && request.getUserEmail() != null && !request.getUserEmail().isBlank()) {
-                guestUser = userRepository.findByEmail(request.getUserEmail()).orElse(null);
-            }
-            
-            // 3. Create new if still not found
+            // 2. Create new if still not found
             if (guestUser == null) {
                 guestUser = new User();
                 guestUser.setName(request.getUserName());
                 guestUser.setPhone(request.getUserPhone());
-                guestUser.setEmail(request.getUserEmail());
                 guestUser.setRole(User.Role.CLIENT);
-                // Use phone as username for guests if email is missing
-                guestUser.setUsername(request.getUserEmail() != null && !request.getUserEmail().isBlank() ? 
-                                    request.getUserEmail() : request.getUserPhone());
+                // Use phone as username for guests
+                guestUser.setUsername(request.getUserPhone());
                 userRepository.save(guestUser);
             } else if (isLoggedAsAdmin) {
                 // If admin found an existing user, we use that instead of the admin user
@@ -86,7 +83,7 @@ public class AppointmentController {
             }
         }
 
-        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceId(), request.getDate(), request.getStartTime());
+        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), request.getDate(), request.getStartTime(), request.isUseReward());
         notifyEmitters(appt);
         return appt;
     }
@@ -201,9 +198,11 @@ public class AppointmentController {
     public Appointment lockSlot(
             @RequestParam Long barberId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String phone
     ) {
-        Appointment appt = appointmentService.lockSlot(barberId, date, startTime);
+        Appointment appt = appointmentService.lockSlot(barberId, date, startTime, name, phone);
         notifyEmitters(appt);
         return appt;
     }
@@ -216,6 +215,14 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime
     ) {
         Appointment appt = appointmentService.unlockSlot(barberId, date, startTime);
+        notifyEmitters(appt);
+        return appt;
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Appointment updateStatus(@PathVariable Long id, @RequestParam com.barbershop.entity.AppointmentStatus status) {
+        Appointment appt = appointmentService.updateStatus(id, status);
         notifyEmitters(appt);
         return appt;
     }
@@ -238,8 +245,54 @@ public class AppointmentController {
                 .count();
     }
 
-    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping("/revenue-report/{barberId}")
     @PreAuthorize("hasRole('ADMIN')")
+    public RevenueReportDTO getRevenueReport(
+            @PathVariable Long barberId,
+            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        logger.info("Received revenue report request for barber {} with date {}", barberId, date);
+        return appointmentService.getBarberRevenueReport(barberId, date);
+    }
+
+    // --- Blocked Slots Management ---
+
+    @GetMapping("/blocked")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<BlockedSlot> getBlockedSlots() {
+        return appointmentService.getAllBlockedSlots();
+    }
+
+    @PostMapping("/blocked")
+    @PreAuthorize("hasRole('ADMIN')")
+    public BlockedSlot blockSlot(
+            @RequestParam String date,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            @RequestParam(required = false) Long barberId,
+            @RequestParam(required = false) String reason
+    ) {
+        return appointmentService.blockSlot(date, startTime, endTime, barberId, reason);
+    }
+
+    @DeleteMapping("/blocked/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteBlockedSlot(@PathVariable Long id) {
+        appointmentService.deleteBlockedSlot(id);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public void deleteAppointment(@PathVariable Long id) {
+        appointmentService.deleteAppointment(id);
+        // We notify with a dummy appointment or just an event if needed
+        // For simplicity, we can send a special event or just notify something changed
+        Appointment dummy = new Appointment();
+        dummy.setId(id);
+        dummy.setStatus(com.barbershop.entity.AppointmentStatus.CANCELLED); // Or any status to trigger refresh
+        notifyEmitters(dummy);
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream() {
         SseEmitter emitter = new SseEmitter(0L);
         emitters.add(emitter);
