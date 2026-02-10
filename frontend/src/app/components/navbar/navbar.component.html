@@ -10,6 +10,7 @@
       <a mat-button (click)="navigateToSection('top')">ACCUEIL</a>
       <a mat-button (click)="navigateToSection('services-section')">SERVICES</a>
       <a mat-button (click)="navigateToSection('barbers')">BARBIERS</a>
+      <a mat-button (click)="navigateToSection('products')">PRODUITS</a>
       <a mat-button [routerLink]="['/my-appointments']" routerLinkActive="active-link">MES RDV</a>
       <a mat-button (click)="navigateToSection('feedbacks')">FEEDBACKS</a>
       <a mat-button (click)="navigateToSection('videos')">VIDÉOS</a>
@@ -35,6 +36,10 @@
         <a mat-menu-item (click)="navigateToSection('barbers')">
           <mat-icon>group</mat-icon>
           <span>BARBIERS</span>
+        </a>
+        <a mat-menu-item (click)="navigateToSection('products')">
+          <mat-icon>inventory_2</mat-icon>
+          <span>PRODUITS</span>
         </a>
         <a mat-menu-item [routerLink]="['/my-appointments']">
           <mat-icon>event_note</mat-icon>

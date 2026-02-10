@@ -24,6 +24,10 @@ public class Barber {
     @Column(length = 1000)
     private String description;
 
+    @OneToOne
+    @JoinColumn(name = "user_id")
+    private User user; // L'utilisateur (Admin) associé à ce barbier
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -32,4 +36,6 @@ public class Barber {
     public void setSpeciality(String speciality) { this.speciality = speciality; }
     public String getPhoto() { return photo; }
     public void setPhoto(String photo) { this.photo = photo; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 }

@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
@@ -15,11 +16,53 @@ import { ApiService, Appointment } from '../../services/api.service';
 @Component({
   selector: 'app-my-appointments',
   standalone: true,
-  imports: [CommonModule, MatTableModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatDatepickerModule, MatNativeDateModule, MatChipsModule, MatCardModule, MatSnackBarModule, MatIconModule],
+  imports: [
+    CommonModule, 
+    FormsModule,
+    ReactiveFormsModule,
+    MatTableModule, 
+    MatButtonModule, 
+    MatFormFieldModule, 
+    MatInputModule, 
+    MatDatepickerModule, 
+    MatNativeDateModule, 
+    MatChipsModule, 
+    MatCardModule, 
+    MatSnackBarModule, 
+    MatIconModule
+  ],
   template: `
     <div class="container">
+      <!-- Formulaire d'identification client -->
+      <mat-card class="identification-card" *ngIf="!isAuthenticated">
+        <mat-card-header>
+          <mat-card-title>Consulter mes rendez-vous</mat-card-title>
+          <mat-card-subtitle>Entrez vos coordonnées pour accéder à votre historique et vos points de fidélité</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="idForm" (ngSubmit)="identify()">
+            <div class="id-form-row">
+              <mat-form-field appearance="outline">
+                <mat-label>Votre Nom</mat-label>
+                <input matInput formControlName="name" placeholder="Ex: Ahmed">
+                <mat-icon matPrefix>person</mat-icon>
+              </mat-form-field>
+              
+              <mat-form-field appearance="outline">
+                <mat-label>Votre Numéro de Téléphone</mat-label>
+                <input matInput formControlName="phone" placeholder="Ex: 22111333">
+                <mat-icon matPrefix>phone</mat-icon>
+              </mat-form-field>
+            </div>
+            <button mat-raised-button color="primary" type="submit" [disabled]="idForm.invalid">
+              Voir mes rendez-vous
+            </button>
+          </form>
+        </mat-card-content>
+      </mat-card>
+
       <!-- Loyalty Progress Section -->
-      <mat-card class="loyalty-card" *ngIf="user">
+      <mat-card class="loyalty-card" *ngIf="isAuthenticated && user">
         <mat-card-content>
           <div class="loyalty-header">
             <h3>Votre Fidélité</h3>
@@ -57,10 +100,17 @@ import { ApiService, Appointment } from '../../services/api.service';
         </mat-card-content>
       </mat-card>
 
-      <mat-card class="client-card">
+      <mat-card class="client-card" *ngIf="isAuthenticated">
         <mat-card-header>
           <mat-card-title>Mes Rendez-vous</mat-card-title>
           <mat-card-subtitle>Consultez, annulez ou modifiez vos réservations</mat-card-subtitle>
+          <div class="user-identity-chip" *ngIf="user">
+            <mat-icon>person</mat-icon>
+            <span>{{ user.name }} ({{ user.phone }})</span>
+            <button mat-icon-button (click)="logout()" title="Changer d'utilisateur">
+              <mat-icon>logout</mat-icon>
+            </button>
+          </div>
         </mat-card-header>
         <mat-card-content>
       
@@ -248,6 +298,33 @@ import { ApiService, Appointment } from '../../services/api.service';
 
     .client-card mat-card-header { margin-bottom: 20px; }
     .client-card mat-card-header mat-card-title { color: #d4af37; font-size: 1.8rem; font-family: 'Playfair Display', serif; }
+    
+    .identification-card {
+      color: #fff;
+      background: #121212 !important;
+      border: 1px solid #d4af37 !important;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      padding: 16px;
+    }
+    .identification-card mat-card-title { color: #d4af37; margin-bottom: 8px; }
+    .id-form-row { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
+    .id-form-row mat-form-field { flex: 1; min-width: 250px; }
+    .identification-card form button { width: 100%; padding: 12px; font-weight: bold; }
+    
+    .user-identity-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(212, 175, 55, 0.1);
+      color: #d4af37;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      margin-left: auto;
+      font-size: 0.9rem;
+    }
+    .user-identity-chip button { color: #d4af37; width: auto; padding: 0; }
     .client-card mat-card-header mat-card-subtitle { color: #aaaaaa; }
     
     .desktop-only { display: block; }
@@ -282,6 +359,12 @@ import { ApiService, Appointment } from '../../services/api.service';
       .mobile-only { display: block; }
       .container { padding: 100px 10px 20px; }
       .client-card mat-card-header mat-card-title { font-size: 1.4rem; }
+      .id-form-row mat-form-field { min-width: 100%; }
+      .user-identity-chip { margin-left: 0; margin-top: 10px; width: 100%; justify-content: space-between; }
+      .loyalty-header { flex-direction: column; align-items: flex-start; }
+      .loyalty-stats { flex-direction: column; gap: 16px; width: 100%; }
+      .stat-item { width: 100%; flex-direction: row; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+      .stat-value { font-size: 1.4rem; }
     }
 
     .appointment-cards { display: flex; flex-direction: column; gap: 16px; }
@@ -309,13 +392,20 @@ import { ApiService, Appointment } from '../../services/api.service';
 export class MyAppointmentsComponent implements OnInit, OnDestroy {
   appointments: Appointment[] = [];
   user: any = null;
+  isAuthenticated: boolean = false;
+  idForm: FormGroup;
   displayedColumns: string[] = ['date', 'time', 'service', 'barber', 'status', 'actions'];
   modifying: Record<number, { date: Date; slots: string[]; time?: string }> = {};
   contactEmail: string = '';
   contactPhone: string = '';
   private refreshInterval: any;
 
-  constructor(private apiService: ApiService, private snackBar: MatSnackBar) {}
+  constructor(private apiService: ApiService, private snackBar: MatSnackBar, private fb: FormBuilder) {
+    this.idForm = this.fb.group({
+      name: ['', Validators.required],
+      phone: ['', [Validators.required, Validators.pattern(/^[0-9]{8,}$/)]]
+    });
+  }
 
   ngOnInit() {
     this.apiService.appointmentBooked$.subscribe(() => {
@@ -327,9 +417,16 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
       this.reloadAppointments();
     });
     
-    const userJson = sessionStorage.getItem('user');
-    if (userJson) {
-      this.user = JSON.parse(userJson);
+    // Check if user is already identified in session or local storage
+    const savedPhone = localStorage.getItem('lastUserPhone');
+    const savedName = localStorage.getItem('lastUserName');
+    const token = sessionStorage.getItem('token');
+
+    if (token) {
+      this.isAuthenticated = true;
+    } else if (savedPhone && savedName) {
+      this.isAuthenticated = true;
+      this.idForm.patchValue({ name: savedName, phone: savedPhone });
     }
 
     this.reloadAppointments();
@@ -346,7 +443,31 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  identify() {
+    if (this.idForm.valid) {
+      const { name, phone } = this.idForm.value;
+      localStorage.setItem('lastUserName', name);
+      localStorage.setItem('lastUserPhone', phone);
+      this.isAuthenticated = true;
+      this.reloadAppointments();
+      this.snackBar.open(`Bienvenue ${name}`, 'OK', { duration: 2000 });
+    }
+  }
+
+  logout() {
+    localStorage.removeItem('lastUserName');
+    localStorage.removeItem('lastUserPhone');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    this.isAuthenticated = false;
+    this.user = null;
+    this.appointments = [];
+    this.idForm.reset();
+  }
+
   reloadAppointments() {
+    if (!this.isAuthenticated) return;
+
     const token = sessionStorage.getItem('token');
     const savedEmail = localStorage.getItem('lastUserEmail');
     const savedPhone = localStorage.getItem('lastUserPhone');

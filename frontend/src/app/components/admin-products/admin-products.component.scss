@@ -1,0 +1,91 @@
+.admin-products-container {
+  padding: 20px;
+  background: transparent;
+  color: #fff;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+
+    h3 {
+      margin: 0;
+      color: #d4af37;
+      font-size: 1.5rem;
+    }
+  }
+
+  .form-card {
+    background: #1a1a1a;
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-bottom: 30px;
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .full-width {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    ::ng-deep .mat-mdc-form-field-label {
+      color: #bbb !important;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      background-color: #2a2a2a !important;
+    }
+
+    ::ng-deep .mdc-text-field--outline .mdc-notched-outline__leading,
+    ::ng-deep .mdc-text-field--outline .mdc-notched-outline__notch,
+    ::ng-deep .mdc-text-field--outline .mdc-notched-outline__trailing {
+      border-color: #444 !important;
+    }
+
+    input, textarea {
+      color: #fff !important;
+    }
+  }
+
+  table {
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+
+    th {
+      color: #d4af37 !important;
+      font-weight: bold;
+      background: #111 !important;
+    }
+
+    td {
+      color: #eee !important;
+      border-bottom: 1px solid #333 !important;
+    }
+
+    .table-img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin: 5px 0;
+      border: 1px solid #444;
+    }
+
+    tr:hover {
+      background: #252525 !important;
+    }
+  }
+}

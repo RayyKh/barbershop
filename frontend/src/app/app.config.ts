@@ -24,7 +24,7 @@ export const appConfig: ApplicationConfig = {
     }),
     provideServiceWorker('ngsw-worker.js', {
         enabled: true, // Force enabled for local Push testing
-        registrationStrategy: 'registerWhenStable:30000'
+        registrationStrategy: 'registerImmediately'
     })
 ]
 };

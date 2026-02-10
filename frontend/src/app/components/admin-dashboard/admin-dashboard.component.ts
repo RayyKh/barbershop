@@ -14,7 +14,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
 import { Subscription } from 'rxjs';
-import { ApiService, Appointment, Barber, BlockedSlot } from '../../services/api.service';
+import { ApiService, Appointment, Barber, BlockedSlot, Service } from '../../services/api.service';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -41,6 +41,7 @@ import { ApiService, Appointment, Barber, BlockedSlot } from '../../services/api
 export class AdminDashboardComponent implements OnInit {
   appointments: Appointment[] = [];
   barbers: Barber[] = [];
+  services: Service[] = [];
   blockedSlots: BlockedSlot[] = [];
   lockForm: FormGroup;
   filterForm: FormGroup;
@@ -55,6 +56,7 @@ export class AdminDashboardComponent implements OnInit {
   activeTab: 'manual' | 'block' = 'manual';
   hasNew = false;
   isPushEnabled = false;
+  selectedBarberForPush: number | null = null;
   readonly VAPID_PUBLIC_KEY = "BP07gvsy0ylgW-4T7ch1FOGdTUfPSKKOmsTOzA-ybaHq54q7zovWbzOynSUVQY_7nAg7WAFMS_WfSrgT_yoW2S4";
 
   private sub?: Subscription;
@@ -68,6 +70,7 @@ export class AdminDashboardComponent implements OnInit {
   ) {
     this.lockForm = this.fb.group({
       barber: [null, Validators.required],
+      services: [[]],
       date: [new Date(), Validators.required],
       time: [null, Validators.required],
       name: [''],
@@ -92,6 +95,7 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.api.getServices().subscribe(s => this.services = s);
     this.api.getBarbers().subscribe(b => { 
       this.barbers = b; 
       // Sélectionner le premier barbier par défaut si disponible
@@ -188,7 +192,22 @@ export class AdminDashboardComponent implements OnInit {
     
     const dateStr = this.formatDateLocal(new Date(date));
     this.api.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
-      this.availableHours = slots;
+      // Filtrer les créneaux déjà réservés par des clients
+      // On compare avec la liste des rendez-vous actuelle (this.appointments)
+      // car getAvailableSlots du backend ne prend peut-être pas en compte les rendez-vous "BOOKED" 
+      // si c'est une simple vérification de blocage admin.
+      // Cependant, le backend getAvailableSlots est censé retourner uniquement les vrais créneaux libres.
+      // Par sécurité, on s'assure que le créneau n'est pas dans nos rendez-vous actifs.
+      
+      const reservedSlots = this.appointments
+        .filter(a => 
+          a.barber?.id === barber.id && 
+          a.date === dateStr && 
+          (a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'DONE')
+        )
+        .map(a => a.startTime.substring(0, 5));
+
+      this.availableHours = slots.filter(s => !reservedSlots.includes(s.substring(0, 5)));
     });
   }
 
@@ -207,25 +226,51 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   subscribeToPush() {
+    // Vérification du contexte sécurisé (HTTPS)
+    if (!window.isSecureContext) {
+      this.snackBar.open('Les notifications Push nécessitent impérativement HTTPS sur mobile. HTTP n\'est pas supporté par les navigateurs pour cette fonctionnalité.', 'Compris', { duration: 10000 });
+      console.error('Push notifications are only available in secure contexts (HTTPS).');
+      return;
+    }
+
+    if (!this.swPush.isEnabled) {
+      this.snackBar.open('Le Service Worker n\'est pas activé ou n\'est pas supporté par ce navigateur.', 'Fermer', { duration: 5000 });
+      return;
+    }
+
     this.swPush.requestSubscription({
       serverPublicKey: this.VAPID_PUBLIC_KEY
     })
-    .then(sub => {
-      this.api.subscribeToPush(sub).subscribe({
-        next: () => {
-          this.isPushEnabled = true;
-          this.snackBar.open('Notifications activées sur cet appareil !', 'OK', { duration: 3000 });
-        },
-        error: (err) => {
-          console.error('Could not subscribe to push', err);
-          this.snackBar.open('Erreur lors de l\'activation des notifications.', 'Fermer', { duration: 3000 });
-        }
+      .then(sub => {
+        console.log('Push Subscription Object:', sub);
+        // Conversion explicite en JSON pour s'assurer que l'objet est sérialisable
+        const subscriptionJson = sub.toJSON();
+        console.log('Push Subscription JSON:', subscriptionJson);
+        
+        this.api.subscribeToPush(subscriptionJson, this.selectedBarberForPush || undefined).subscribe({
+          next: () => {
+            console.log('Successfully subscribed to push on backend');
+            this.isPushEnabled = true;
+            const barberName = this.selectedBarberForPush 
+              ? this.barbers.find(b => b.id === this.selectedBarberForPush)?.name 
+              : 'Tous les barbiers';
+            this.snackBar.open(`Notifications activées pour: ${barberName}`, 'OK', { duration: 3000 });
+          },
+          error: (err) => {
+            console.error('Backend subscription error:', err);
+            let msg = 'Erreur lors de l\'activation des notifications.';
+            if (err.status === 401) msg = 'Erreur d\'authentification (401).';
+            if (err.status === 404) msg = 'Route non trouvée (404).';
+            this.snackBar.open(msg, 'Fermer', { duration: 5000 });
+          }
+        });
+      })
+      .catch(err => {
+        console.error('Browser Push Request Error:', err);
+        let msg = 'Permission de notification refusée ou non supportée.';
+        if (err.message) msg += ' Détails: ' + err.message;
+        this.snackBar.open(msg, 'Fermer', { duration: 7000 });
       });
-    })
-    .catch(err => {
-      console.error('Could not request subscription', err);
-      this.snackBar.open('Permission de notification refusée ou non supportée.', 'Fermer', { duration: 3000 });
-    });
   }
 
   unsubscribeFromPush() {
@@ -275,12 +320,13 @@ export class AdminDashboardComponent implements OnInit {
       const timeStr = this.lockForm.value.time;
       const name = this.lockForm.value.name;
       const phone = this.lockForm.value.phone;
+      const serviceIds = (this.lockForm.value.services || []).map((s: Service) => s.id);
 
-      this.api.lockSlot(barberId, dateStr, timeStr, name, phone).subscribe({
+      this.api.lockSlot(barberId, dateStr, timeStr, name, phone, serviceIds).subscribe({
         next: () => {
           this.applyFilters(); // Re-charger la liste filtrée
           this.generateAvailableHours(); // Re-charger les créneaux libres
-          this.lockForm.patchValue({ name: '', phone: '', time: null });
+          this.lockForm.patchValue({ name: '', phone: '', time: null, services: [] });
           alert('Opération réussie');
         },
         error: (err) => alert('Erreur: ' + err.message)

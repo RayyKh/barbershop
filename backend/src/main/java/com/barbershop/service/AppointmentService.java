@@ -26,6 +26,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.WeekFields;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 @Service
@@ -91,7 +92,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean useReward) {
+    public synchronized Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean useReward) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Barber barber = barberRepository.findById(barberId)
@@ -117,25 +118,40 @@ public class AppointmentService {
         // Loyalty Logic: Check if reward can be applied
         boolean rewardApplied = false;
         if (useReward && user.getAvailableRewards() > 0) {
-            boolean hasCoupeBarbe = selectedServices.stream()
-                .anyMatch(s -> s.getName().toLowerCase().contains("coupe") && s.getName().toLowerCase().contains("barbe"));
-                
-            if (hasCoupeBarbe) {
-                // Find the price of "Coupe + Barbe" to subtract it (in case of multiple services)
-                double coupeBarbePrice = selectedServices.stream()
+            // Check if "Coupe" and "Barbe" are BOTH selected (either as a pack or as individual services)
+            boolean hasCoupe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("coupe"));
+            boolean hasBarbe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("barbe"));
+            
+            if (hasCoupe && hasBarbe) {
+                // Find the services to discount. Priority: "Coupe + Barbe" pack, or individual "Coupe" and "Barbe"
+                Optional<com.barbershop.entity.Service> pack = selectedServices.stream()
                     .filter(s -> s.getName().toLowerCase().contains("coupe") && s.getName().toLowerCase().contains("barbe"))
-                    .mapToDouble(com.barbershop.entity.Service::getPrice)
-                    .findFirst()
-                    .orElse(0.0);
+                    .findFirst();
                 
-                total -= coupeBarbePrice;
-                if (total < 0) total = 0; // Should not happen
+                if (pack.isPresent()) {
+                    total -= pack.get().getPrice();
+                } else {
+                    // Discount individual services
+                    double coupePrice = selectedServices.stream()
+                        .filter(s -> s.getName().toLowerCase().contains("coupe"))
+                        .mapToDouble(com.barbershop.entity.Service::getPrice)
+                        .findFirst()
+                        .orElse(0.0);
+                    double barbePrice = selectedServices.stream()
+                        .filter(s -> s.getName().toLowerCase().contains("barbe"))
+                        .mapToDouble(com.barbershop.entity.Service::getPrice)
+                        .findFirst()
+                        .orElse(0.0);
+                    total -= (coupePrice + barbePrice);
+                }
+                
+                if (total < 0) total = 0;
                 
                 rewardApplied = true;
                 user.setAvailableRewards(user.getAvailableRewards() - 1);
                 user.setUsedRewards(user.getUsedRewards() + 1);
                 userRepository.save(user);
-                logger.info("Reward applied for user {}. Service 'Coupe + Barbe' discounted. New total: {}", user.getName(), total);
+                logger.info("Reward applied for user {}. 'Coupe' and 'Barbe' discounted. New total: {}", user.getName(), total);
             }
         }
 
@@ -149,17 +165,17 @@ public class AppointmentService {
         appointment.setAdminViewed(false);
 
         Appointment saved = appointmentRepository.save(appointment);
-        
-        // Notification Push
-        String servicesNames = selectedServices.stream()
+
+        String servicesNames = saved.getServices().stream()
             .map(com.barbershop.entity.Service::getName)
             .collect(java.util.stream.Collectors.joining(", "));
 
-        pushNotificationService.sendNotificationToAdmins(
-            "Nouveau Rendez-vous !",
-            String.format("%s a réservé pour %s (Total: %.2f DT) avec %s le %s à %s", 
-                user.getName(), servicesNames, total, barber.getName(), date, startTime)
-        );
+        String title = "Nouveau Rendez-vous !";
+        String message = String.format("%s a réservé pour %s (Total: %.2f DT) avec %s le %s à %s", 
+            user.getName(), servicesNames, total, barber.getName(), date, startTime);
+
+        // Envoyer la notification push ciblée pour ce barbier
+        pushNotificationService.sendNotificationToBarber(barber.getId(), title, message);
 
         return saved;
     }
@@ -352,11 +368,16 @@ public class AppointmentService {
             .map(com.barbershop.entity.Service::getName)
             .collect(java.util.stream.Collectors.joining(", "));
 
-        pushNotificationService.sendNotificationToAdmins(
-            "Rendez-vous Modifié",
-            String.format("%s a modifié son rendez-vous pour %s. Nouvelle date: %s à %s", 
-                saved.getUser().getName(), servicesNames, newDate, newStartTime)
-        );
+        String title = "Rendez-vous Modifié";
+        String message = String.format("%s a modifié son rendez-vous pour %s. Nouvelle date: %s à %s", 
+            saved.getUser().getName(), servicesNames, newDate, newStartTime);
+
+        // Envoyer au barbier concerné
+        if (saved.getBarber() != null) {
+            pushNotificationService.sendNotificationToBarber(saved.getBarber().getId(), title, message);
+        } else {
+            pushNotificationService.sendNotificationToAdmins(title, message);
+        }
 
         return saved;
     }
@@ -424,7 +445,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment lockSlot(Long barberId, LocalDate date, LocalTime startTime, String name, String phone) {
+    public Appointment lockSlot(Long barberId, LocalDate date, LocalTime startTime, String name, String phone, List<Long> serviceIds) {
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
 
@@ -445,8 +466,8 @@ public class AppointmentService {
                 return userRepository.save(newUser);
             });
             appointment.setUser(user);
-            appointment.setStatus(AppointmentStatus.BOOKED);
-            appointment.setAdminViewed(false); // S'assurer que ça apparaît comme nouveau
+            appointment.setStatus(AppointmentStatus.BOOKED); // Initialement BOOKED pour permettre de marquer DONE plus tard
+            appointment.setAdminViewed(false); // Afficher comme NEW pour l'admin
         } else {
             appointment.setUser(null);
             appointment.setStatus(AppointmentStatus.BLOCKED);
@@ -454,8 +475,20 @@ public class AppointmentService {
         }
 
         appointment.setBarber(barber);
-        appointment.setServices(new ArrayList<>());
-        appointment.setTotalPrice(0.0);
+        
+        List<com.barbershop.entity.Service> services = new ArrayList<>();
+        double totalPrice = 0.0;
+        if (serviceIds != null && !serviceIds.isEmpty()) {
+            for (Long sid : serviceIds) {
+                serviceRepository.findById(sid).ifPresent(s -> {
+                    services.add(s);
+                });
+            }
+            totalPrice = services.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
+        }
+        
+        appointment.setServices(services);
+        appointment.setTotalPrice(totalPrice);
         appointment.setDate(date);
         appointment.setStartTime(startTime);
         appointment.setEndTime(endTime);

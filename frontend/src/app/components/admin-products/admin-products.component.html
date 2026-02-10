@@ -1,0 +1,75 @@
+<div class="admin-products-container">
+  <div class="header">
+    <h3>Gestion de la Vitrine Produits</h3>
+    <button mat-raised-button color="primary" (click)="toggleForm()">
+      <mat-icon>{{ showForm ? 'close' : 'add' }}</mat-icon>
+      {{ showForm ? 'Annuler' : 'Ajouter un Produit' }}
+    </button>
+  </div>
+
+  <div class="form-card" *ngIf="showForm">
+    <form [formGroup]="productForm" (ngSubmit)="onSubmit()">
+      <div class="form-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Nom du produit</mat-label>
+          <input matInput formControlName="name" placeholder="Ex: Cire Strong Hold">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Prix (TND)</mat-label>
+          <input matInput type="number" formControlName="price" step="0.001">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nom du fichier photo</mat-label>
+          <input matInput formControlName="photo" placeholder="Ex: cire.jpg">
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" rows="3"></textarea>
+      </mat-form-field>
+
+      <div class="form-actions">
+        <button mat-raised-button color="accent" type="submit" [disabled]="!productForm.valid">
+          {{ editingId ? 'Mettre à jour' : 'Enregistrer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <table mat-table [dataSource]="products" class="mat-elevation-z8">
+    <ng-container matColumnDef="photo">
+      <th mat-header-cell *mat-header-cell> Image </th>
+      <td mat-cell *mat-cell="let p"> 
+        <img [src]="'assets/' + p.photo" class="table-img" onerror="this.src='assets/cirespider.jpg'">
+      </td>
+    </ng-container>
+
+    <ng-container matColumnDef="name">
+      <th mat-header-cell *mat-header-cell> Nom </th>
+      <td mat-cell *mat-cell="let p"> {{ p.name }} </td>
+    </ng-container>
+
+    <ng-container matColumnDef="price">
+      <th mat-header-cell *mat-header-cell> Prix </th>
+      <td mat-cell *mat-cell="let p"> {{ p.price | number:'1.3-3' }} TND </td>
+    </ng-container>
+
+    <ng-container matColumnDef="actions">
+      <th mat-header-cell *mat-header-cell> Actions </th>
+      <td mat-cell *mat-cell="let p">
+        <button mat-icon-button color="primary" (click)="onEdit(p)">
+          <mat-icon>edit</mat-icon>
+        </button>
+        <button mat-icon-button color="warn" (click)="onDelete(p.id)">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </ng-container>
+
+    <tr mat-header-row *mat-header-row="displayedColumns"></tr>
+    <tr mat-row *mat-row="let row; columns: displayedColumns;"></tr>
+  </table>
+</div>

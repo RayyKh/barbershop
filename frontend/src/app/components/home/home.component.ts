@@ -7,6 +7,7 @@ import { RouterModule } from '@angular/router';
 import { ScrollRevealDirective } from '../../directives/scroll-reveal.directive';
 import { ApiService, Barber, Service } from '../../services/api.service';
 import { BookingComponent } from '../booking/booking.component';
+import { ProductListComponent } from '../product-list/product-list.component';
 
 @Component({
   selector: 'app-home',
@@ -18,7 +19,8 @@ import { BookingComponent } from '../booking/booking.component';
     MatIconModule, 
     RouterModule, 
     BookingComponent,
-    ScrollRevealDirective
+    ScrollRevealDirective,
+    ProductListComponent
   ],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.scss']
@@ -28,12 +30,15 @@ export class HomeComponent implements OnInit {
   barbers: Barber[] = [];
   parallaxOffset = 0;
   videos: { title: string; url: string }[] = [
-    { title: 'Salon de coiffure', url: 'assets/short7.mp4' },
-    { title: 'Taille de barbe', url: 'assets/short4.mp4' },
-    { title: 'Fade moderne', url: 'assets/short3.mp4' },
-    { title: 'Coupe classique', url: 'assets/short1.mp4' },
-    { title: 'Taille de barbe', url: 'assets/short5.mp4' },
-    { title: 'Fade moderne', url: 'assets/short6.mp4' }
+    { title: 'Salon de coiffure', url: 'assets/vd.mp4' },
+    { title: 'Taille de barbe', url: 'assets/vd (1).mp4' },
+    { title: 'Fade moderne', url: 'assets/vd (2).mp4' },
+    { title: 'Coupe classique', url: 'assets/vd (3).mp4' },
+    { title: 'Taille de barbe', url: 'assets/vd (4).mp4' },
+    { title: 'Fade moderne', url: 'assets/vd (5).mp4' },
+    { title: 'Soin du visage', url: 'assets/vd (6).mp4' },
+    { title: 'Style Signature', url: 'assets/vd (7).mp4' },
+    { title: 'Finition Précise', url: 'assets/vd (8).mp4' }
   ];
 
   galleryImages: string[] = [

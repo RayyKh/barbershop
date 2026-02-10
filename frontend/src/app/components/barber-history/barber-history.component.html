@@ -1,0 +1,133 @@
+<div class="history-container">
+  <mat-card class="history-card">
+    <mat-card-header>
+      <div class="header-titles">
+        <mat-card-title>Historique des Réservations</mat-card-title>
+        <mat-card-subtitle>Suivi détaillé par barbier</mat-card-subtitle>
+      </div>
+      <div class="header-actions">
+        <button mat-stroked-button class="back-btn" routerLink="/admin">
+          <mat-icon>arrow_back</mat-icon>
+          Retour au Dashboard
+        </button>
+      </div>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="filterForm" class="filter-row">
+        <mat-form-field appearance="outline">
+          <mat-label>Barbier</mat-label>
+          <mat-select formControlName="barberId">
+            <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Période</mat-label>
+          <mat-select formControlName="period">
+            <mat-option value="day">Aujourd'hui / Jour précis</mat-option>
+            <mat-option value="week">Cette semaine</mat-option>
+            <mat-option value="month">Ce mois</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Date de référence</mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="selectedDate">
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+
+        <div class="total-revenue">
+          <span class="label">Total :</span>
+          <span class="value">{{ getTotalRevenue() }} DT</span>
+        </div>
+      </form>
+
+      <!-- Affichage Tableau pour Desktop -->
+      <div class="table-container mat-elevation-z2 desktop-only">
+        <table mat-table [dataSource]="appointments">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef class="gold-header"> Date </th>
+            <td mat-cell *matCellDef="let app"> {{ app.date | date:'dd/MM/yyyy' }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="time">
+            <th mat-header-cell *matHeaderCellDef class="gold-header"> Heure </th>
+            <td mat-cell *matCellDef="let app"> {{ app.startTime.substring(0, 5) }} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="client">
+            <th mat-header-cell *matHeaderCellDef class="gold-header"> Client </th>
+            <td mat-cell *matCellDef="let app"> 
+              <div class="client-info">
+                <span class="name">{{ app.user?.name || 'Inconnu' }}</span>
+                <span class="phone">{{ app.user?.phone }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="service">
+            <th mat-header-cell *matHeaderCellDef class="gold-header"> Services </th>
+            <td mat-cell *matCellDef="let app">
+              <div *ngFor="let s of app.services" class="service-item">• {{ s.name }}</div>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef class="gold-header"> Prix </th>
+            <td mat-cell *matCellDef="let app"> 
+              <span [class.reward]="app.rewardApplied">
+                {{ app.totalPrice }} DT
+              </span>
+              <mat-icon *ngIf="app.rewardApplied" class="gift-icon" title="Récompense fidélité">card_giftcard</mat-icon>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+          <tr class="mat-row" *matNoDataRow>
+            <td class="mat-cell no-data" [attr.colspan]="displayedColumns.length">
+              Aucun historique trouvé pour cette période.
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Affichage Cartes pour Mobile -->
+      <div class="mobile-only">
+        <div *ngIf="appointments.length === 0" class="no-data-mobile">
+          Aucun historique trouvé pour cette période.
+        </div>
+        
+        <div class="appointment-card-mobile" *ngFor="let app of appointments">
+          <div class="card-header">
+            <span class="date-time">{{ app.date | date:'dd/MM/yyyy' }} à {{ app.startTime.substring(0, 5) }}</span>
+            <span class="price" [class.reward]="app.rewardApplied">
+              {{ app.totalPrice }} DT
+              <mat-icon *ngIf="app.rewardApplied">card_giftcard</mat-icon>
+            </span>
+          </div>
+          
+          <div class="card-body">
+            <div class="client-section">
+              <mat-icon>person</mat-icon>
+              <div class="info">
+                <span class="name">{{ app.user?.name || 'Inconnu' }}</span>
+                <span class="phone">{{ app.user?.phone }}</span>
+              </div>
+            </div>
+            
+            <div class="services-section">
+              <mat-icon>content_cut</mat-icon>
+              <div class="services-list">
+                <div *ngFor="let s of app.services" class="service-item">• {{ s.name }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

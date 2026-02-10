@@ -101,14 +101,98 @@
 }
 
 .service-option {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    min-width: 220px;
+    padding: 8px 0;
     
+    .service-name {
+        color: #ffffff;
+        font-weight: 500;
+        margin-right: 15px;
+        flex: 1;
+    }
+
     .service-price {
         color: #d4af37;
         font-weight: bold;
-        margin-left: 20px;
+        flex-shrink: 0;
+        text-align: right;
+    }
+
+    @media (max-width: 600px) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        min-width: unset !important;
+
+        .service-name {
+            margin-right: 0;
+        }
+
+        .service-price {
+            font-size: 0.85rem;
+            margin-left: 0;
+        }
+    }
+}
+
+@media (max-width: 600px) {
+    .booking-container {
+        padding: 0;
+    }
+    
+    .booking-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+
+        mat-card-content {
+            padding: 12px !important;
+        }
+    }
+
+    .step-content {
+        padding: 0;
+        
+        .full-width {
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+    }
+}
+
+// Thème doré pour le panneau de sélection (Identique à l'admin)
+::ng-deep .gold-theme-panel {
+    background-color: #121212 !important;
+    border: 1px solid #d4af37 !important;
+    box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3) !important;
+    min-width: 280px !important;
+    max-width: 90vw !important;
+    
+    .mat-mdc-option {
+        color: #ffffff !important;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+        height: auto !important;
+        min-height: 48px;
+        
+        .mdc-list-item__primary-text {
+            width: 100% !important;
+            display: flex !important;
+        }
+
+        &:hover:not(.mdc-list-item--disabled), 
+        &.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+            background-color: rgba(212, 175, 55, 0.15) !important;
+        }
+
+        .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
+            background-color: #d4af37 !important;
+            border-color: #d4af37 !important;
+        }
     }
 }
 
@@ -170,6 +254,7 @@
     margin-bottom: 20px;
     padding-bottom: 15px;
     border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    text-align: left; /* Force alignment to left */
     
     ul {
         list-style: none;
@@ -180,12 +265,14 @@
             padding: 5px 0;
             color: #cccccc;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start; /* Align service and price to left */
+            gap: 10px; /* Space between name and price */
             
             &::before {
                 content: "•";
                 color: #d4af37;
                 margin-right: 10px;
+                flex-shrink: 0;
             }
         }
     }

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatStepperModule } from '@angular/material/stepper';
+import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { AnimationOptions, LottieComponent } from 'ngx-lottie';
 import { ApiService, AppointmentRequest, Barber, Service, User } from '../../services/api.service';
@@ -44,6 +44,7 @@ import { LoaderComponent } from '../loader/loader.component';
   styleUrls: ['./booking.component.scss']
 })
 export class BookingComponent implements OnInit {
+  @ViewChild('stepper') stepper!: MatStepper;
   services: Service[] = [];
   barbers: Barber[] = [];
   availableSlots: string[] = [];
@@ -103,7 +104,10 @@ export class BookingComponent implements OnInit {
     const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
     if (!selected || !selected.length) return false;
     
-    return selected.some(s => s.name.toLowerCase().includes('coupe') && s.name.toLowerCase().includes('barbe'));
+    const hasCoupe = selected.some(s => s.name.toLowerCase().includes('coupe'));
+    const hasBarbe = selected.some(s => s.name.toLowerCase().includes('barbe'));
+    
+    return hasCoupe && hasBarbe;
   }
 
   get totalSelectedPrice(): number {
@@ -113,10 +117,17 @@ export class BookingComponent implements OnInit {
     let total = selected.reduce((acc, s) => acc + s.price, 0);
     
     if (this.bookingFormGroup.get('useRewardCtrl')?.value && this.canApplyReward) {
-      // Find the "Coupe + Barbe" service and subtract its price
-      const coupeBarbe = selected.find(s => s.name.toLowerCase().includes('coupe') && s.name.toLowerCase().includes('barbe'));
-      if (coupeBarbe) {
-        total -= coupeBarbe.price;
+      // Find the services to discount. Priority: "Coupe + Barbe" pack, or individual "Coupe" and "Barbe"
+      const pack = selected.find(s => s.name.toLowerCase().includes('coupe') && s.name.toLowerCase().includes('barbe'));
+      
+      if (pack) {
+        total -= pack.price;
+      } else {
+        const coupe = selected.find(s => s.name.toLowerCase().includes('coupe'));
+        const barbe = selected.find(s => s.name.toLowerCase().includes('barbe'));
+        if (coupe && barbe) {
+          total -= (coupe.price + barbe.price);
+        }
       }
     }
     
@@ -129,6 +140,35 @@ export class BookingComponent implements OnInit {
   
   onBarberChange() {
       this.fetchSlots();
+  }
+
+  onStepChange(event: any) {
+    // Si on arrive à l'étape de confirmation (index 4)
+    if (event.selectedIndex === 4) {
+      this.validateSlotAvailability();
+    }
+  }
+
+  validateSlotAvailability() {
+    const barber = this.bookingFormGroup.get('barberCtrl')?.value;
+    const date = this.bookingFormGroup.get('dateCtrl')?.value;
+    const selectedTime = this.bookingFormGroup.get('timeCtrl')?.value;
+
+    if (barber && date && selectedTime) {
+      const dateStr = this.formatDateLocal(date);
+      this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
+        // Vérifier si le créneau sélectionné est toujours dans la liste des créneaux disponibles
+        const isStillAvailable = slots.includes(selectedTime);
+        
+        if (!isStillAvailable) {
+          this.snackBar.open('Désolé, ce créneau vient d\'être réservé par un autre client. Veuillez en choisir un autre.', 'OK', { duration: 5000 });
+          // Rediriger l'utilisateur vers l'étape de sélection de la date/heure (index 2)
+          this.stepper.selectedIndex = 2;
+          // Rafraîchir la liste locale des créneaux
+          this.fetchSlots();
+        }
+      });
+    }
   }
 
   fetchSlots() {

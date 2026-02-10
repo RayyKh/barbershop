@@ -200,9 +200,10 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
             @RequestParam(required = false) String name,
-            @RequestParam(required = false) String phone
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) List<Long> serviceIds
     ) {
-        Appointment appt = appointmentService.lockSlot(barberId, date, startTime, name, phone);
+        Appointment appt = appointmentService.lockSlot(barberId, date, startTime, name, phone, serviceIds);
         notifyEmitters(appt);
         return appt;
     }

@@ -29,6 +29,10 @@ public class PushSubscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barber_id")
+    private Barber barber; // Le barbier spécifique que cet abonnement souhaite suivre
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getEndpoint() { return endpoint; }
@@ -39,4 +43,6 @@ public class PushSubscription {
     public void setAuth(String auth) { this.auth = auth; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+    public Barber getBarber() { return barber; }
+    public void setBarber(Barber barber) { this.barber = barber; }
 }

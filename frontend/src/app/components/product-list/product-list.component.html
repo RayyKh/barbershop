@@ -1,0 +1,56 @@
+<div class="product-container" [class.on-home]="isHome">
+  <div class="header-section">
+    <h2 class="title-dark">NOTRE VITRINE PRODUITS</h2>
+    <div class="divider-gold"></div>
+    <p class="subtitle">Découvrez notre sélection de produits premium pour entretenir votre style à la maison.</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-spinner">
+    <div class="spinner"></div>
+    <p>Chargement de la vitrine...</p>
+  </div>
+
+  <div *ngIf="!loading && products.length === 0" class="no-products">
+    <mat-icon>inventory_2</mat-icon>
+    <p>Aucun produit n'est disponible pour le moment.</p>
+  </div>
+
+  <div class="slider-wrapper" *ngIf="!loading && products.length > 0">
+    <button class="nav-btn prev" (click)="prevSlide()" *ngIf="products.length > visibleItems">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+
+    <div class="slider-container">
+      <div class="product-slider" [style.transform]="'translateX(-' + (currentIndex * (100 / visibleItems)) + '%)'">
+        <mat-card class="product-card" *ngFor="let product of products" [style.flex]="'0 0 ' + (100 / visibleItems) + '%'">
+          <div class="product-image-container">
+            <img [src]="'assets/' + product.photo" [alt]="product.name" onerror="this.src='assets/cirespider.jpg'">
+            <div class="hover-overlay">
+              <span class="view-details">Disponible au salon</span>
+            </div>
+          </div>
+          <mat-card-content>
+            <h3 class="product-name">{{ product.name }}</h3>
+            <p class="product-description">{{ product.description }}</p>
+            <div class="product-footer">
+              <span class="product-price">{{ product.price | number:'1.3-3' }} TND</span>
+              <span class="available-badge">En salon uniquement</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </div>
+
+    <button class="nav-btn next" (click)="nextSlide()" *ngIf="products.length > visibleItems">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+
+  <div class="pagination-dots" *ngIf="!loading && products.length > visibleItems">
+    <span *ngFor="let dot of dots; let i = index" 
+          class="dot" 
+          [class.active]="isDotActive(i)"
+          (click)="goToSlide(i * visibleItems)">
+    </span>
+  </div>
+</div>

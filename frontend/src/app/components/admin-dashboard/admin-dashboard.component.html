@@ -4,12 +4,25 @@
       <mat-card-title>Dashboard Admin</mat-card-title>
       <mat-card-subtitle>Gestion des réservations et verrouillage de créneaux</mat-card-subtitle>
       <div class="header-actions">
+        <div class="push-config" *ngIf="!isPushEnabled">
+          <mat-form-field appearance="outline" class="mini-select">
+            <mat-label>Notifier pour :</mat-label>
+            <mat-select [(value)]="selectedBarberForPush">
+              <mat-option [value]="null">Tous</mat-option>
+              <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
         <button mat-icon-button [color]="isPushEnabled ? 'primary' : 'warn'" (click)="togglePush()" [title]="isPushEnabled ? 'Notifications activées' : 'Activer les notifications'">
           <mat-icon>{{ isPushEnabled ? 'notifications_active' : 'notifications_off' }}</mat-icon>
         </button>
         <button mat-button class="revenue-btn" routerLink="/admin/revenue">
           <mat-icon>monetization_on</mat-icon>
           Revenus
+        </button>
+        <button mat-button class="history-btn" routerLink="/admin/history">
+          <mat-icon>history</mat-icon>
+          Historique
         </button>
         <button mat-button class="logout-btn" (click)="logout()">Déconnexion</button>
       </div>
@@ -28,6 +41,18 @@
               <mat-label>Barbier</mat-label>
               <mat-select formControlName="barber">
                 <mat-option *ngFor="let b of barbers" [value]="b">{{ b.name }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="full-width service-field">
+              <mat-label>Services</mat-label>
+              <mat-select formControlName="services" multiple panelClass="gold-theme-panel">
+                <mat-option *ngFor="let s of services" [value]="s">
+                  <div class="service-option">
+                    <span class="service-name">{{ s.name }}&nbsp;</span>
+                    <span class="service-price">{{ s.price }} DT</span>
+                  </div>
+                </mat-option>
               </mat-select>
             </mat-form-field>
 

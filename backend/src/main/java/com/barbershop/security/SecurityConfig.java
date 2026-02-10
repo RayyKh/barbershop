@@ -63,6 +63,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/appointments/by-contact").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/services/**").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/barbers/**").permitAll()
+                    .requestMatchers("/api/products/**").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/cancel").permitAll()
                     .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/*/modify").permitAll()
                     .requestMatchers("/h2-console/**").permitAll()
@@ -75,6 +76,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/appointments", "/api/appointments/**").hasRole("ADMIN")
                     .requestMatchers("/api/services/**").hasRole("ADMIN")
                     .requestMatchers("/api/barbers/**").hasRole("ADMIN")
+                    .requestMatchers("/api/products/**").hasRole("ADMIN")
                     .anyRequest().authenticated()
             );
         

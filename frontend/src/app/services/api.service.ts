@@ -94,6 +94,14 @@ export interface BlockedSlot {
   reason?: string;
 }
 
+export interface Product {
+  id?: number;
+  name: string;
+  description: string;
+  price: number;
+  photo: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -148,8 +156,11 @@ export class ApiService {
   }
 
   // Web Push Notifications
-  subscribeToPush(subscription: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/notifications/subscribe`, subscription);
+  subscribeToPush(subscription: any, barberId?: number): Observable<any> {
+    return this.http.post(`${this.baseUrl}/notifications/subscribe`, {
+      subscription,
+      barberId
+    });
   }
 
   unsubscribeFromPush(endpoint: string): Observable<any> {
@@ -251,10 +262,13 @@ export class ApiService {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/status?status=${status}`, {});
   }
 
-  lockSlot(barberId: number, date: string, startTime: string, name?: string, phone?: string): Observable<Appointment> {
+  lockSlot(barberId: number, date: string, startTime: string, name?: string, phone?: string, serviceIds?: number[]): Observable<Appointment> {
     const params = new URLSearchParams({ barberId: String(barberId), date, startTime });
     if (name) params.set('name', name);
     if (phone) params.set('phone', phone);
+    if (serviceIds && serviceIds.length > 0) {
+      params.set('serviceIds', serviceIds.join(','));
+    }
     return this.http.post<Appointment>(`${this.baseUrl}/appointments/lock?${params.toString()}`, {});
   }
 
@@ -326,6 +340,27 @@ export class ApiService {
         return res;
       })
     );
+  }
+
+  // Products
+  getProducts(): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.baseUrl}/products`);
+  }
+
+  getProductById(id: number): Observable<Product> {
+    return this.http.get<Product>(`${this.baseUrl}/products/${id}`);
+  }
+
+  createProduct(product: Product): Observable<Product> {
+    return this.http.post<Product>(`${this.baseUrl}/products`, product);
+  }
+
+  updateProduct(id: number, product: Product): Observable<Product> {
+    return this.http.put<Product>(`${this.baseUrl}/products/${id}`, product);
+  }
+
+  deleteProduct(id: number): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/products/${id}`);
   }
 
   // Auth

@@ -15,7 +15,7 @@
       </div>
 
       <form [formGroup]="bookingFormGroup" *ngIf="!isBookingSuccess">
-        <mat-stepper orientation="vertical" linear #stepper class="custom-stepper">
+        <mat-stepper orientation="vertical" linear #stepper class="custom-stepper" (selectionChange)="onStepChange($event)">
           
           <!-- Step 1: Services -->
           <mat-step [stepControl]="bookingFormGroup.get('servicesCtrl')!">
@@ -23,10 +23,10 @@
             <div class="step-content">
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Services</mat-label>
-                <mat-select formControlName="servicesCtrl" multiple>
+                <mat-select formControlName="servicesCtrl" multiple panelClass="gold-theme-panel">
                   <mat-option *ngFor="let service of services" [value]="service">
                     <div class="service-option">
-                      <span class="service-name">{{service.name}}</span>
+                      <span class="service-name">{{service.name}}&nbsp;</span>
                       <span class="service-price">{{service.price}} DT</span>
                     </div>
                   </mat-option>
