@@ -115,6 +115,11 @@
                 <mat-label>Nom</mat-label>
                 <input matInput formControlName="name" required>
               </mat-form-field>
+
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Prénom</mat-label>
+                <input matInput formControlName="firstName" required>
+              </mat-form-field>
               
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Téléphone</mat-label>
@@ -146,7 +151,7 @@
 
               <p><strong>Barbier:</strong> {{bookingFormGroup.get('barberCtrl')?.value?.name}}</p>
               <p><strong>Date:</strong> {{bookingFormGroup.get('dateCtrl')?.value | date:'dd/MM/yyyy'}} à {{bookingFormGroup.get('timeCtrl')?.value}}</p>
-              <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
+              <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.firstName}} {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
               
               <div class="actions">
                 <button mat-button matStepperPrevious>Retour</button>

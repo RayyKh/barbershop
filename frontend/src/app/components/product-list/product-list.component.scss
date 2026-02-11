@@ -1,8 +1,10 @@
 .product-container {
-  padding: 40px 20px;
-  max-width: 1200px;
+  padding: 40px 0; // Supprimé padding latéral pour pleine largeur
+  width: 100%;
+  max-width: 100%; // Autorise la pleine largeur
   margin: 0 auto;
   color: #fff;
+  overflow: hidden; // Évite les scrollbars horizontales indésirables
 
   &.on-home {
     padding: 0;
@@ -11,6 +13,7 @@
   .header-section {
     text-align: center;
     margin-bottom: 50px;
+    padding: 0 20px; // Padding pour le texte uniquement
 
     .title-dark {
       color: #1a1a1a;
@@ -41,56 +44,84 @@
     position: relative;
     display: flex;
     align-items: center;
-    max-width: 1200px;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto;
-    padding: 20px 60px; // Augmenté pour éviter tout chevauchement avec les boutons
+    padding: 20px 20px; // Réduit encore le padding latéral pour gagner de l'espace
+    box-sizing: border-box;
   }
 
   .slider-container {
     flex-grow: 1;
     overflow: hidden;
-    padding: 30px 0; // Augmenté pour laisser de la place aux ombres et animations au survol
-    margin: -10px 0; // Compense le padding pour garder l'alignement vertical
+    padding: 30px 0; // Padding vertical seulement
+    margin: -10px 0;
+    
+    &::before, &::after {
+      display: none !important;
+    }
   }
 
   .product-slider {
     display: flex;
     transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    gap: 0;
+    gap: 20px;
+    will-change: transform;
+    width: 100%;
+    padding: 10px 0; // On retire le padding horizontal pour faciliter le centrage
   }
 
   .product-card {
     background: #ffffff;
-    border: 1px solid rgba(212, 175, 55, 0.3);
-    border-radius: 8px;
+    border: 1px solid rgba(212, 175, 55, 0.2); // Bordure très fine et dorée
+    border-radius: 12px; // Coins plus arrondis pour un look plus moderne
     overflow: hidden;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     display: flex;
     flex-direction: column;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08); // Ombre plus douce et élégante
     position: relative;
     box-sizing: border-box;
-    margin: 0 10px;
+    margin: 0;
+    flex-shrink: 0;
+    padding: 0; // On remet à 0 et on utilise le gap ou padding du wrapper
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, #d4af37, transparent);
+      opacity: 0.5;
+    }
 
     &:hover {
-      transform: translateY(-15px);
-      border-color: rgba(212, 175, 55, 1);
-      box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2);
+      transform: translateY(-10px);
+      border-color: rgba(212, 175, 55, 0.8);
+      box-shadow: 0 20px 40px rgba(212, 175, 55, 0.15);
+      
+      &::before {
+        opacity: 1;
+        height: 6px;
+      }
       
       .product-image-container img {
-        transform: scale(1.05);
+        transform: scale(1.08);
       }
     }
 
     .product-image-container {
       position: relative;
-      height: 200px;
+      height: 250px; // Un peu plus haut
       overflow: hidden;
-      background: #fff;
+      background: #fdfdfd; // Blanc cassé très léger
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 20px;
+      padding: 30px;
+      border-bottom: 1px solid rgba(0,0,0,0.03);
 
       img {
         width: 80%;
@@ -190,19 +221,19 @@
   }
 
   .nav-btn {
-    background: #fff;
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid #eee;
     color: #1a1a1a;
-    width: 45px;
-    height: 45px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    z-index: 10;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    z-index: 20; // Passé à 20 pour être au-dessus des cartes
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -211,14 +242,15 @@
       background: #1a1a1a;
       color: #fff;
       border-color: #1a1a1a;
+      transform: translateY(-50%) scale(1.1);
     }
 
     &.prev {
-      left: 10px;
+      left: -15px; // Sort la flèche un peu du conteneur pour ne pas gêner
     }
 
     &.next {
-      right: 10px;
+      right: -15px; // Sort la flèche un peu du conteneur pour ne pas gêner
     }
 
     mat-icon {
@@ -252,7 +284,7 @@
 
   @media (max-width: 768px) {
     &.product-container {
-      padding: 20px 5px; // Minimum de padding pour utiliser toute la largeur
+      padding: 20px 0;
     }
     
     .header-section {
@@ -265,15 +297,16 @@
     }
 
     .slider-wrapper {
-      padding: 10px 5px; // Presque plus de padding latéral
+      padding: 10px 45px; // Plus d'espace pour que les flèches ne cachent rien
     }
     
     .nav-btn {
-      width: 32px;
-      height: 32px;
-      background: rgba(255, 255, 255, 0.9);
-      &.prev { left: 2px; }
-      &.next { right: 2px; }
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.95);
+      z-index: 30;
+      &.prev { left: 5px; } // Positionnées dans le padding
+      &.next { right: 5px; }
       
       mat-icon {
         font-size: 18px;
@@ -283,29 +316,44 @@
     }
 
     .product-card {
-      margin: 0 5px;
-      border-radius: 4px;
+      padding: 0;
+      margin: 0; 
+      width: 100% !important; // Prend toute la largeur du conteneur pour n'en voir qu'un
+      max-width: none; // Supprime la restriction pour remplir l'espace
+      scroll-snap-align: center;
       
       .product-image-container {
-        height: 240px; // Encore plus grand pour l'immersion
-        padding: 5px;
+        height: 220px; // Augmenté pour mieux voir le produit
+        padding: 10px;
+        
+        img {
+          object-fit: contain; // Assure que l'image n'est pas coupée
+        }
       }
       
       mat-card-content {
-        padding: 12px 8px;
+        padding: 15px 10px;
         
         .product-name {
-          font-size: 0.9rem;
-          min-height: 2em;
+          font-size: 0.85rem;
+          min-height: 2.2em;
+          margin-bottom: 5px;
         }
         
         .product-description {
-          font-size: 0.8rem;
-          margin-bottom: 10px;
+          font-size: 0.75rem;
+          margin-bottom: 8px;
+          -webkit-line-clamp: 2;
         }
 
         .product-footer {
-          .product-price { font-size: 1.1rem; }
+          gap: 5px;
+          .product-price { font-size: 1rem; }
+          .available-badge {
+            font-size: 0.55rem;
+            padding-top: 5px;
+            width: 80%;
+          }
         }
       }
     }

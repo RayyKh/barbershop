@@ -445,7 +445,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment lockSlot(Long barberId, LocalDate date, LocalTime startTime, String name, String phone, List<Long> serviceIds) {
+    public Appointment lockSlot(Long barberId, LocalDate date, LocalTime startTime, String firstName, String name, String phone, List<Long> serviceIds) {
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
 
@@ -459,6 +459,7 @@ public class AppointmentService {
         if (name != null && !name.isBlank() && phone != null && !phone.isBlank()) {
             User user = userRepository.findByPhone(phone).orElseGet(() -> {
                 User newUser = new User();
+                newUser.setFirstName(firstName);
                 newUser.setName(name);
                 newUser.setPhone(phone);
                 newUser.setRole(User.Role.CLIENT);
@@ -598,7 +599,9 @@ public class AppointmentService {
     private RevenueReportDTO.RevenueDetailDTO mapToDetail(Appointment a) {
         RevenueReportDTO.RevenueDetailDTO detail = new RevenueReportDTO.RevenueDetailDTO();
         detail.setAppointmentId(a.getId());
-        detail.setClientName(a.getUser() != null ? a.getUser().getName() : "Guest");
+        String firstName = (a.getUser() != null && a.getUser().getFirstName() != null) ? a.getUser().getFirstName() : "";
+        String name = (a.getUser() != null && a.getUser().getName() != null) ? a.getUser().getName() : "Guest";
+        detail.setClientName((firstName + " " + name).trim());
         detail.setServices(a.getServices().stream().map(com.barbershop.entity.Service::getName).collect(Collectors.joining(", ")));
         detail.setPrice(a.getTotalPrice());
         detail.setDate(a.getDate().toString());

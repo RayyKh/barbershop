@@ -61,7 +61,7 @@
             <th mat-header-cell *matHeaderCellDef class="gold-header"> Client </th>
             <td mat-cell *matCellDef="let app"> 
               <div class="client-info">
-                <span class="name">{{ app.user?.name || 'Inconnu' }}</span>
+                <span class="name">{{ app.user?.firstName || '' }} {{ app.user?.name || 'Inconnu' }}</span>
                 <span class="phone">{{ app.user?.phone }}</span>
               </div>
             </td>
@@ -114,7 +114,7 @@
             <div class="client-section">
               <mat-icon>person</mat-icon>
               <div class="info">
-                <span class="name">{{ app.user?.name || 'Inconnu' }}</span>
+                <span class="name">{{ app.user?.firstName || '' }} {{ app.user?.name || 'Inconnu' }}</span>
                 <span class="phone">{{ app.user?.phone }}</span>
               </div>
             </div>

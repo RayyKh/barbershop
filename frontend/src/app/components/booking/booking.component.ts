@@ -74,6 +74,7 @@ export class BookingComponent implements OnInit {
       useRewardCtrl: [false],
       userCtrl: this._formBuilder.group({
         name: ['', Validators.required],
+        firstName: ['', Validators.required],
         phone: ['', Validators.required]
       })
     });
@@ -214,6 +215,7 @@ export class BookingComponent implements OnInit {
         date: this.formatDateLocal(formValue.dateCtrl),
         startTime: formValue.timeCtrl,
         userName: formValue.userCtrl.name,
+        userFirstName: formValue.userCtrl.firstName,
         userPhone: formValue.userCtrl.phone,
         useReward: formValue.useRewardCtrl
       };

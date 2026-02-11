@@ -21,8 +21,11 @@
     </button>
 
     <div class="slider-container">
-      <div class="product-slider" [style.transform]="'translateX(-' + (currentIndex * (100 / visibleItems)) + '%)'">
-        <mat-card class="product-card" *ngFor="let product of products" [style.flex]="'0 0 ' + (100 / visibleItems) + '%'">
+      <div class="product-slider" 
+           [style.transform]="'translateX(calc(-' + (currentIndex * (100 / visibleItems)) + '% - ' + (currentIndex * 20 / visibleItems) + 'px))'">
+        <mat-card class="product-card" 
+                  *ngFor="let product of products" 
+                  [style.flex]="'0 0 calc(' + (100 / visibleItems) + '% - ' + (20 * (visibleItems - 1) / visibleItems) + 'px)'">
           <div class="product-image-container">
             <img [src]="'assets/' + product.photo" [alt]="product.name" onerror="this.src='assets/cirespider.jpg'">
             <div class="hover-overlay">

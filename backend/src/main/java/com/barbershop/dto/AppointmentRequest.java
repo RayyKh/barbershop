@@ -13,6 +13,7 @@ public class AppointmentRequest {
     
     // User details for guest booking
     private String userName;
+    private String userFirstName;
     private String userPhone;
     private String userEmail;
     private boolean useReward;
@@ -22,6 +23,7 @@ public class AppointmentRequest {
     public LocalDate getDate() { return date; }
     public LocalTime getStartTime() { return startTime; }
     public String getUserName() { return userName; }
+    public String getUserFirstName() { return userFirstName; }
     public String getUserPhone() { return userPhone; }
     public String getUserEmail() { return userEmail; }
     public boolean isUseReward() { return useReward; }

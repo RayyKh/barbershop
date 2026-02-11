@@ -9,6 +9,7 @@ public class SignupRequest {
     private String email;
     private String password;
     private String name;
+    private String firstName;
     private String phone;
     private Set<String> role;
 
@@ -16,6 +17,7 @@ public class SignupRequest {
     public String getEmail() { return email; }
     public String getPassword() { return password; }
     public String getName() { return name; }
+    public String getFirstName() { return firstName; }
     public String getPhone() { return phone; }
     public Set<String> getRole() { return role; }
 }

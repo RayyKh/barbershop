@@ -6,6 +6,7 @@ import { map } from 'rxjs/operators';
 export interface User {
   id?: number;
   name: string;
+  firstName?: string;
   email?: string;
   phone: string;
   totalAppointments?: number;
@@ -51,6 +52,7 @@ export interface AppointmentRequest {
   date: string;
   startTime: string;
   userName?: string;
+  userFirstName?: string;
   userPhone?: string;
   userEmail?: string;
   useReward?: boolean;
@@ -262,8 +264,9 @@ export class ApiService {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/status?status=${status}`, {});
   }
 
-  lockSlot(barberId: number, date: string, startTime: string, name?: string, phone?: string, serviceIds?: number[]): Observable<Appointment> {
+  lockSlot(barberId: number, date: string, startTime: string, firstName?: string, name?: string, phone?: string, serviceIds?: number[]): Observable<Appointment> {
     const params = new URLSearchParams({ barberId: String(barberId), date, startTime });
+    if (firstName) params.set('firstName', firstName);
     if (name) params.set('name', name);
     if (phone) params.set('phone', phone);
     if (serviceIds && serviceIds.length > 0) {

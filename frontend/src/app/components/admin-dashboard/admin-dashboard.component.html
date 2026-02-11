@@ -65,10 +65,16 @@
 
             <div class="manual-booking-fields">
               <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Prénom (Optionnel)</mat-label>
+                <input matInput formControlName="firstName" placeholder="Prénom du client">
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Nom (Optionnel)</mat-label>
                 <input matInput formControlName="name" placeholder="Nom du client">
               </mat-form-field>
-              <mat-form-field appearance="outline" class="half-width">
+            </div>
+            <div class="manual-booking-fields">
+              <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Téléphone (Optionnel)</mat-label>
                 <input matInput formControlName="phone" placeholder="Numéro de téléphone">
               </mat-form-field>
@@ -192,7 +198,7 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="filter-item search-item">
-              <mat-label>Recherche (nom/téléphone)</mat-label>
+              <mat-label>Recherche (prénom/nom/téléphone)</mat-label>
               <input matInput formControlName="q" placeholder="Tapez pour chercher">
             </mat-form-field>
 
@@ -235,7 +241,7 @@
               <div>{{ a.startTime.substring(0, 5) }} - {{ a.endTime.substring(0, 5) }}</div>
               <div>{{ a.barber.name }}</div>
               <div>
-                {{ a.user?.name || '-' }}
+                {{ a.user?.firstName || '' }} {{ a.user?.name || '-' }}
                 <div class="client-loyalty" *ngIf="a.user">
                   <mat-icon title="Total rendez-vous">event_available</mat-icon>
                   <span>{{ a.user?.totalAppointments || 0 }}</span>
@@ -284,7 +290,7 @@
                   <div class="admin-card-row">
                     <span class="label">Client:</span>
                     <span class="value">
-                      {{ a.user?.name || '-' }}
+                      {{ a.user?.firstName || '' }} {{ a.user?.name || '-' }}
                       <span class="client-loyalty-mini" *ngIf="a.user">
                         ({{ a.user?.totalAppointments || 0 }} <mat-icon>event_available</mat-icon>)
                         <mat-icon class="reward-icon" *ngIf="(a.user?.availableRewards || 0) > 0">card_giftcard</mat-icon>

@@ -73,6 +73,7 @@ export class AdminDashboardComponent implements OnInit {
       services: [[]],
       date: [new Date(), Validators.required],
       time: [null, Validators.required],
+      firstName: [''],
       name: [''],
       phone: ['']
     });
@@ -315,21 +316,20 @@ export class AdminDashboardComponent implements OnInit {
 
   lockSlot() {
     if (this.lockForm.valid) {
-      const barberId = this.lockForm.value.barber.id;
-      const dateStr = this.formatDateLocal(this.lockForm.value.date as Date);
-      const timeStr = this.lockForm.value.time;
-      const name = this.lockForm.value.name;
-      const phone = this.lockForm.value.phone;
-      const serviceIds = (this.lockForm.value.services || []).map((s: Service) => s.id);
-
-      this.api.lockSlot(barberId, dateStr, timeStr, name, phone, serviceIds).subscribe({
+      const val = this.lockForm.value;
+      const dateStr = this.formatDateLocal(val.date as Date);
+      const serviceIds = val.services.map((s: any) => s.id);
+      
+      this.api.lockSlot(val.barber.id, dateStr, val.time, val.firstName, val.name, val.phone, serviceIds).subscribe({
         next: () => {
-          this.applyFilters(); // Re-charger la liste filtrée
-          this.generateAvailableHours(); // Re-charger les créneaux libres
-          this.lockForm.patchValue({ name: '', phone: '', time: null, services: [] });
-          alert('Opération réussie');
+          this.snackBar.open('Créneau verrouillé avec succès', 'OK', { duration: 3000 });
+          this.lockForm.reset({ barber: this.barbers[0], date: new Date(), services: [], time: null, firstName: '', name: '', phone: '' });
+          this.applyFilters();
+          this.generateAvailableHours();
         },
-        error: (err) => alert('Erreur: ' + err.message)
+        error: (err) => {
+          this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+        }
       });
     }
   }

@@ -43,8 +43,14 @@ import { ApiService, Appointment } from '../../services/api.service';
           <form [formGroup]="idForm" (ngSubmit)="identify()">
             <div class="id-form-row">
               <mat-form-field appearance="outline">
+                <mat-label>Votre Prénom</mat-label>
+                <input matInput formControlName="firstName" placeholder="Ex: Jean">
+                <mat-icon matPrefix>person_outline</mat-icon>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
                 <mat-label>Votre Nom</mat-label>
-                <input matInput formControlName="name" placeholder="Ex: Ahmed">
+                <input matInput formControlName="name" placeholder="Ex: Dupont">
                 <mat-icon matPrefix>person</mat-icon>
               </mat-form-field>
               
@@ -106,7 +112,7 @@ import { ApiService, Appointment } from '../../services/api.service';
           <mat-card-subtitle>Consultez, annulez ou modifiez vos réservations</mat-card-subtitle>
           <div class="user-identity-chip" *ngIf="user">
             <mat-icon>person</mat-icon>
-            <span>{{ user.name }} ({{ user.phone }})</span>
+            <span>{{ user.firstName }} {{ user.name }} ({{ user.phone }})</span>
             <button mat-icon-button (click)="logout()" title="Changer d'utilisateur">
               <mat-icon>logout</mat-icon>
             </button>
@@ -402,6 +408,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
   constructor(private apiService: ApiService, private snackBar: MatSnackBar, private fb: FormBuilder) {
     this.idForm = this.fb.group({
+      firstName: ['', Validators.required],
       name: ['', Validators.required],
       phone: ['', [Validators.required, Validators.pattern(/^[0-9]{8,}$/)]]
     });
@@ -420,13 +427,14 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     // Check if user is already identified in session or local storage
     const savedPhone = localStorage.getItem('lastUserPhone');
     const savedName = localStorage.getItem('lastUserName');
+    const savedFirstName = localStorage.getItem('lastUserFirstName');
     const token = sessionStorage.getItem('token');
 
     if (token) {
       this.isAuthenticated = true;
     } else if (savedPhone && savedName) {
       this.isAuthenticated = true;
-      this.idForm.patchValue({ name: savedName, phone: savedPhone });
+      this.idForm.patchValue({ firstName: savedFirstName || '', name: savedName, phone: savedPhone });
     }
 
     this.reloadAppointments();
@@ -445,16 +453,18 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
   identify() {
     if (this.idForm.valid) {
-      const { name, phone } = this.idForm.value;
+      const { firstName, name, phone } = this.idForm.value;
+      localStorage.setItem('lastUserFirstName', firstName);
       localStorage.setItem('lastUserName', name);
       localStorage.setItem('lastUserPhone', phone);
       this.isAuthenticated = true;
       this.reloadAppointments();
-      this.snackBar.open(`Bienvenue ${name}`, 'OK', { duration: 2000 });
+      this.snackBar.open(`Bienvenue ${firstName} ${name}`, 'OK', { duration: 2000 });
     }
   }
 
   logout() {
+    localStorage.removeItem('lastUserFirstName');
     localStorage.removeItem('lastUserName');
     localStorage.removeItem('lastUserPhone');
     sessionStorage.removeItem('user');

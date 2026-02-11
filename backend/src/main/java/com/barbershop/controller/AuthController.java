@@ -82,6 +82,7 @@ public class AuthController {
         user.setEmail(signUpRequest.getEmail());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
         user.setName(signUpRequest.getName());
+        user.setFirstName(signUpRequest.getFirstName());
         user.setPhone(signUpRequest.getPhone());
         
         // Handle Roles

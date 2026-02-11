@@ -68,6 +68,7 @@ public class AppointmentController {
             if (guestUser == null) {
                 guestUser = new User();
                 guestUser.setName(request.getUserName());
+                guestUser.setFirstName(request.getUserFirstName());
                 guestUser.setPhone(request.getUserPhone());
                 guestUser.setRole(User.Role.CLIENT);
                 // Use phone as username for guests
@@ -123,9 +124,10 @@ public class AppointmentController {
         if (q != null && !q.isBlank()) {
             String qq = q.toLowerCase();
             list = list.stream().filter(a -> {
+                String firstName = a.getUser() != null && a.getUser().getFirstName() != null ? a.getUser().getFirstName().toLowerCase() : "";
                 String name = a.getUser() != null && a.getUser().getName() != null ? a.getUser().getName().toLowerCase() : "";
                 String phone = a.getUser() != null && a.getUser().getPhone() != null ? a.getUser().getPhone().toLowerCase() : "";
-                return name.contains(qq) || phone.contains(qq);
+                return firstName.contains(qq) || name.contains(qq) || phone.contains(qq);
             }).toList();
         }
         java.util.Comparator<Appointment> comparator = null;
@@ -199,11 +201,12 @@ public class AppointmentController {
             @RequestParam Long barberId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
+            @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String phone,
             @RequestParam(required = false) List<Long> serviceIds
     ) {
-        Appointment appt = appointmentService.lockSlot(barberId, date, startTime, name, phone, serviceIds);
+        Appointment appt = appointmentService.lockSlot(barberId, date, startTime, firstName, name, phone, serviceIds);
         notifyEmitters(appt);
         return appt;
     }
