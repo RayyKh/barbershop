@@ -26,6 +26,13 @@
             <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
           </mat-select>
         </mat-form-field>
+
+        <mat-form-field appearance="outline" class="date-picker-field">
+          <mat-label>Choisir une Date</mat-label>
+          <input matInput [matDatepicker]="picker" [(ngModel)]="currentDate" (dateChange)="onDateChange()">
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
       </div>
 
       <div *ngIf="loading" class="loading-spinner">

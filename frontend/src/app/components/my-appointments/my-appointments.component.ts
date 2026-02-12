@@ -44,19 +44,19 @@ import { ApiService, Appointment } from '../../services/api.service';
             <div class="id-form-row">
               <mat-form-field appearance="outline">
                 <mat-label>Votre Prénom</mat-label>
-                <input matInput formControlName="firstName" placeholder="Ex: Jean">
+                <input matInput formControlName="firstName">
                 <mat-icon matPrefix>person_outline</mat-icon>
               </mat-form-field>
 
               <mat-form-field appearance="outline">
                 <mat-label>Votre Nom</mat-label>
-                <input matInput formControlName="name" placeholder="Ex: Dupont">
+                <input matInput formControlName="name" >
                 <mat-icon matPrefix>person</mat-icon>
               </mat-form-field>
               
               <mat-form-field appearance="outline">
                 <mat-label>Votre Numéro de Téléphone</mat-label>
-                <input matInput formControlName="phone" placeholder="Ex: 22111333">
+                <input matInput formControlName="phone" >
                 <mat-icon matPrefix>phone</mat-icon>
               </mat-form-field>
             </div>
@@ -391,8 +391,25 @@ import { ApiService, Appointment } from '../../services/api.service';
     .mobile-chips { display: flex; flex-wrap: wrap; gap: 4px; }
 
     ::ng-deep .mat-mdc-form-field-flex { background-color: #1a1a1a !important; }
-    ::ng-deep .mat-mdc-form-field-label { color: #aaa !important; }
-    ::ng-deep .mat-mdc-input-element { color: #fff !important; }
+    ::ng-deep .mat-mdc-form-field-label, 
+    ::ng-deep .mdc-floating-label,
+    ::ng-deep .mat-mdc-form-field-label .mdc-floating-label { 
+      color: #ffffff !important; 
+    }
+    ::ng-deep .mat-mdc-input-element { color: #ffffff !important; }
+    ::ng-deep .mat-mdc-form-field-label .mdc-floating-label--float-above { 
+      color: #d4af37 !important; 
+    }
+    ::ng-deep .mat-icon[matPrefix] { color: #d4af37 !important; }
+    ::ng-deep .mat-mdc-form-field-hint { color: #ffffff !important; }
+    ::ng-deep .mat-mdc-form-field-placeholder,
+    ::ng-deep .mat-mdc-input-element::placeholder { 
+      color: rgba(255, 255, 255, 0.7) !important; 
+    }
+    /* Pour la bordure quand on ne survole pas */
+    ::ng-deep .mdc-outlined-record__outline {
+      border-color: rgba(255, 255, 255, 0.3) !important;
+    }
   `]
 })
 export class MyAppointmentsComponent implements OnInit, OnDestroy {

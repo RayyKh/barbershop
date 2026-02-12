@@ -108,7 +108,7 @@ export interface Product {
   providedIn: 'root'
 })
 export class ApiService {
-  private baseUrl = `http://${window.location.hostname}:8081/api`;
+  private baseUrl = `${window.location.origin}/api`;
   private appointmentBookedSubject = new Subject<Appointment>();
   appointmentBooked$ = this.appointmentBookedSubject.asObservable();
   

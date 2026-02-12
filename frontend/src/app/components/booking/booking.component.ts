@@ -86,6 +86,11 @@ export class BookingComponent implements OnInit {
     });
     this.apiService.getBarbers().subscribe(data => this.barbers = data);
 
+    // Refresh slots when services change
+    this.bookingFormGroup.get('servicesCtrl')?.valueChanges.subscribe(() => {
+      this.fetchSlots();
+    });
+
     // Load user from session storage
     const userJson = sessionStorage.getItem('user');
     if (userJson) {
@@ -175,9 +180,12 @@ export class BookingComponent implements OnInit {
   fetchSlots() {
     const barber = this.bookingFormGroup.get('barberCtrl')?.value;
     const date = this.bookingFormGroup.get('dateCtrl')?.value;
+    const selectedServices = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
 
-    if (barber && date) {
+    if (barber && date && selectedServices && selectedServices.length > 0) {
       const dateStr = this.formatDateLocal(date);
+      const totalDuration = selectedServices.reduce((acc, s) => acc + s.duration, 0);
+
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
         const now = new Date();
         const todayStr = this.formatDateLocal(now);
@@ -196,9 +204,40 @@ export class BookingComponent implements OnInit {
           });
         }
 
-        // 2. Les blocages admin sont déjà filtrés par le backend dans apiService.getAvailableSlots
-        this.availableSlots = filteredSlots;
+        // 2. Vérifier si les créneaux consécutifs nécessaires sont disponibles
+        const finalAvailableSlots: string[] = [];
+        const slotsNeeded = Math.ceil(totalDuration / 15);
+
+        for (let i = 0; i <= filteredSlots.length - slotsNeeded; i++) {
+          let canFit = true;
+          const currentSlot = filteredSlots[i];
+          const [h, m] = currentSlot.split(':').map(Number);
+          let expectedTime = new Date();
+          expectedTime.setHours(h, m, 0, 0);
+
+          for (let j = 0; j < slotsNeeded; j++) {
+            const checkTime = new Date(expectedTime.getTime() + j * 15 * 60000);
+            const checkTimeStr = `${String(checkTime.getHours()).padStart(2, '0')}:${String(checkTime.getMinutes()).padStart(2, '0')}:00`;
+            
+            // On vérifie si ce créneau spécifique existe dans la liste des créneaux libres
+            // Note: Le backend renvoie HH:mm ou HH:mm:ss, on doit être flexible
+            const exists = filteredSlots.some(s => s.startsWith(checkTimeStr.substring(0, 5)));
+            
+            if (!exists) {
+              canFit = false;
+              break;
+            }
+          }
+
+          if (canFit) {
+            finalAvailableSlots.push(currentSlot);
+          }
+        }
+
+        this.availableSlots = finalAvailableSlots;
       });
+    } else {
+      this.availableSlots = [];
     }
   }
 
@@ -239,9 +278,8 @@ export class BookingComponent implements OnInit {
 
           this.isBookingSuccess = true;
           setTimeout(() => {
-            this.router.navigate(['/'], { fragment: 'top' }).then(() => {
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            });
+            // Refresh the page completely to allow the next customer to start fresh
+            window.location.href = '/'; 
           }, 3000);
         },
         error: (err) => {

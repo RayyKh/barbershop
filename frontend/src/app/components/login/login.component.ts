@@ -23,12 +23,12 @@ import { ApiService } from '../../services/api.service';
           <form [formGroup]="loginForm" (ngSubmit)="login()" class="login-form">
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Nom d'utilisateur</mat-label>
-              <input matInput formControlName="username" placeholder="ex: superadmin123">
+              <input matInput formControlName="username" >
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Mot de passe</mat-label>
-              <input matInput type="password" formControlName="password" placeholder="••••••••">
+              <input matInput type="password" formControlName="password" >
             </mat-form-field>
 
             <button mat-raised-button color="primary" type="submit" [disabled]="!loginForm.valid" class="submit-btn">Se connecter</button>

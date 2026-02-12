@@ -52,10 +52,20 @@ public class AppointmentService {
     private PushNotificationService pushNotificationService;
 
     private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        // Ramadan Special Rule (Feb 19 - March 20)
+        if (isRamadan(date)) {
+            boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
+            boolean inSecondWindow = !startTime.isBefore(LocalTime.of(19, 0)) && !endTime.isAfter(LocalTime.of(22, 0));
+            
+            if (!inFirstWindow && !inSecondWindow) {
+                throw new ConflictException("Pendant le Ramadan, les réservations ne sont autorisées que de 12h à 17h et de 19h à 22h.");
+            }
+        }
+
         // 1. Check conflicts with other appointments
         List<Appointment> conflicts = appointmentRepository.findConflictingAppointments(barberId, date, startTime, endTime);
         if (!conflicts.isEmpty()) {
-            throw new ConflictException("Slot not available (Conflict with appointment)");
+            throw new ConflictException("Ce créneau n'est pas disponible car il contient déjà une réservation.");
         }
 
         // 2. Check conflicts with admin blockages
@@ -64,7 +74,7 @@ public class AppointmentService {
             boolean barberMatches = (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId)));
             if (barberMatches) {
                 if (b.getStartTime() == null || b.getStartTime().isBlank()) {
-                    throw new ConflictException("Date is blocked by administrator");
+                    throw new ConflictException("Cette date est bloquée par l'administrateur.");
                 }
                 
                 try {
@@ -78,11 +88,11 @@ public class AppointmentService {
                         if (bEndStr.length() == 5) bEndStr += ":00";
                         bEnd = LocalTime.parse(bEndStr);
                     } else {
-                        bEnd = bStart.plusMinutes(30);
+                        bEnd = bStart.plusMinutes(15);
                     }
                     
                     if (startTime.isBefore(bEnd) && endTime.isAfter(bStart)) {
-                        throw new ConflictException("Slot is blocked by administrator");
+                        throw new ConflictException("Ce créneau est bloqué par l'administrateur.");
                     }
                 } catch (Exception e) {
                     logger.error("Error parsing blockage time: '{}' - '{}'", b.getStartTime(), b.getEndTime(), e);
@@ -103,7 +113,12 @@ public class AppointmentService {
             throw new ResourceNotFoundException("No services selected");
         }
 
-        LocalTime endTime = startTime.plusMinutes(30); 
+        // Calculate total duration based on all selected services
+        int totalDuration = selectedServices.stream()
+                .mapToInt(com.barbershop.entity.Service::getDuration)
+                .sum();
+        
+        LocalTime endTime = startTime.plusMinutes(totalDuration); 
 
         // Check for conflicts (appointments and admin blockages)
         checkConflicts(barberId, date, startTime, endTime);
@@ -113,25 +128,16 @@ public class AppointmentService {
         appointment.setBarber(barber);
         appointment.setServices(selectedServices);
         
-        double total = selectedServices.stream().mapToDouble(s -> s.getPrice()).sum();
-        
-        // Loyalty Logic: Check if reward can be applied
+        double total = selectedServices.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
         boolean rewardApplied = false;
-        if (useReward && user.getAvailableRewards() > 0) {
-            // Check if "Coupe" and "Barbe" are BOTH selected (either as a pack or as individual services)
-            boolean hasCoupe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("coupe"));
-            boolean hasBarbe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("barbe"));
-            
-            if (hasCoupe && hasBarbe) {
-                // Find the services to discount. Priority: "Coupe + Barbe" pack, or individual "Coupe" and "Barbe"
-                Optional<com.barbershop.entity.Service> pack = selectedServices.stream()
-                    .filter(s -> s.getName().toLowerCase().contains("coupe") && s.getName().toLowerCase().contains("barbe"))
-                    .findFirst();
+
+        if (useReward) {
+            if (user.getAvailableRewards() > 0) {
+                // Discount: free "Coupe" and "Barbe" if present in selected services
+                boolean hasCoupe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("coupe"));
+                boolean hasBarbe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("barbe"));
                 
-                if (pack.isPresent()) {
-                    total -= pack.get().getPrice();
-                } else {
-                    // Discount individual services
+                if (hasCoupe || hasBarbe) {
                     double coupePrice = selectedServices.stream()
                         .filter(s -> s.getName().toLowerCase().contains("coupe"))
                         .mapToDouble(com.barbershop.entity.Service::getPrice)
@@ -170,9 +176,13 @@ public class AppointmentService {
             .map(com.barbershop.entity.Service::getName)
             .collect(java.util.stream.Collectors.joining(", "));
 
+        String clientFullName = (user.getFirstName() != null && !user.getFirstName().isBlank()) 
+            ? user.getFirstName() + " " + user.getName() 
+            : user.getName();
+
         String title = "Nouveau Rendez-vous !";
         String message = String.format("%s a réservé pour %s (Total: %.2f DT) avec %s le %s à %s", 
-            user.getName(), servicesNames, total, barber.getName(), date, startTime);
+            clientFullName, servicesNames, total, barber.getName(), date, startTime);
 
         // Envoyer la notification push ciblée pour ce barbier
         pushNotificationService.sendNotificationToBarber(barber.getId(), title, message);
@@ -208,18 +218,48 @@ public class AppointmentService {
         return appointmentRepository.findByUser_Id(userId);
     }
 
+    private boolean isRamadan(LocalDate date) {
+        int year = date.getYear();
+        LocalDate start = LocalDate.of(year, 2, 19);
+        LocalDate end = LocalDate.of(year, 3, 20);
+        return !date.isBefore(start) && !date.isAfter(end);
+    }
+
     public List<LocalTime> getAvailableSlots(Long barberId, LocalDate date) {
-        LocalTime startOfDay;
-        LocalTime endOfDay;
-
-        if (date.getDayOfWeek() == DayOfWeek.MONDAY) {
-            startOfDay = LocalTime.of(12, 0);
-            endOfDay = LocalTime.of(18, 0);
+        List<LocalTime> allTimes = new ArrayList<>();
+        
+        if (isRamadan(date)) {
+            // Ramadan hours: 12h-17h and 19h-22h
+            LocalTime t1 = LocalTime.of(12, 0);
+            while (t1.isBefore(LocalTime.of(17, 0))) {
+                allTimes.add(t1);
+                t1 = t1.plusMinutes(15);
+            }
+            
+            LocalTime t2 = LocalTime.of(19, 0);
+            while (t2.isBefore(LocalTime.of(22, 0))) {
+                allTimes.add(t2);
+                t2 = t2.plusMinutes(15);
+            }
         } else {
-            startOfDay = LocalTime.of(10, 0);
-            endOfDay = LocalTime.of(21, 0);
-        }
+            LocalTime startOfDay;
+            LocalTime endOfDay;
 
+            if (date.getDayOfWeek() == DayOfWeek.MONDAY) {
+                startOfDay = LocalTime.of(12, 0);
+                endOfDay = LocalTime.of(18, 0);
+            } else {
+                startOfDay = LocalTime.of(10, 0);
+                endOfDay = LocalTime.of(21, 0);
+            }
+
+            LocalTime currentSlot = startOfDay;
+            while (currentSlot.isBefore(endOfDay)) {
+                allTimes.add(currentSlot);
+                currentSlot = currentSlot.plusMinutes(15);
+            }
+        }
+        
         // Check if the whole day is blocked by admin
         List<BlockedSlot> dayBlockages = blockedSlotRepository.findByDate(date);
         logger.info("Checking availability for barber {} on {}. Found {} total blockages.", barberId, date, dayBlockages.size());
@@ -239,13 +279,6 @@ public class AppointmentService {
             return new ArrayList<>();
         }
 
-        List<LocalTime> allTimes = new ArrayList<>();
-        LocalTime currentSlot = startOfDay;
-        while (currentSlot.isBefore(endOfDay)) {
-            allTimes.add(currentSlot);
-            currentSlot = currentSlot.plusMinutes(30);
-        }
-
         // Fetch booked appointments
         List<Appointment> bookedAppointments = appointmentRepository.findByBarber_IdAndDate(barberId, date);
         logger.info("Found {} existing appointments for barber {} on {}", bookedAppointments.size(), barberId, date);
@@ -253,7 +286,7 @@ public class AppointmentService {
         List<LocalTime> availableSlots = new ArrayList<>();
         for (LocalTime time : allTimes) {
             boolean isBooked = false;
-            LocalTime slotEnd = time.plusMinutes(30);
+            LocalTime slotEnd = time.plusMinutes(15);
             
             // 1. Check against appointments
             for (Appointment appt : bookedAppointments) {
@@ -320,6 +353,56 @@ public class AppointmentService {
     @Transactional
     public BlockedSlot blockSlot(String dateStr, String startTime, String endTime, Long barberId, String reason) {
         LocalDate date = LocalDate.parse(dateStr);
+        
+        // 1. Vérifier s'il y a déjà des réservations pour ce créneau ou cette journée
+        List<Appointment> existingAppointments = appointmentRepository.findByDate(date);
+        
+        if (barberId != null) {
+            existingAppointments = existingAppointments.stream()
+                .filter(a -> a.getBarber() != null && a.getBarber().getId().equals(barberId))
+                .toList();
+        }
+
+        if (startTime == null || startTime.isBlank()) {
+            // Blocage de toute la journée
+            boolean hasActiveAppointments = existingAppointments.stream()
+                .anyMatch(a -> a.getStatus() == AppointmentStatus.BOOKED || a.getStatus() == AppointmentStatus.MODIFIED);
+            if (hasActiveAppointments) {
+                throw new ConflictException("Cette journée contient déjà une ou plusieurs réservations et ne peut donc pas être bloquée.");
+            }
+        } else {
+            // Blocage d'un créneau spécifique
+            try {
+                String sStartStr = startTime.trim();
+                if (sStartStr.length() == 5) sStartStr += ":00";
+                LocalTime bStart = LocalTime.parse(sStartStr);
+                
+                LocalTime bEnd;
+                if (endTime != null && !endTime.isBlank()) {
+                    String sEndStr = endTime.trim();
+                    if (sEndStr.length() == 5) sEndStr += ":00";
+                    bEnd = LocalTime.parse(sEndStr);
+                } else {
+                    bEnd = bStart.plusMinutes(30);
+                }
+
+                boolean hasActiveAppointments = existingAppointments.stream()
+                    .filter(a -> a.getStatus() == AppointmentStatus.BOOKED || a.getStatus() == AppointmentStatus.MODIFIED)
+                    .anyMatch(a -> {
+                        LocalTime aStart = a.getStartTime();
+                        LocalTime aEnd = a.getEndTime();
+                        return bStart.isBefore(aEnd) && bEnd.isAfter(aStart);
+                    });
+                
+                if (hasActiveAppointments) {
+                    throw new ConflictException("Ce créneau contient déjà une réservation et ne peut donc pas être bloqué.");
+                }
+            } catch (Exception e) {
+                if (e instanceof ConflictException) throw e;
+                logger.error("Error parsing blockage time for validation: {} - {}", startTime, endTime, e);
+            }
+        }
+
         BlockedSlot bs = new BlockedSlot();
         bs.setDate(date);
         bs.setStartTime(startTime);

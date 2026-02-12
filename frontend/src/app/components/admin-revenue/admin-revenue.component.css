@@ -187,7 +187,82 @@
   --mdc-outlined-text-field-focused-outline-color: #ffffff;
 }
 
+:host ::ng-deep .mat-mdc-input-element {
+  color: #fff !important;
+}
+
+:host ::ng-deep .mat-datepicker-toggle {
+  color: #fff !important;
+}
+
+:host ::ng-deep .mat-datepicker-content {
+  background-color: #1a1a1a !important;
+  color: #fff !important;
+}
+
+:host ::ng-deep .mat-calendar-body-cell-content {
+  color: #fff !important;
+}
+
+:host ::ng-deep .mat-calendar-table-header,
+:host ::ng-deep .mat-calendar-controls {
+  color: #fff !important;
+}
+
 :host ::ng-deep .mat-mdc-select-value,
 :host ::ng-deep .mat-mdc-select-arrow {
   color: #fff !important;
+}
+
+/* Responsiveness fixes */
+@media (max-width: 600px) {
+  .revenue-container {
+    padding: 120px 10px 20px;
+  }
+
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  .nav-actions {
+    justify-content: space-between;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .current-date-display {
+    font-size: 0.9rem;
+    min-width: unset;
+    flex: 1;
+  }
+
+  .revenue-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Force tabs to show fully or scroll */
+  :host ::ng-deep .mat-mdc-tab-header {
+    width: 100%;
+  }
+
+  :host ::ng-deep .mat-mdc-tab-labels {
+    justify-content: space-between;
+  }
+
+  :host ::ng-deep .mdc-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 0 8px;
+  }
+
+  .period-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
 }

@@ -37,6 +37,7 @@ import { ApiService, Appointment, Barber } from '../../services/api.service';
 export class BarberHistoryComponent implements OnInit, OnDestroy {
   barbers: Barber[] = [];
   appointments: Appointment[] = [];
+  filteredAppointments: Appointment[] = [];
   filterForm: FormGroup;
   displayedColumns: string[] = ['date', 'time', 'client', 'service', 'price'];
   private appointmentsSub?: Subscription;
@@ -45,7 +46,8 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
     this.filterForm = this.fb.group({
       barberId: [null],
       period: ['day'], // 'day', 'week', 'month'
-      selectedDate: [new Date()]
+      selectedDate: [new Date()],
+      searchTerm: ['']
     });
   }
 
@@ -58,7 +60,9 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.filterForm.valueChanges.subscribe(() => {
+    this.filterForm.valueChanges.subscribe((vals) => {
+      // Si seul searchTerm a changé, on filtre localement
+      // Sinon on recharge tout
       this.loadHistory();
     });
 
@@ -76,12 +80,10 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
   }
 
   loadHistory(): void {
-    const { barberId, period, selectedDate } = this.filterForm.value;
+    const { barberId, period, selectedDate, searchTerm } = this.filterForm.value;
     if (!barberId) return;
 
     // On utilise l'API de filtrage existante. 
-    // Pour simplifier, on récupère tout et on filtre côté client pour la période complexe
-    // (ou on pourrait étendre le backend si nécessaire).
     this.api.filterAppointments({ barberId }).subscribe(data => {
       const date = new Date(selectedDate);
       
@@ -115,10 +117,33 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
         const dB = new Date(b.date + 'T' + b.startTime);
         return dB.getTime() - dA.getTime();
       });
+
+      this.applySearch();
+    });
+  }
+
+  applySearch(): void {
+    const term = this.filterForm.value.searchTerm?.toLowerCase().trim();
+    if (!term) {
+      this.filteredAppointments = [...this.appointments];
+      return;
+    }
+
+    this.filteredAppointments = this.appointments.filter(app => {
+      const user = app.user;
+      if (!user) return false;
+      
+      const firstName = (user.firstName || '').toLowerCase();
+      const name = (user.name || '').toLowerCase();
+      const phone = (user.phone || '').toLowerCase();
+      
+      return firstName.includes(term) || 
+             name.includes(term) || 
+             phone.includes(term);
     });
   }
 
   getTotalRevenue(): number {
-    return this.appointments.reduce((sum, app) => sum + (app.totalPrice || 0), 0);
+    return this.filteredAppointments.reduce((sum, app) => sum + (app.totalPrice || 0), 0);
   }
 }

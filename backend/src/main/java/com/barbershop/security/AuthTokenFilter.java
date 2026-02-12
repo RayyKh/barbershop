@@ -31,6 +31,12 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
+            
+            // Special handling for SSE stream with token in query param
+            if (jwt == null && "/api/appointments/stream".equals(request.getRequestURI())) {
+                jwt = request.getParameter("token");
+            }
+
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
 

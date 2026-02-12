@@ -50,19 +50,29 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   navigateToSection(fragment: string) {
-    const isHome = this.router.url === '/' || this.router.url.startsWith('/#');
+    if (fragment === 'top') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.router.navigate(['/']);
+      return;
+    }
+
+    const isHome = this.router.url === '/' || this.router.url.split('#')[0] === '/';
     
     if (isHome) {
-      // Already on home, just scroll
+      // Forcer la fermeture du menu mobile avant de scroller
       const element = document.getElementById(fragment);
       if (element) {
-        // Smooth scroll to the element
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        // Update URL without triggering navigation
-        window.history.replaceState({}, '', `/#${fragment}`);
+        // Utiliser scrollIntoView natif qui est plus fiable quand il y a des conflits
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Ajuster un peu après le scroll pour compenser la navbar
+          setTimeout(() => {
+            window.scrollBy(0, -100);
+          }, 600);
+          window.history.replaceState({}, '', `/#${fragment}`);
+        }, 100);
       }
     } else {
-      // Navigate to home with fragment
       this.router.navigate(['/'], { fragment: fragment });
     }
   }

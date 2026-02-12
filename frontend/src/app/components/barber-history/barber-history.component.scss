@@ -80,6 +80,11 @@ mat-form-field {
   min-width: 220px;
 }
 
+.search-field {
+  flex: 2;
+  min-width: 300px;
+}
+
 .total-revenue {
   display: flex;
   flex-direction: column;

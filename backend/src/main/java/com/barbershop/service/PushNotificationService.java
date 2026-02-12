@@ -117,7 +117,7 @@ public class PushNotificationService {
 
                 Notification notification = new Notification(
                     subscription,
-                    String.format("{\"notification\":{\"title\":\"%s\", \"body\":\"%s\", \"icon\":\"/assets/logo.png\"}}", title, message)
+                    String.format("{\"notification\":{\"title\":\"%s\", \"body\":\"%s\", \"icon\":\"/assets/logo.png\", \"badge\":\"/assets/icons/icon-72x72.png\", \"vibrate\":[100, 50, 100], \"data\":{\"url\":\"/admin\"}}}", title, message)
                 );
                 
                 pushService.send(notification);

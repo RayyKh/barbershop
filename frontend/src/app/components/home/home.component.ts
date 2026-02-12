@@ -42,14 +42,19 @@ export class HomeComponent implements OnInit {
   ];
 
   galleryImages: string[] = [
-    'assets/pic1.png',
-    'assets/pic2.png',
-    'assets/pic3.png',
-    'assets/pic4.png',
-    'assets/pic5.png',
-    'assets/pic6.png',
-    'assets/pic7.png',
-    'assets/pic8.png'
+    
+    'assets/img1.jpeg',
+    'assets/img2.jpeg',
+    'assets/img3.jpeg',
+    'assets/img4.jpeg',
+    'assets/img5.jpeg',
+    'assets/img6.jpeg',
+    'assets/img7.jpeg',
+    'assets/img8.jpeg',
+    'assets/img9.jpeg',
+    'assets/img10.jpeg',
+    'assets/img11.jpeg',
+    'assets/img12.jpeg'
   ];
 
   galleryChunks: string[][] = [];
@@ -59,10 +64,8 @@ export class HomeComponent implements OnInit {
     { name: 'Ahmed Khadhraoui', text: 'Service impeccable, fade parfait et ambiance au top.', rating: 5 },
     { name: 'Amir Bachtobji', text: 'Très pro, rapide et soigné. Je recommande vivement.', rating: 5 },
     { name: 'Rayen Aissaoui', text: 'Super expérience, équipe accueillante et talentueuse.', rating: 5 },
-    { name: 'Amen Benzarti', text: 'Coupe nickel, respect des horaires et des goûts.', rating: 4 },
     { name: 'Mohammed Omri', text: 'Barbiers qualifiés, résultats au-delà des attentes.', rating: 5 },
     { name: 'Fares Ben Salem', text: 'Salon élégant, produits premium, top qualité.', rating: 4 },
-    { name: 'Rami Zoghlami', text: 'Meilleur barbier du quartier, je recommande sans hésiter.', rating: 5 },
     { name: 'Bayrem Oueslati', text: 'Très satisfait du service et de la précision du travail.', rating: 5 }
   ];
 
@@ -88,7 +91,13 @@ export class HomeComponent implements OnInit {
   }
 
   scrollToBooking() {
-    document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth' });
+    const element = document.getElementById('booking');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setTimeout(() => {
+        window.scrollBy(0, -100);
+      }, 600);
+    }
   }
 
   isMp4(url: string): boolean {

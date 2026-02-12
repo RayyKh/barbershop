@@ -14,7 +14,7 @@
       <a mat-button [routerLink]="['/my-appointments']" routerLinkActive="active-link">MES RDV</a>
       <a mat-button (click)="navigateToSection('feedbacks')">FEEDBACKS</a>
       <a mat-button (click)="navigateToSection('videos')">VIDÉOS</a>
-      <a mat-button (click)="navigateToSection('booking-section')" class="book-btn">
+      <a mat-button (click)="navigateToSection('booking')" class="book-btn">
         RÉSERVER
       </a>
     </div>
@@ -53,7 +53,7 @@
           <mat-icon>play_circle</mat-icon>
           <span>VIDÉOS</span>
         </a>
-        <a mat-menu-item (click)="navigateToSection('booking-section')" class="mobile-book-item">
+        <a mat-menu-item (click)="navigateToSection('booking')" class="mobile-book-item">
           <mat-icon color="primary">calendar_today</mat-icon>
           <span>RÉSERVER</span>
         </a>

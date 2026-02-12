@@ -48,10 +48,10 @@ export class AdminDashboardComponent implements OnInit {
   adminBlockForm: FormGroup;
   availableHours: string[] = [];
   allAvailableHours: string[] = [
-    "09:00:00", "09:30:00", "10:00:00", "10:30:00", "11:00:00", "11:30:00",
-    "12:00:00", "12:30:00", "13:00:00", "13:30:00", "14:00:00", "14:30:00",
-    "15:00:00", "15:30:00", "16:00:00", "16:30:00", "17:00:00", "17:30:00",
-    "18:00:00", "18:30:00", "19:00:00", "19:30:00"
+    "09:00:00", "09:40:00", "10:20:00", "11:00:00", "11:40:00", 
+    "12:20:00", "13:00:00", "13:40:00", "14:20:00", "15:00:00", "15:40:00", 
+    "16:20:00", "17:00:00", "17:40:00", "18:20:00", "19:00:00", "19:40:00", 
+    "20:20:00", "21:00:00", "21:40:00", "22:20:00"
   ];
   activeTab: 'manual' | 'block' = 'manual';
   hasNew = false;
@@ -163,7 +163,15 @@ export class AdminDashboardComponent implements OnInit {
           this.adminBlockForm.reset({ date: new Date(), barberId: null, startTime: null, endTime: null, reason: '' });
         },
         error: (err) => {
-          this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+          let errorMsg = 'Erreur lors du blocage';
+          if (err.error && typeof err.error === 'string') {
+            errorMsg = err.error;
+          } else if (err.error && err.error.message) {
+            errorMsg = err.error.message;
+          } else if (err.message) {
+            errorMsg = err.message;
+          }
+          this.snackBar.open(errorMsg, 'Fermer', { duration: 5000 });
         }
       });
     }
@@ -328,7 +336,15 @@ export class AdminDashboardComponent implements OnInit {
           this.generateAvailableHours();
         },
         error: (err) => {
-          this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
+          let errorMsg = 'Erreur lors du verrouillage';
+          if (err.error && typeof err.error === 'string') {
+            errorMsg = err.error;
+          } else if (err.error && err.error.message) {
+            errorMsg = err.error.message;
+          } else if (err.message) {
+            errorMsg = err.message;
+          }
+          this.snackBar.open(errorMsg, 'Fermer', { duration: 5000 });
         }
       });
     }
