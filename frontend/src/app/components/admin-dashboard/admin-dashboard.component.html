@@ -65,27 +65,31 @@
 
             <div class="manual-booking-fields">
               <mat-form-field appearance="outline" class="half-width">
-                <mat-label>Prénom (Optionnel)</mat-label>
-                <input matInput formControlName="firstName" placeholder="Prénom du client">
-              </mat-form-field>
-              <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Nom (Optionnel)</mat-label>
                 <input matInput formControlName="name" placeholder="Nom du client">
               </mat-form-field>
-            </div>
-            <div class="manual-booking-fields">
-              <mat-form-field appearance="outline" class="full-width">
+              <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Téléphone (Optionnel)</mat-label>
-                <input matInput formControlName="phone" placeholder="Numéro de téléphone">
+                <input matInput formControlName="phone" placeholder="Ex: 26006015" type="tel" pattern="[0-9]*" inputmode="numeric">
+                <mat-error *ngIf="lockForm.get('phone')?.hasError('pattern')">
+                  Numéro invalide (8 chiffres minimum)
+                </mat-error>
               </mat-form-field>
             </div>
 
-            <div class="hours">
-              <mat-chip-listbox>
-                <mat-chip-option *ngFor="let h of availableHours" [selected]="lockForm.value.time===h" (click)="lockForm.patchValue({ time: h })">
-                  {{ h.substring(0, 5) }}
-                </mat-chip-option>
-              </mat-chip-listbox>
+            <div class="slots-container" *ngIf="allSlotsUI.length > 0">
+              <h3>Créneaux horaires :</h3>
+              <div class="slots-grid">
+                <div *ngFor="let slot of allSlotsUI" 
+                     class="slot-item"
+                     [class.available]="slot.isAvailable"
+                     [class.unavailable]="!slot.isAvailable"
+                     [class.selected]="lockForm.get('time')?.value === slot.time"
+                     [style.display]="slot.isPast ? 'none' : 'flex'"
+                     (click)="slot.isAvailable ? lockForm.patchValue({ time: slot.time }) : null">
+                  {{slot.time}}
+                </div>
+              </div>
             </div>
 
             <div class="actions">
@@ -236,7 +240,7 @@
             <div class="barber-title">{{ b.name }}</div>
             
             <!-- Desktop Rows -->
-            <div class="row desktop-only" *ngFor="let a of filterByBarber(b.id)">
+            <div class="row desktop-only" [ngClass]="'status-' + a.status.toLowerCase()" *ngFor="let a of filterByBarber(b.id)">
               <div>{{ a.date }}</div>
               <div>{{ a.startTime.substring(0, 5) }} - {{ a.endTime.substring(0, 5) }}</div>
               <div>{{ a.barber.name }}</div>
@@ -261,13 +265,16 @@
               <div>
                 <span class="status">
                   {{ a.status }}
-                  <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new" (click)="markViewed(a)">
-                    {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
+                  <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && !a.adminViewed" class="pill-new" (click)="markViewed(a)">
+                    {{ a.status === 'MODIFIED' ? 'MODIFIED' : (a.status === 'BLOCKED' ? 'LOCKED' : 'NEW') }}
                   </span>
-                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-icon-button color="primary" (click)="markDone(a)" title="Marquer comme terminé">
+                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button color="primary" (click)="markDone(a)" title="Marquer comme terminé">
                     <mat-icon>check_circle</mat-icon>
                   </button>
-                  <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED') && a.adminViewed)" mat-icon-button color="warn" class="delete-btn" (click)="deleteAppointment(a)" title="Supprimer de la liste">
+                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button class="gold-icon-btn" (click)="editAppointment(a)" title="Modifier">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && a.adminViewed)" mat-icon-button color="warn" class="delete-btn" (click)="deleteAppointment(a)" title="Supprimer de la liste">
                     <mat-icon>close</mat-icon>
                   </button>
                 </span>
@@ -315,20 +322,23 @@
                     <span class="label">Statut:</span>
                     <div class="value">
                       <span class="status-text">{{ a.status }}</span>
-                      <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED') && !a.adminViewed" class="pill-new mini" (click)="markViewed(a)">
-                        {{ a.status === 'MODIFIED' ? 'MODIFIED' : 'NEW' }}
+                      <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && !a.adminViewed" class="pill-new mini" (click)="markViewed(a)">
+                        {{ a.status === 'MODIFIED' ? 'MODIFIED' : (a.status === 'BLOCKED' ? 'LOCKED' : 'NEW') }}
                       </span>
-                      <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-icon-button color="primary" size="small" (click)="markDone(a)" title="Terminer">
+                      <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button color="primary" size="small" (click)="markDone(a)" title="Terminer">
                         <mat-icon>check_circle</mat-icon>
                       </button>
-                      <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED') && a.adminViewed)" mat-icon-button color="warn" size="small" (click)="deleteAppointment(a)" title="Supprimer de la liste">
+                      <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button class="gold-icon-btn" size="small" (click)="editAppointment(a)" title="Modifier">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+                      <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && a.adminViewed)" mat-icon-button color="warn" size="small" (click)="deleteAppointment(a)" title="Supprimer de la liste">
                         <mat-icon>close</mat-icon>
                       </button>
                     </div>
                   </div>
                   <div class="admin-card-actions" *ngIf="a.status === 'BLOCKED' || a.status === 'BOOKED' || a.status === 'MODIFIED'">
                     <button *ngIf="a.status === 'BLOCKED'" mat-raised-button color="warn" size="small" (click)="unlock(a)">Déverrouiller</button>
-                    <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED'" mat-raised-button color="primary" size="small" (click)="markDone(a)">Marquer Terminé</button>
+                    <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-raised-button color="primary" size="small" (click)="markDone(a)">Marquer Terminé</button>
                   </div>
                 </mat-card-content>
               </mat-card>
@@ -338,4 +348,45 @@
       </section>
     </mat-card-content>
   </mat-card>
+</div>
+
+<!-- Floating Chat Button -->
+<button class="chat-toggle-btn" (click)="toggleChat()">
+  <mat-icon>chat</mat-icon>
+  <span class="chat-badge" *ngIf="false">0</span>
+</button>
+
+<!-- Chat Window -->
+<div class="admin-chat-window" [class.expanded]="chatExpanded">
+  <div class="chat-header" (click)="toggleChat()">
+    <h3>Discussion Barbiers</h3>
+    <mat-icon>expand_more</mat-icon>
+  </div>
+  
+  <div class="chat-identity-selector" *ngIf="!selectedChatIdentity">
+    <h4>Qui êtes-vous ?</h4>
+    <div class="identity-options">
+      <button mat-stroked-button *ngFor="let name of availableIdentities" (click)="selectIdentity(name)">
+        {{name}}
+      </button>
+    </div>
+  </div>
+
+  <div class="chat-body" id="chat-messages-container" *ngIf="selectedChatIdentity">
+    <div *ngFor="let msg of chatMessages" class="chat-message" [class.own-message]="msg.senderName === selectedChatIdentity">
+      <div class="message-info">
+        <span class="sender-name">{{ msg.senderName }}</span>
+        <span class="message-time">{{ msg.timestamp | date:'shortTime' }}</span>
+      </div>
+      <div class="message-content">
+        {{ msg.content }}
+      </div>
+    </div>
+  </div>
+  <div class="chat-footer" *ngIf="selectedChatIdentity">
+    <input type="text" [(ngModel)]="newMessageContent" (keyup.enter)="sendChatMessage()" placeholder="Écrire un message...">
+    <button mat-icon-button color="primary" (click)="sendChatMessage()" [disabled]="!newMessageContent.trim()">
+      <mat-icon>send</mat-icon>
+    </button>
+  </div>
 </div>

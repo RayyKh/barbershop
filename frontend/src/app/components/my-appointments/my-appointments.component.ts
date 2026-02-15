@@ -33,40 +33,6 @@ import { ApiService, Appointment } from '../../services/api.service';
   ],
   template: `
     <div class="container">
-      <!-- Formulaire d'identification client -->
-      <mat-card class="identification-card" *ngIf="!isAuthenticated">
-        <mat-card-header>
-          <mat-card-title>Consulter mes rendez-vous</mat-card-title>
-          <mat-card-subtitle>Entrez vos coordonnées pour accéder à votre historique et vos points de fidélité</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <form [formGroup]="idForm" (ngSubmit)="identify()">
-            <div class="id-form-row">
-              <mat-form-field appearance="outline">
-                <mat-label>Votre Prénom</mat-label>
-                <input matInput formControlName="firstName">
-                <mat-icon matPrefix>person_outline</mat-icon>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Votre Nom</mat-label>
-                <input matInput formControlName="name" >
-                <mat-icon matPrefix>person</mat-icon>
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline">
-                <mat-label>Votre Numéro de Téléphone</mat-label>
-                <input matInput formControlName="phone" >
-                <mat-icon matPrefix>phone</mat-icon>
-              </mat-form-field>
-            </div>
-            <button mat-raised-button color="primary" type="submit" [disabled]="idForm.invalid">
-              Voir mes rendez-vous
-            </button>
-          </form>
-        </mat-card-content>
-      </mat-card>
-
       <!-- Loyalty Progress Section -->
       <mat-card class="loyalty-card" *ngIf="isAuthenticated && user">
         <mat-card-content>
@@ -86,16 +52,16 @@ import { ApiService, Appointment } from '../../services/api.service';
             <div class="stat-item progress-container">
               <div class="progress-info">
                 <span>Progression vers la prochaine récompense</span>
-                <span>{{ (user.totalAppointments || 0) % 10 }}/10</span>
+                <span>{{ (user.totalAppointments || 0) % 5 }}/5</span>
               </div>
               <div class="progress-bar-bg">
-                <div class="progress-bar-fill" [style.width.%]="((user.totalAppointments || 0) % 10) * 10"></div>
+                <div class="progress-bar-fill" [style.width.%]="((user.totalAppointments || 0) % 5) * 20"></div>
               </div>
               <p class="loyalty-tip" *ngIf="user.availableRewards > 0">
                 Une "Coupe + Barbe" gratuite sera appliquée à votre prochaine réservation de ce service !
               </p>
               <p class="loyalty-tip" *ngIf="user.availableRewards === 0">
-                Encore {{ 10 - ((user.totalAppointments || 0) % 10) }} rendez-vous pour votre prochaine récompense !
+                Encore {{ 5 - ((user.totalAppointments || 0) % 5) }} rendez-vous pour votre prochaine récompense !
               </p>
             </div>
             <div class="stat-item">
@@ -106,22 +72,38 @@ import { ApiService, Appointment } from '../../services/api.service';
         </mat-card-content>
       </mat-card>
 
-      <mat-card class="client-card" *ngIf="isAuthenticated">
+      <mat-card class="client-card">
         <mat-card-header>
           <mat-card-title>Mes Rendez-vous</mat-card-title>
           <mat-card-subtitle>Consultez, annulez ou modifiez vos réservations</mat-card-subtitle>
-          <div class="user-identity-chip" *ngIf="user">
+          
+          <div class="user-identity-chip" *ngIf="isAuthenticated && user">
             <mat-icon>person</mat-icon>
-            <span>{{ user.firstName }} {{ user.name }} ({{ user.phone }})</span>
+            <span>{{ user.name }} ({{ user.phone }})</span>
             <button mat-icon-button (click)="logout()" title="Changer d'utilisateur">
               <mat-icon>logout</mat-icon>
             </button>
           </div>
         </mat-card-header>
         <mat-card-content>
+        
+        <!-- Search/Login Form (Inline) -->
+        <div class="search-section" *ngIf="!isAuthenticated">
+           <form [formGroup]="idForm" (ngSubmit)="identify()" class="inline-search-form">
+              <mat-form-field appearance="outline" class="search-field">
+                <mat-label>Votre Numéro de Téléphone</mat-label>
+                <input matInput formControlName="phone" placeholder="Ex: 20123456">
+                <mat-icon matPrefix>phone</mat-icon>
+                <button mat-icon-button matSuffix type="submit" [disabled]="idForm.invalid">
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </mat-form-field>
+              <p class="search-hint">Saisissez votre numéro pour accéder à vos rendez-vous.</p>
+           </form>
+        </div>
       
       <!-- Affichage Tableau pour Desktop -->
-      <div class="desktop-only">
+      <div class="desktop-only" *ngIf="isAuthenticated">
         <table mat-table [dataSource]="appointments" class="mat-elevation-z8">
           
           <ng-container matColumnDef="date">
@@ -174,17 +156,27 @@ import { ApiService, Appointment } from '../../services/api.service';
               <div class="modify-panel" *ngIf="isModifying(element.id)">
                 <mat-form-field appearance="outline">
                   <mat-label>Nouvelle date</mat-label>
-                  <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange(element)" [value]="getModifyDate(element.id)">
+                  <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
                   <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                   <mat-datepicker #picker></mat-datepicker>
                 </mat-form-field>
 
-                <div class="hours">
-                  <mat-chip-listbox>
-                    <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
-                      {{ h.substring(0, 5) }}
-                    </mat-chip-option>
-                  </mat-chip-listbox>
+                <div class="hours-grid-container" *ngIf="getModifyUiSlots(element.id).length > 0">
+                  <label class="grid-label">Créneaux horaires:</label>
+                  <div class="slots-grid">
+                    <div *ngFor="let slot of getModifyUiSlots(element.id)" 
+                         class="slot-item"
+                         [class.available]="slot.isAvailable"
+                         [class.unavailable]="!slot.isAvailable"
+                         [class.selected]="slot.isSelected"
+                         (click)="selectModifyTime(element.id, slot)">
+                      {{ slot.display }}
+                    </div>
+                  </div>
+                </div>
+                
+                <div *ngIf="getModifyUiSlots(element.id).length === 0" class="no-slots-msg">
+                   Veuillez sélectionner une date.
                 </div>
 
                 <button mat-raised-button color="primary" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
@@ -198,7 +190,7 @@ import { ApiService, Appointment } from '../../services/api.service';
       </div>
 
       <!-- Affichage Cartes pour Mobile -->
-      <div class="mobile-only">
+      <div class="mobile-only" *ngIf="isAuthenticated">
         <div class="appointment-cards">
           <mat-card class="mobile-appointment-card" *ngFor="let element of appointments">
             <mat-card-content>
@@ -234,17 +226,27 @@ import { ApiService, Appointment } from '../../services/api.service';
               <div class="modify-panel mobile" *ngIf="isModifying(element.id)">
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Nouvelle date</mat-label>
-                  <input matInput [matDatepicker]="mobilePicker" (dateChange)="onModifyDateChange(element)" [value]="getModifyDate(element.id)">
+                  <input matInput [matDatepicker]="mobilePicker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
                   <mat-datepicker-toggle matIconSuffix [for]="mobilePicker"></mat-datepicker-toggle>
                   <mat-datepicker #mobilePicker></mat-datepicker>
                 </mat-form-field>
 
-                <div class="hours">
-                  <mat-chip-listbox class="mobile-chips">
-                    <mat-chip-option *ngFor="let h of getModifySlots(element.id)" [selected]="getModifyTime(element.id)===h" (click)="selectModifyTime(element.id, h)">
-                      {{ h.substring(0, 5) }}
-                    </mat-chip-option>
-                  </mat-chip-listbox>
+                <div class="hours-grid-container" *ngIf="getModifyUiSlots(element.id).length > 0">
+                  <label class="grid-label">Créneaux horaires:</label>
+                  <div class="slots-grid">
+                    <div *ngFor="let slot of getModifyUiSlots(element.id)" 
+                         class="slot-item"
+                         [class.available]="slot.isAvailable"
+                         [class.unavailable]="!slot.isAvailable"
+                         [class.selected]="slot.isSelected"
+                         (click)="selectModifyTime(element.id, slot)">
+                      {{ slot.display }}
+                    </div>
+                  </div>
+                </div>
+                
+                <div *ngIf="getModifyUiSlots(element.id).length === 0" class="no-slots-msg">
+                   Veuillez sélectionner une date.
                 </div>
 
                 <button mat-raised-button color="primary" class="full-width" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
@@ -355,7 +357,58 @@ import { ApiService, Appointment } from '../../services/api.service';
       opacity: 1 !important;
     }
     .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
-    .hours { margin: 8px 0; }
+    .hours-grid-container {
+      margin-top: 12px;
+    }
+    .grid-label {
+      display: block;
+      color: #d4af37;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .slot-item {
+      padding: 6px 2px;
+      text-align: center;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .slot-item.available {
+      background-color: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      color: #4caf50;
+    }
+    .slot-item.available:hover {
+      background-color: rgba(76, 175, 80, 0.4);
+    }
+    .slot-item.available.selected {
+      background-color: #4caf50;
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+    .slot-item.unavailable {
+      background-color: rgba(244, 67, 54, 0.1);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      color: rgba(244, 67, 54, 0.5);
+      cursor: not-allowed;
+      text-decoration: line-through;
+    }
+    .no-slots-msg {
+      color: #888;
+      font-style: italic;
+      margin-top: 8px;
+    }
     .full-width { width: 100%; }
     .empty-state { text-align: center; padding: 40px; color: #aaa; }
 
@@ -363,6 +416,7 @@ import { ApiService, Appointment } from '../../services/api.service';
     @media (max-width: 768px) {
       .desktop-only { display: none; }
       .mobile-only { display: block; }
+      .slots-grid { max-height: 120px; }
       .container { padding: 100px 10px 20px; }
       .client-card mat-card-header mat-card-title { font-size: 1.4rem; }
       .id-form-row mat-form-field { min-width: 100%; }
@@ -410,6 +464,28 @@ import { ApiService, Appointment } from '../../services/api.service';
     ::ng-deep .mdc-outlined-record__outline {
       border-color: rgba(255, 255, 255, 0.3) !important;
     }
+
+    .search-section {
+       padding: 24px;
+       display: flex;
+       justify-content: center;
+       background: rgba(255, 255, 255, 0.03);
+       border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+    }
+    .inline-search-form {
+       width: 100%;
+       max-width: 500px;
+       text-align: center;
+    }
+    .search-field {
+       width: 100%;
+       font-size: 1.1rem;
+    }
+    .search-hint {
+       color: #888;
+       margin-top: -10px;
+       font-size: 0.9rem;
+    }
   `]
 })
 export class MyAppointmentsComponent implements OnInit, OnDestroy {
@@ -418,15 +494,15 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
   isAuthenticated: boolean = false;
   idForm: FormGroup;
   displayedColumns: string[] = ['date', 'time', 'service', 'barber', 'status', 'actions'];
-  modifying: Record<number, { date: Date; slots: string[]; time?: string }> = {};
+  modifying: { [key: number]: { date: Date; slots: string[]; time?: string; uiSlots?: any[] } } = {};
   contactEmail: string = '';
   contactPhone: string = '';
   private refreshInterval: any;
 
   constructor(private apiService: ApiService, private snackBar: MatSnackBar, private fb: FormBuilder) {
+    // Initialisation du formulaire d'identification
     this.idForm = this.fb.group({
-      firstName: ['', Validators.required],
-      name: ['', Validators.required],
+      firstName: [''], // Optionnel, gardé pour la forme
       phone: ['', [Validators.required, Validators.pattern(/^[0-9]{8,}$/)]]
     });
   }
@@ -442,16 +518,18 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     });
     
     // Check if user is already identified in session or local storage
-    const savedPhone = localStorage.getItem('lastUserPhone');
-    const savedName = localStorage.getItem('lastUserName');
     const savedFirstName = localStorage.getItem('lastUserFirstName');
+    const savedPhone = localStorage.getItem('lastUserPhone');
     const token = sessionStorage.getItem('token');
 
     if (token) {
       this.isAuthenticated = true;
-    } else if (savedPhone && savedName) {
+    } else if (savedPhone) {
       this.isAuthenticated = true;
-      this.idForm.patchValue({ firstName: savedFirstName || '', name: savedName, phone: savedPhone });
+      this.idForm.patchValue({ 
+        firstName: savedFirstName || '',
+        phone: savedPhone 
+      });
     }
 
     this.reloadAppointments();
@@ -470,19 +548,37 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
   identify() {
     if (this.idForm.valid) {
-      const { firstName, name, phone } = this.idForm.value;
-      localStorage.setItem('lastUserFirstName', firstName);
-      localStorage.setItem('lastUserName', name);
-      localStorage.setItem('lastUserPhone', phone);
-      this.isAuthenticated = true;
-      this.reloadAppointments();
-      this.snackBar.open(`Bienvenue ${firstName} ${name}`, 'OK', { duration: 2000 });
+      const phone = this.idForm.value.phone;
+      // firstName n'est plus utilisé pour l'identification, on passe une chaîne vide ou on adapte le backend
+      // Pour l'instant on garde la signature de la méthode mais on ignore le prénom
+      this.apiService.getAppointmentsByPhone(phone).subscribe({
+        next: (data) => {
+          this.appointments = data;
+          this.isAuthenticated = true;
+          if (data.length > 0) {
+            this.user = data[0].user; // On récupère les infos du client depuis le premier rdv
+          } else {
+             // Si pas de rdv, on crée un objet user temporaire avec juste le téléphone
+             this.user = { 
+               name: 'Client', 
+               firstName: '', 
+               phone: phone, 
+               email: '', 
+               id: 0 
+             }; 
+          }
+          this.snackBar.open('Bienvenue !', 'Fermer', { duration: 3000 });
+        },
+        error: (err) => {
+          console.error('Erreur lors de la récupération des rendez-vous', err);
+          this.snackBar.open('Aucun rendez-vous trouvé pour ce numéro.', 'Fermer', { duration: 3000 });
+        }
+      });
     }
   }
 
   logout() {
     localStorage.removeItem('lastUserFirstName');
-    localStorage.removeItem('lastUserName');
     localStorage.removeItem('lastUserPhone');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('token');
@@ -537,11 +633,15 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
   private fetchByContact(email?: string, phone?: string) {
     const token = sessionStorage.getItem('token');
-    this.apiService.getAppointmentsByContact(email, phone).subscribe({
-      next: (list) => {
+    
+    // Si pas de téléphone, on ne fait rien car c'est le seul identifiant fiable maintenant
+    if (!phone) return;
+
+    this.apiService.getAppointmentsByPhone(phone).subscribe({
+      next: (list: Appointment[]) => {
         // Merge results and avoid duplicates, but update existing ones with fresh data
         const updatedAppointments = [...this.appointments];
-        list.forEach(newApp => {
+        list.forEach((newApp: Appointment) => {
           const index = updatedAppointments.findIndex(a => a.id === newApp.id);
           if (index > -1) {
             updatedAppointments[index] = newApp;
@@ -579,7 +679,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
           }
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error fetching appointments by contact', err);
       }
     });
@@ -601,7 +701,15 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
       delete this.modifying[id];
       return;
     }
-    this.modifying[id] = { date: new Date(), slots: [] };
+    // Initialiser avec la date du jour par défaut
+    const now = new Date();
+    this.modifying[id] = { date: now, slots: [], uiSlots: [] };
+    
+    // Charger les créneaux pour aujourd'hui immédiatement
+    const appt = this.appointments.find(a => a.id === id);
+    if (appt) {
+      this.loadModifySlots(appt, now);
+    }
   }
 
   isModifying(id: number): boolean {
@@ -612,30 +720,144 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     return this.modifying[id]?.date || null;
   }
 
-  onModifyDateChange(a: Appointment) {
+  onModifyDateChange(event: any, a: Appointment) {
+    const d = event.value;
+    if (!d) return;
+    
     const state = this.modifying[a.id];
     if (!state) return;
-    const d = state.date;
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
+    
+    state.date = d;
+    this.loadModifySlots(a, d);
+  }
+  
+  loadModifySlots(a: Appointment, date: Date) {
+    const state = this.modifying[a.id];
+    if (!state) return;
+    
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
+    
     this.apiService.getAvailableSlots(a.barber.id, dateStr).subscribe(slots => {
       state.slots = slots;
+      
+      // --- LOGIC FOR GREEN/RED SLOTS (Similar to EditAppointmentDialog) ---
+      
+      // 1. Raw free slots in minutes
+      let freeSlotsInMinutes: number[] = slots.map(s => {
+        const parts = s.split(':');
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+      });
+      
+      // 2. If same day as original appointment, add original time to free slots
+      // (So user can keep same time or see it as available)
+      if (dateStr === a.date) {
+         const apptStartParts = a.startTime.split(':');
+         const apptStartMin = parseInt(apptStartParts[0]) * 60 + parseInt(apptStartParts[1]);
+         
+         const apptEndParts = a.endTime.split(':');
+         const apptEndMin = parseInt(apptEndParts[0]) * 60 + parseInt(apptEndParts[1]);
+         
+         for (let m = apptStartMin; m < apptEndMin; m += 15) {
+           if (!freeSlotsInMinutes.includes(m)) {
+             freeSlotsInMinutes.push(m);
+           }
+         }
+      }
+      
+      // 3. Generate full day slots based on barber schedule
+      const dayOfWeek = date.getDay();
+      const barberName = a.barber.name.toLowerCase();
+      
+      let startHour = 10;
+      let endHour = 21;
+
+      if (dayOfWeek === 1) { // Monday
+        startHour = 12;
+        endHour = 18;
+      } else {
+        if (barberName.includes("hamouda")) startHour = 12;
+        else if (barberName.includes("ahmed")) startHour = 11;
+        else startHour = 10;
+      }
+
+      const fullDaySlots: number[] = [];
+      for (let h = startHour; h < endHour; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          fullDaySlots.push(h * 60 + m);
+        }
+      }
+      
+      // 4. Calculate needed duration based on appointment services
+      let totalDuration = 30; // Default
+      if (a.services && a.services.length > 0) {
+          totalDuration = a.services.reduce((acc, s) => acc + s.duration, 0);
+      }
+      const slotsNeeded = Math.ceil(totalDuration / 15);
+      
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      
+      const newSlotsUI: any[] = [];
+      
+      fullDaySlots.forEach((totalMin, index) => {
+        const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+        
+        if (isPast) return; // Masquer les créneaux passés
+
+        const isLastSlot = index === fullDaySlots.length - 1;
+        
+        let canFit = true;
+        
+        const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
+        for (let j = 0; j < effectiveSlotsNeeded; j++) {
+          const targetMinutes = totalMin + (j * 15);
+          if (!freeSlotsInMinutes.includes(targetMinutes)) {
+            canFit = false;
+            break;
+          }
+        }
+
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`; 
+        const displayTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+        newSlotsUI.push({
+          time: timeStr,
+          display: displayTime,
+          isAvailable: canFit,
+          isPast: isPast,
+          isSelected: timeStr === state.time
+        });
+      });
+      
+      state.uiSlots = newSlotsUI;
     });
   }
 
-  getModifySlots(id: number): string[] {
-    return this.modifying[id]?.slots || [];
+  getModifyUiSlots(id: number): any[] {
+    return this.modifying[id]?.uiSlots || [];
   }
 
   getModifyTime(id: number): string | undefined {
     return this.modifying[id]?.time;
   }
 
-  selectModifyTime(id: number, h: string) {
-    if (this.modifying[id]) {
-      this.modifying[id].time = h;
+  selectModifyTime(id: number, slot: any) {
+    if (!slot.isAvailable) return;
+    
+    const state = this.modifying[id];
+    if (state) {
+      state.time = slot.time;
+      // Update selection UI
+      if (state.uiSlots) {
+        state.uiSlots.forEach(s => s.isSelected = (s.time === slot.time));
+      }
     }
   }
 
@@ -654,7 +876,12 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         this.reloadAppointments();
       },
       error: (err) => {
-        this.snackBar.open('Erreur modification: ' + err.message, 'OK', { duration: 3500 });
+        let errorMsg = 'Erreur modification';
+        if (err.error && typeof err.error === 'string') errorMsg = err.error;
+        else if (err.error && err.error.message) errorMsg = err.error.message;
+        else if (err.message) errorMsg = err.message;
+        
+        this.snackBar.open(errorMsg, 'OK', { duration: 5000 });
       }
     });
   }

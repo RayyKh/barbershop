@@ -223,6 +223,21 @@ public class AppointmentController {
         return appt;
     }
 
+    @PutMapping("/{id}/update")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Appointment updateAppointment(
+            @PathVariable Long id,
+            @RequestParam Long barberId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
+            @RequestParam List<Long> serviceIds,
+            @RequestParam(required = false) String clientName
+    ) {
+        Appointment appt = appointmentService.adminUpdateAppointment(id, barberId, date, startTime, serviceIds, clientName);
+        notifyEmitters(appt);
+        return appt;
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public Appointment updateStatus(@PathVariable Long id, @RequestParam com.barbershop.entity.AppointmentStatus status) {

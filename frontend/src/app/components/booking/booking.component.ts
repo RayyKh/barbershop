@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -17,6 +17,12 @@ import { Router } from '@angular/router';
 import { AnimationOptions, LottieComponent } from 'ngx-lottie';
 import { ApiService, AppointmentRequest, Barber, Service, User } from '../../services/api.service';
 import { LoaderComponent } from '../loader/loader.component';
+
+export interface SlotUI {
+  time: string;
+  isAvailable: boolean;
+  isPast: boolean;
+}
 
 @Component({
   selector: 'app-booking',
@@ -48,6 +54,7 @@ export class BookingComponent implements OnInit {
   services: Service[] = [];
   barbers: Barber[] = [];
   availableSlots: string[] = [];
+  allSlotsUI: SlotUI[] = [];
   isBookingSuccess = false;
   isLoading = false;
   errorMessage = '';
@@ -59,6 +66,8 @@ export class BookingComponent implements OnInit {
   options: AnimationOptions = {
     path: 'assets/lottie/success.json',
   };
+
+  private cdr = inject(ChangeDetectorRef);
 
   constructor(
     private _formBuilder: FormBuilder,
@@ -74,8 +83,8 @@ export class BookingComponent implements OnInit {
       useRewardCtrl: [false],
       userCtrl: this._formBuilder.group({
         name: ['', Validators.required],
-        firstName: ['', Validators.required],
-        phone: ['', Validators.required]
+        firstName: [''], // Optionnel ou retiré, mais gardé pour compatibilité backend si nécessaire
+        phone: ['', [Validators.required, Validators.pattern(/^[0-9]{8,}$/)]]
       })
     });
   }
@@ -148,7 +157,34 @@ export class BookingComponent implements OnInit {
       this.fetchSlots();
   }
 
+  onServicesChange() {
+    // Force la validation et détecte les changements immédiatement pour Angular
+    const ctrl = this.bookingFormGroup.get('servicesCtrl');
+    if (ctrl) {
+      ctrl.markAsDirty();
+      ctrl.markAsTouched();
+      ctrl.updateValueAndValidity();
+      // Forcer la détection de changement pour que le bouton [disabled] se mette à jour
+      this.cdr.detectChanges();
+    }
+  }
+
   onStepChange(event: any) {
+    // Scroll fluide vers le haut du formulaire avec un léger délai pour laisser le stepper finir sa transition
+    setTimeout(() => {
+      const bookingElement = document.getElementById('booking');
+      if (bookingElement) {
+        const headerOffset = 80; 
+        const elementPosition = bookingElement.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 50);
+
     // Si on arrive à l'étape de confirmation (index 4)
     if (event.selectedIndex === 4) {
       this.validateSlotAvailability();
@@ -159,18 +195,41 @@ export class BookingComponent implements OnInit {
     const barber = this.bookingFormGroup.get('barberCtrl')?.value;
     const date = this.bookingFormGroup.get('dateCtrl')?.value;
     const selectedTime = this.bookingFormGroup.get('timeCtrl')?.value;
+    const selectedServices = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
 
-    if (barber && date && selectedTime) {
+    if (barber && date && selectedTime && selectedServices && selectedServices.length > 0) {
       const dateStr = this.formatDateLocal(date);
+      const totalDuration = selectedServices.reduce((acc, s) => acc + s.duration, 0);
+      const slotsNeeded = Math.ceil(totalDuration / 15);
+
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
-        // Vérifier si le créneau sélectionné est toujours dans la liste des créneaux disponibles
-        const isStillAvailable = slots.includes(selectedTime);
+        // Convertir les slots reçus en minutes pour une comparaison fiable
+        const slotsInMinutes = slots.map(s => {
+          if (Array.isArray(s)) return s[0] * 60 + s[1];
+          if (typeof s === 'string') {
+            const cleanTime = s.split(':');
+            return parseInt(cleanTime[0], 10) * 60 + parseInt(cleanTime[1], 10);
+          }
+          return 0;
+        });
+
+        // Convertir le créneau sélectionné en minutes
+        const [h, m] = selectedTime.split(':').map(Number);
+        const startMinutes = h * 60 + m;
+
+        // Vérifier si TOUS les créneaux nécessaires sont encore disponibles
+        let isStillAvailable = true;
+        for (let j = 0; j < slotsNeeded; j++) {
+          const targetMinutes = startMinutes + (j * 15);
+          if (!slotsInMinutes.includes(targetMinutes)) {
+            isStillAvailable = false;
+            break;
+          }
+        }
         
         if (!isStillAvailable) {
-          this.snackBar.open('Désolé, ce créneau vient d\'être réservé par un autre client. Veuillez en choisir un autre.', 'OK', { duration: 5000 });
-          // Rediriger l'utilisateur vers l'étape de sélection de la date/heure (index 2)
+          this.snackBar.open('Désolé, ce créneau n\'est plus disponible (durée insuffisante ou déjà réservé). Veuillez en choisir un autre.', 'OK', { duration: 5000 });
           this.stepper.selectedIndex = 2;
-          // Rafraîchir la liste locale des créneaux
           this.fetchSlots();
         }
       });
@@ -189,54 +248,85 @@ export class BookingComponent implements OnInit {
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
         const now = new Date();
         const todayStr = this.formatDateLocal(now);
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
 
-        // 1. Filtrer les heures passées si c'est aujourd'hui
-        let filteredSlots = slots;
-        if (dateStr === todayStr) {
-          const currentHour = now.getHours();
-          const currentMinute = now.getMinutes();
+        // 1. Définir la plage horaire complète (ex: 10h - 21h par tranches de 15min)
+        // Note: Le backend renvoie déjà la liste de tous les créneaux théoriques possibles pour ce jour
+        // (y compris ceux déjà réservés, car on en a besoin pour savoir s'ils sont rouges)
+        // Mais attendez, le backend actuel ne renvoie QUE les libres.
+        // On va générer tous les créneaux de la journée basés sur les horaires du salon.
+        
+        const dayOfWeek = date.getDay(); // 0=Dim, 1=Lun, ...
+        let startHour = 10;
+        let endHour = 21;
 
-          filteredSlots = slots.filter(slot => {
-            const [hour, minute] = slot.split(':').map(Number);
-            if (hour > currentHour) return true;
-            if (hour === currentHour && minute > currentMinute) return true;
-            return false;
-          });
+        // Horaires spécifiques barbiers
+        const name = barber.name.toLowerCase();
+        if (dayOfWeek === 1) { // Lundi
+          startHour = 12;
+          endHour = 18;
+        } else {
+          if (name.includes("hamouda")) startHour = 12;
+          else if (name.includes("ahmed")) startHour = 11;
+          else startHour = 10;
         }
 
-        // 2. Vérifier si les créneaux consécutifs nécessaires sont disponibles
-        const finalAvailableSlots: string[] = [];
+        const fullDaySlots: number[] = [];
+        for (let h = startHour; h < endHour; h++) {
+          for (let m = 0; m < 60; m += 15) {
+            fullDaySlots.push(h * 60 + m);
+          }
+        }
+
+        // Convertir les slots reçus du backend (libres) en minutes
+        const freeSlotsInMinutes = slots.map(s => {
+          if (Array.isArray(s)) return s[0] * 60 + s[1];
+          const cleanTime = s.split(':');
+          return parseInt(cleanTime[0], 10) * 60 + parseInt(cleanTime[1], 10);
+        });
+
         const slotsNeeded = Math.ceil(totalDuration / 15);
+              const newSlotsUI: SlotUI[] = [];
 
-        for (let i = 0; i <= filteredSlots.length - slotsNeeded; i++) {
-          let canFit = true;
-          const currentSlot = filteredSlots[i];
-          const [h, m] = currentSlot.split(':').map(Number);
-          let expectedTime = new Date();
-          expectedTime.setHours(h, m, 0, 0);
+              fullDaySlots.forEach((totalMin, index) => {
+                const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+                
+                if (isPast) return; // Masquer les créneaux passés
 
-          for (let j = 0; j < slotsNeeded; j++) {
-            const checkTime = new Date(expectedTime.getTime() + j * 15 * 60000);
-            const checkTimeStr = `${String(checkTime.getHours()).padStart(2, '0')}:${String(checkTime.getMinutes()).padStart(2, '0')}:00`;
-            
-            // On vérifie si ce créneau spécifique existe dans la liste des créneaux libres
-            // Note: Le backend renvoie HH:mm ou HH:mm:ss, on doit être flexible
-            const exists = filteredSlots.some(s => s.startsWith(checkTimeStr.substring(0, 5)));
-            
-            if (!exists) {
-              canFit = false;
-              break;
-            }
-          }
+                const isLastSlot = index === fullDaySlots.length - 1;
+                
+                let canFit = true;
+                
+                // Vérifier si toute la durée du service rentre
+                // Exception pour le dernier créneau : dépassement autorisé de 5-10 min
+                const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
+                
+                for (let j = 0; j < effectiveSlotsNeeded; j++) {
+                  const targetMinutes = totalMin + (j * 15);
+                  if (!freeSlotsInMinutes.includes(targetMinutes)) {
+                    canFit = false;
+                    break;
+                  }
+                }
 
-          if (canFit) {
-            finalAvailableSlots.push(currentSlot);
-          }
-        }
+          const h = Math.floor(totalMin / 60);
+          const m = totalMin % 60;
+          const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
-        this.availableSlots = finalAvailableSlots;
+          newSlotsUI.push({
+            time: timeStr,
+            isAvailable: canFit,
+            isPast: isPast
+          });
+        });
+
+        this.allSlotsUI = newSlotsUI;
+        // On garde availableSlots pour la compatibilité avec le reste du code
+        this.availableSlots = newSlotsUI.filter(s => s.isAvailable).map(s => s.time);
       });
     } else {
+      this.allSlotsUI = [];
       this.availableSlots = [];
     }
   }

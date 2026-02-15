@@ -1,0 +1,65 @@
+<div class="edit-dialog-container">
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Modifier le rendez-vous</h2>
+  </div>
+
+  <mat-dialog-content [formGroup]="editForm" class="edit-dialog-content">
+    <div class="form-section">
+      <mat-form-field appearance="outline" class="full-width gold-form-field">
+        <mat-label>Nom du Client</mat-label>
+        <input matInput formControlName="clientName">
+        <mat-icon matSuffix>person</mat-icon>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width gold-form-field">
+        <mat-label>Barbier</mat-label>
+        <mat-select formControlName="barberId">
+          <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width gold-form-field">
+        <mat-label>Date</mat-label>
+        <input matInput [matDatepicker]="picker" formControlName="date">
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+
+      <div class="slots-container">
+        <label class="slots-label">Créneaux horaires</label>
+        <div class="slots-grid">
+          <div *ngFor="let slot of allSlotsUI" 
+               class="slot-item"
+               [class.available]="slot.isAvailable"
+               [class.unavailable]="!slot.isAvailable"
+               [class.selected]="slot.isSelected"
+               (click)="selectSlot(slot)">
+            {{ slot.time.substring(0, 5) }}
+          </div>
+          <div *ngIf="allSlotsUI.length === 0" class="no-slots">
+            Veuillez sélectionner un barbier et une date.
+          </div>
+        </div>
+        <!-- Hidden input to keep form validity working -->
+        <input type="hidden" formControlName="startTime">
+      </div>
+
+      <mat-form-field appearance="outline" class="full-width gold-form-field">
+        <mat-label>Services</mat-label>
+        <mat-select formControlName="serviceIds" multiple>
+          <mat-option *ngFor="let s of services" [value]="s.id">
+            <span class="option-text">{{ s.name }}</span>
+            <span class="option-price">{{ s.price }} DT</span>
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="dialog-actions">
+    <button mat-button (click)="onCancel()" class="btn-cancel">Annuler</button>
+    <button mat-raised-button (click)="onSave()" [disabled]="!editForm.valid" class="btn-save">
+      ENREGISTRER
+    </button>
+  </mat-dialog-actions>
+</div>

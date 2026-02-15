@@ -84,18 +84,20 @@
                 <mat-datepicker #picker></mat-datepicker>
               </mat-form-field>
       
-              <div *ngIf="availableSlots.length > 0" class="slots-container">
+              <div *ngIf="allSlotsUI.length > 0" class="slots-container">
                 <h3>Créneaux horaires :</h3>
-                <mat-chip-listbox class="slots-list">
-                  <mat-chip-option *ngFor="let slot of availableSlots" 
-                            (click)="selectSlot(slot)"
-                            [selected]="bookingFormGroup.get('timeCtrl')?.value === slot"
-                            color="primary">
-                    {{slot.substring(0, 5)}}
-                  </mat-chip-option>
-                </mat-chip-listbox>
+                <div class="slots-grid">
+                  <div *ngFor="let slot of allSlotsUI" 
+                       class="slot-item"
+                       [class.available]="slot.isAvailable"
+                       [class.unavailable]="!slot.isAvailable"
+                       [class.selected]="bookingFormGroup.get('timeCtrl')?.value === slot.time"
+                       (click)="slot.isAvailable ? selectSlot(slot.time) : null">
+                    {{slot.time}}
+                  </div>
+                </div>
               </div>
-              <div *ngIf="availableSlots.length === 0 && bookingFormGroup.get('dateCtrl')?.value" class="no-slots">
+              <div *ngIf="allSlotsUI.length === 0 && bookingFormGroup.get('dateCtrl')?.value" class="no-slots">
                   <p>Aucun créneau disponible pour cette date.</p>
               </div>
       
@@ -117,13 +119,14 @@
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Prénom</mat-label>
-                <input matInput formControlName="firstName" required>
-              </mat-form-field>
-              
-              <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Téléphone</mat-label>
-                <input matInput formControlName="phone" required>
+                <input matInput formControlName="phone" required  type="tel" pattern="[0-9]*" inputmode="numeric">
+                <mat-error *ngIf="bookingFormGroup.get('userCtrl.phone')?.hasError('required')">
+                  Le numéro de téléphone est obligatoire
+                </mat-error>
+                <mat-error *ngIf="bookingFormGroup.get('userCtrl.phone')?.hasError('pattern')">
+                  Veuillez saisir un numéro de téléphone valide (8 chiffres minimum)
+                </mat-error>
               </mat-form-field>
       
               <div class="actions">
@@ -151,7 +154,7 @@
 
               <p><strong>Barbier:</strong> {{bookingFormGroup.get('barberCtrl')?.value?.name}}</p>
               <p><strong>Date:</strong> {{bookingFormGroup.get('dateCtrl')?.value | date:'dd/MM/yyyy'}} à {{bookingFormGroup.get('timeCtrl')?.value}}</p>
-              <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.firstName}} {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
+              <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
               
               <div class="actions">
                 <button mat-button matStepperPrevious>Retour</button>

@@ -1,6 +1,7 @@
 package com.barbershop.service;
 
 import com.barbershop.entity.*;
+import com.barbershop.exception.BadRequestException;
 import com.barbershop.exception.ConflictException;
 import com.barbershop.exception.ResourceNotFoundException;
 import com.barbershop.repository.AppointmentRepository;
@@ -249,7 +250,22 @@ public class AppointmentService {
                 startOfDay = LocalTime.of(12, 0);
                 endOfDay = LocalTime.of(18, 0);
             } else {
-                startOfDay = LocalTime.of(10, 0);
+                // Heures d'ouverture spécifiques par barbier
+                // Aladin: 10h, Ahmed: 11h, Hamouda: 12h
+                Optional<Barber> barberOpt = barberRepository.findById(barberId);
+                if (barberOpt.isPresent()) {
+                    String name = barberOpt.get().getName().toLowerCase();
+                    if (name.contains("hamouda")) {
+                        startOfDay = LocalTime.of(12, 0);
+                    } else if (name.contains("ahmed")) {
+                        startOfDay = LocalTime.of(11, 0);
+                    } else {
+                        // Aladin ou autres par défaut
+                        startOfDay = LocalTime.of(10, 0);
+                    }
+                } else {
+                    startOfDay = LocalTime.of(10, 0);
+                }
                 endOfDay = LocalTime.of(21, 0);
             }
 
@@ -466,6 +482,62 @@ public class AppointmentService {
     }
 
     @Transactional
+    public Appointment adminUpdateAppointment(Long id, Long barberId, LocalDate date, LocalTime startTime, List<Long> serviceIds, String clientName) {
+        Appointment appt = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
+
+        Barber barber = barberRepository.findById(barberId)
+                .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
+
+        // Update Client Name if provided
+        if (clientName != null && !clientName.isBlank()) {
+            User user = appt.getUser();
+            if (user != null) {
+                user.setName(clientName);
+                userRepository.save(user);
+            }
+        }
+
+        List<com.barbershop.entity.Service> selectedServices = serviceRepository.findAllById(serviceIds);
+        if (selectedServices.isEmpty()) {
+            throw new BadRequestException("At least one service must be selected");
+        }
+
+        int totalDuration = selectedServices.stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
+        LocalTime endTime = startTime.plusMinutes(totalDuration);
+
+        // Temp change to avoid self-conflict
+        AppointmentStatus originalStatus = appt.getStatus();
+        
+        // IMPORTANT: We must save the cancelled status to the DB so checkConflicts() sees it as cancelled
+        // If we just set it in memory, checkConflicts will still see the old status in the DB query
+        appt.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.saveAndFlush(appt); // Force flush to ensure DB is updated before checkConflicts
+
+        try {
+            checkConflicts(barberId, date, startTime, endTime);
+        } catch (Exception e) {
+            appt.setStatus(originalStatus);
+            appointmentRepository.save(appt);
+            throw e;
+        }
+
+        double total = selectedServices.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
+
+        appt.setBarber(barber);
+        appt.setDate(date);
+        appt.setStartTime(startTime);
+        appt.setEndTime(endTime);
+        appt.setServices(selectedServices);
+        appt.setTotalPrice(total);
+        // Restore original status unless it was already CANCELLED
+        appt.setStatus(originalStatus == AppointmentStatus.CANCELLED ? AppointmentStatus.BOOKED : originalStatus);
+        appt.setAdminViewed(true);
+
+        return appointmentRepository.save(appt);
+    }
+
+    @Transactional
     public Appointment updateStatus(Long appointmentId, AppointmentStatus status) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
@@ -479,10 +551,10 @@ public class AppointmentService {
             if (user != null) {
                 user.setTotalAppointments(user.getTotalAppointments() + 1);
                 
-                // Check for reward (every 10 appointments)
-                if (user.getTotalAppointments() % 10 == 0) {
+                // Check for reward (every 5 appointments)
+                if (user.getTotalAppointments() % 5 == 0) {
                     user.setAvailableRewards(user.getAvailableRewards() + 1);
-                    logger.info("User {} reached 10 appointments! Reward added. Total: {}, Available: {}", 
+                    logger.info("User {} reached 5 appointments! Reward added. Total: {}, Available: {}", 
                         user.getName(), user.getTotalAppointments(), user.getAvailableRewards());
                 }
                 userRepository.save(user);
@@ -508,8 +580,8 @@ public class AppointmentService {
             if (user != null) {
                 user.setTotalAppointments(Math.max(0, user.getTotalAppointments() - 1));
                 
-                // If the appointment that was cancelled was the 10th one, remove the reward
-                if ((user.getTotalAppointments() + 1) % 10 == 0) {
+                // If the appointment that was cancelled was the 5th one, remove the reward
+                if ((user.getTotalAppointments() + 1) % 5 == 0) {
                     user.setAvailableRewards(Math.max(0, user.getAvailableRewards() - 1));
                 }
                 userRepository.save(user);

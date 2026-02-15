@@ -1,5 +1,6 @@
 package com.barbershop.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -26,6 +27,8 @@ public class User {
 
     // For Authentication (Admin)
     private String username; // Can be email or separate
+    
+    @JsonIgnore
     private String password;
     
     @Enumerated(EnumType.STRING)

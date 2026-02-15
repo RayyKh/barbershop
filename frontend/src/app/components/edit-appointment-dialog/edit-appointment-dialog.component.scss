@@ -1,0 +1,179 @@
+.edit-dialog-container {
+  background-color: #121212;
+  border: 1px solid #d4af37;
+  border-radius: 8px;
+  overflow: hidden;
+  color: #ffffff;
+}
+
+.dialog-header {
+  background-color: #000000;
+  padding: 16px 24px;
+  border-bottom: 1px solid #d4af37;
+
+  h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+}
+
+.edit-dialog-content {
+  padding: 24px !important;
+  background-color: #121212;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 320px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.dialog-actions {
+  padding: 16px 24px !important;
+  background-color: #121212;
+  border-top: none;
+  gap: 12px;
+}
+
+/* Gold Form Field Styling */
+::ng-deep .gold-form-field {
+  .mat-mdc-text-field-wrapper {
+    background-color: #000000 !important;
+  }
+
+  .mat-mdc-form-field-flex {
+    background-color: #000000 !important;
+  }
+
+  .mat-mdc-form-field-outline {
+    color: rgba(212, 175, 55, 0.3) !important;
+  }
+
+  &.mat-focused .mat-mdc-form-field-outline {
+    color: #d4af37 !important;
+  }
+
+  .mat-mdc-select-value, 
+  .mat-mdc-input-element,
+  .mat-mdc-select-arrow {
+    color: #ffffff !important;
+  }
+
+  .mat-mdc-form-field-label {
+    color: #cccccc !important;
+  }
+
+  &.mat-focused .mat-mdc-form-field-label {
+    color: #d4af37 !important;
+  }
+  
+  /* Styling for the outline itself */
+  .mdc-notched-outline__leading,
+  .mdc-notched-outline__notch,
+  .mdc-notched-outline__trailing {
+    border-color: rgba(212, 175, 55, 0.5) !important;
+  }
+
+  &.mat-focused {
+    .mdc-notched-outline__leading,
+    .mdc-notched-outline__notch,
+    .mdc-notched-outline__trailing {
+      border-color: #d4af37 !important;
+      border-width: 2px !important;
+    }
+  }
+}
+
+.btn-cancel {
+  color: #ffffff !important;
+  font-weight: 500;
+}
+
+.btn-save {
+  background-color: #d4af37 !important;
+  color: #000000 !important;
+  font-weight: bold !important;
+  padding: 0 24px !important;
+}
+
+/* Slots Styling */
+.slots-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.slots-label {
+  color: #cccccc;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+  
+  /* Scrollbar styling */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #d4af37;
+    border-radius: 3px;
+  }
+}
+
+.slot-item {
+  padding: 8px 4px;
+  text-align: center;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  
+  &.available {
+    background-color: rgba(76, 175, 80, 0.2);
+    border: 1px solid #4caf50;
+    color: #4caf50;
+    
+    &:hover {
+      background-color: rgba(76, 175, 80, 0.4);
+    }
+    
+    &.selected {
+      background-color: #4caf50;
+      color: #000000;
+      font-weight: bold;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    }
+  }
+  
+  &.unavailable {
+    background-color: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    color: rgba(244, 67, 54, 0.5);
+    cursor: not-allowed;
+    text-decoration: line-through;
+  }
+}
+
+.no-slots {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 16px;
+}

@@ -6,6 +6,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -13,8 +14,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { SwPush } from '@angular/service-worker';
-import { Subscription } from 'rxjs';
-import { ApiService, Appointment, Barber, BlockedSlot, Service } from '../../services/api.service';
+import { interval, Subscription } from 'rxjs';
+import { AdminMessage, ApiService, Appointment, Barber, BlockedSlot, Service, User } from '../../services/api.service';
+import { EditAppointmentDialogComponent } from '../edit-appointment-dialog/edit-appointment-dialog.component';
+
+export interface SlotUI {
+  time: string;
+  isAvailable: boolean;
+  isPast: boolean;
+}
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -33,6 +41,7 @@ import { ApiService, Appointment, Barber, BlockedSlot, Service } from '../../ser
     MatChipsModule,
     MatIconModule,
     MatSnackBarModule,
+    MatDialogModule,
     RouterLink
   ],
   templateUrl: './admin-dashboard.component.html',
@@ -47,35 +56,44 @@ export class AdminDashboardComponent implements OnInit {
   filterForm: FormGroup;
   adminBlockForm: FormGroup;
   availableHours: string[] = [];
-  allAvailableHours: string[] = [
-    "09:00:00", "09:40:00", "10:20:00", "11:00:00", "11:40:00", 
-    "12:20:00", "13:00:00", "13:40:00", "14:20:00", "15:00:00", "15:40:00", 
-    "16:20:00", "17:00:00", "17:40:00", "18:20:00", "19:00:00", "19:40:00", 
-    "20:20:00", "21:00:00", "21:40:00", "22:20:00"
-  ];
+  allSlotsUI: SlotUI[] = [];
+  allAvailableHours: string[] = []; // Sera généré dynamiquement
   activeTab: 'manual' | 'block' = 'manual';
   hasNew = false;
   isPushEnabled = false;
   selectedBarberForPush: number | null = null;
+  
+  currentUser: User | null = null;
+
+  // Chat properties
+  chatMessages: AdminMessage[] = [];
+  newMessageContent: string = '';
+  chatExpanded: boolean = false;
+  chatRefreshSub?: Subscription;
+  selectedChatIdentity: string = '';
+  availableIdentities: string[] = ['Aladin', 'Hamouda', 'Ahmed', 'Admin'];
+
   readonly VAPID_PUBLIC_KEY = "BP07gvsy0ylgW-4T7ch1FOGdTUfPSKKOmsTOzA-ybaHq54q7zovWbzOynSUVQY_7nAg7WAFMS_WfSrgT_yoW2S4";
 
   private sub?: Subscription;
+  private refreshSub?: Subscription;
 
   constructor(
     private api: ApiService, 
     private fb: FormBuilder, 
     private router: Router,
     private swPush: SwPush,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private dialog: MatDialog
   ) {
     this.lockForm = this.fb.group({
       barber: [null, Validators.required],
       services: [[]],
       date: [new Date(), Validators.required],
       time: [null, Validators.required],
-      firstName: [''],
+      firstName: [''], // Gardé pour compatibilité mais non affiché
       name: [''],
-      phone: ['']
+      phone: ['', [Validators.pattern(/^[0-9]{8,}$/)]]
     });
     this.filterForm = this.fb.group({
       barberId: [null],
@@ -91,11 +109,35 @@ export class AdminDashboardComponent implements OnInit {
       endTime: [{ value: null, disabled: true }],
       reason: ['']
     });
+    
+    // Get current user from session storage
+    const userStr = sessionStorage.getItem('user');
+    if (userStr) {
+      this.currentUser = JSON.parse(userStr);
+    }
 
+    this.generateAllHours();
     this.generateAvailableHours();
   }
 
+  generateAllHours() {
+    // Génère les heures de 10h00 à 22h00 par pas de 15 minutes
+    this.allAvailableHours = [];
+    const startHour = 10;
+    const endHour = 22;
+    
+    for (let h = startHour; h < endHour; h++) {
+      for (let m = 0; m < 60; m += 15) {
+        const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+        this.allAvailableHours.push(time);
+      }
+    }
+    // Ajouter 22:00:00 comme dernière heure possible de fin (ou de début si on veut)
+    this.allAvailableHours.push("22:00:00");
+  }
+
   ngOnInit(): void {
+
     this.api.getServices().subscribe(s => this.services = s);
     this.api.getBarbers().subscribe(b => { 
       this.barbers = b; 
@@ -117,6 +159,11 @@ export class AdminDashboardComponent implements OnInit {
       this.generateAvailableHours();
     });
 
+    // Update hours when services change
+    this.lockForm.get('services')?.valueChanges.subscribe(() => {
+      this.generateAvailableHours();
+    });
+
     // Mettre à jour les réservations quand la date du filtre change
     this.filterForm.get('date')?.valueChanges.subscribe(() => {
       this.applyFilters();
@@ -124,6 +171,11 @@ export class AdminDashboardComponent implements OnInit {
 
     // Check push status
     this.checkPushStatus();
+
+    // Auto-refresh slots every minute to handle past slots
+    this.refreshSub = interval(60000).subscribe(() => {
+      this.generateAvailableHours();
+    });
 
     // Listen to changes from central ApiService (SSE or local)
     this.sub = this.api.appointmentsChanged$.subscribe(() => {
@@ -145,6 +197,68 @@ export class AdminDashboardComponent implements OnInit {
         endTimeCtrl?.disable();
       }
     });
+
+    // Chat Init
+    const savedIdentity = localStorage.getItem('chatIdentity');
+    if (savedIdentity) {
+      this.selectedChatIdentity = savedIdentity;
+    }
+
+    this.loadChatMessages();
+    this.chatRefreshSub = interval(3000).subscribe(() => {
+      if (this.chatExpanded) {
+        this.loadChatMessages();
+      }
+    });
+  }
+
+  loadChatMessages() {
+    this.api.getAdminMessages().subscribe(msgs => {
+      this.chatMessages = msgs;
+      // Scroll to bottom logic if needed
+      if (this.chatExpanded) {
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    });
+  }
+
+  sendChatMessage() {
+    if (!this.newMessageContent.trim() || !this.currentUser || !this.currentUser.id) return;
+    
+    // Si l'identité n'est pas encore choisie, on ne peut pas envoyer
+    if (!this.selectedChatIdentity) return;
+
+    this.api.sendAdminMessage(
+      this.newMessageContent, 
+      this.currentUser.id, 
+      this.selectedChatIdentity
+    ).subscribe(msg => {
+      this.chatMessages.push(msg);
+      this.newMessageContent = '';
+      setTimeout(() => this.scrollToBottom(), 100);
+    });
+  }
+
+  selectIdentity(name: string) {
+    this.selectedChatIdentity = name;
+    localStorage.setItem('chatIdentity', name);
+  }
+
+  toggleChat() {
+    this.chatExpanded = !this.chatExpanded;
+    if (this.chatExpanded) {
+      this.loadChatMessages();
+      setTimeout(() => this.scrollToBottom(), 100);
+    }
+  }
+
+  scrollToBottom(): void {
+    try {
+      const chatContainer = document.getElementById('chat-messages-container');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    } catch(err) { }
   }
 
   loadBlockedSlots() {
@@ -193,30 +307,96 @@ export class AdminDashboardComponent implements OnInit {
   generateAvailableHours() {
     const barber = this.lockForm.get('barber')?.value;
     const date = this.lockForm.get('date')?.value;
+    const selectedServices = this.lockForm.get('services')?.value as Service[];
     
     if (!barber || !date) {
+      this.allSlotsUI = [];
       this.availableHours = [];
       return;
     }
     
     const dateStr = this.formatDateLocal(new Date(date));
-    this.api.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
-      // Filtrer les créneaux déjà réservés par des clients
-      // On compare avec la liste des rendez-vous actuelle (this.appointments)
-      // car getAvailableSlots du backend ne prend peut-être pas en compte les rendez-vous "BOOKED" 
-      // si c'est une simple vérification de blocage admin.
-      // Cependant, le backend getAvailableSlots est censé retourner uniquement les vrais créneaux libres.
-      // Par sécurité, on s'assure que le créneau n'est pas dans nos rendez-vous actifs.
-      
-      const reservedSlots = this.appointments
-        .filter(a => 
-          a.barber?.id === barber.id && 
-          a.date === dateStr && 
-          (a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'DONE')
-        )
-        .map(a => a.startTime.substring(0, 5));
+    const totalDuration = selectedServices && selectedServices.length > 0 
+      ? selectedServices.reduce((acc, s) => acc + s.duration, 0)
+      : 30; // Durée par défaut si aucun service sélectionné
 
-      this.availableHours = slots.filter(s => !reservedSlots.includes(s.substring(0, 5)));
+    this.api.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
+      const now = new Date();
+      const todayStr = this.formatDateLocal(now);
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+
+      // Logique de génération des créneaux de 15 min identique au client
+      const dayOfWeek = new Date(date).getDay();
+      let startHour = 10;
+      let endHour = 21;
+
+      const name = barber.name.toLowerCase();
+      if (dayOfWeek === 1) { // Lundi
+        startHour = 12;
+        endHour = 18;
+      } else {
+        if (name.includes("hamouda")) startHour = 12;
+        else if (name.includes("ahmed")) startHour = 11;
+        else startHour = 10;
+      }
+
+      const fullDaySlots: number[] = [];
+      for (let h = startHour; h < endHour; h++) {
+        for (let m = 0; m < 60; m += 15) {
+          fullDaySlots.push(h * 60 + m);
+        }
+      }
+
+      // Convertir les slots reçus du backend (libres) en minutes
+      const freeSlotsInMinutes = slots.map(s => {
+        if (Array.isArray(s)) return s[0] * 60 + s[1];
+        const cleanTime = s.split(':');
+        return parseInt(cleanTime[0], 10) * 60 + parseInt(cleanTime[1], 10);
+      });
+
+      const slotsNeeded = Math.ceil(totalDuration / 15);
+      const newSlotsUI: SlotUI[] = [];
+
+      fullDaySlots.forEach((totalMin, index) => {
+        const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+        
+        if (isPast) return; // Masquer les créneaux passés
+
+        const isLastSlot = index === fullDaySlots.length - 1;
+        
+        let canFit = true;
+        
+        // Vérifier si toute la durée du service rentre
+        const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
+        
+        for (let j = 0; j < effectiveSlotsNeeded; j++) {
+          const targetMinutes = totalMin + (j * 15);
+          if (!freeSlotsInMinutes.includes(targetMinutes)) {
+            canFit = false;
+            break;
+          }
+        }
+
+        const h = Math.floor(totalMin / 60);
+        const m = totalMin % 60;
+        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+
+        newSlotsUI.push({
+          time: timeStr,
+          isAvailable: canFit,
+          isPast: isPast
+        });
+      });
+
+      this.allSlotsUI = newSlotsUI;
+      this.availableHours = newSlotsUI.filter(s => s.isAvailable).map(s => s.time);
+      
+      // Reset selected time if it's no longer available
+      const currentTime = this.lockForm.get('time')?.value;
+      if (currentTime && !this.availableHours.includes(currentTime)) {
+        this.lockForm.patchValue({ time: null });
+      }
     });
   }
 
@@ -299,6 +479,8 @@ export class AdminDashboardComponent implements OnInit {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.refreshSub?.unsubscribe();
+    this.chatRefreshSub?.unsubscribe();
   }
 
   loadAppointments() {
@@ -318,7 +500,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
       this.appointments = list;
-      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED') && !a.adminViewed);
+      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED') && !a.adminViewed);
     });
   }
 
@@ -380,7 +562,7 @@ export class AdminDashboardComponent implements OnInit {
       this.api.markAdminViewed(a.id).subscribe({
         next: (updated) => {
           a.adminViewed = true;
-          this.hasNew = this.appointments.some(x => (x.status === 'BOOKED' || x.status === 'MODIFIED') && !x.adminViewed);
+          this.hasNew = this.appointments.some(x => (x.status === 'BOOKED' || x.status === 'MODIFIED' || x.status === 'BLOCKED') && !x.adminViewed);
         }
       });
     }
@@ -413,6 +595,37 @@ export class AdminDashboardComponent implements OnInit {
     }
   }
 
+  editAppointment(a: Appointment) {
+    const dialogRef = this.dialog.open(EditAppointmentDialogComponent, {
+      width: '500px',
+      data: { appointment: a, barbers: this.barbers, services: this.services },
+      panelClass: 'gold-theme-dialog',
+      position: { top: '30px' },
+      maxHeight: '90vh'
+    });
+
+    dialogRef.afterClosed().subscribe((result: any) => {
+      if (result) {
+        this.api.updateAppointment(a.id, result).subscribe({
+          next: () => {
+            this.snackBar.open('Rendez-vous mis à jour', 'OK', { duration: 3000 });
+            this.applyFilters();
+          },
+          error: (err) => {
+            let errorMsg = 'Erreur lors de la modification';
+            if (err.error) {
+              if (typeof err.error === 'string') errorMsg = err.error;
+              else if (err.error.message) errorMsg = err.error.message;
+            } else if (err.message) {
+              errorMsg = err.message;
+            }
+            this.snackBar.open(errorMsg, 'Fermer', { duration: 5000 });
+          }
+        });
+      }
+    });
+  }
+
   logout() {
     try {
       this.api.stopSseListener();
@@ -440,7 +653,7 @@ export class AdminDashboardComponent implements OnInit {
         }
       });
       this.appointments = list;
-      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED') && !a.adminViewed);
+      this.hasNew = list.some(a => (a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED') && !a.adminViewed);
     });
   }
 

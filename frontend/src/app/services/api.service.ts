@@ -104,6 +104,14 @@ export interface Product {
   photo: string;
 }
 
+export interface AdminMessage {
+  id?: number;
+  content: string;
+  senderId: number;
+  senderName: string;
+  timestamp?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -177,6 +185,9 @@ export class ApiService {
     this.appointmentBookedSubject.next(appt);
     this.appointmentsChangedSubject.next();
   }
+
+
+  // Services
   getServices(): Observable<Service[]> {
     return this.http.get<Service[]>(`${this.baseUrl}/services`);
   }
@@ -244,9 +255,16 @@ export class ApiService {
       return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/my-appointments`);
   }
 
-  getAppointmentsByContact(email?: string, phone?: string): Observable<Appointment[]> {
+  getAppointmentsByClient(firstName: string, phone: string): Observable<Appointment[]> {
     const usp = new URLSearchParams();
-    if (email) usp.set('email', email);
+    if (firstName) usp.set('firstName', firstName);
+    if (phone) usp.set('phone', phone);
+    const qs = usp.toString();
+    return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/by-contact${qs ? '?' + qs : ''}`);
+  }
+
+  getAppointmentsByPhone(phone: string): Observable<Appointment[]> {
+    const usp = new URLSearchParams();
     if (phone) usp.set('phone', phone);
     const qs = usp.toString();
     return this.http.get<Appointment[]>(`${this.baseUrl}/appointments/by-contact${qs ? '?' + qs : ''}`);
@@ -282,6 +300,19 @@ export class ApiService {
 
   cancelAppointment(id: number): Observable<Appointment> {
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/cancel`, {});
+  }
+
+  updateAppointment(id: number, data: any): Observable<Appointment> {
+    const params = new URLSearchParams({
+      barberId: data.barberId.toString(),
+      date: data.date,
+      startTime: data.startTime,
+      serviceIds: data.serviceIds.join(',')
+    });
+    if (data.clientName) {
+      params.set('clientName', data.clientName);
+    }
+    return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/update?${params.toString()}`, {});
   }
 
   deleteAppointment(id: number): Observable<any> {
@@ -364,6 +395,15 @@ export class ApiService {
 
   deleteProduct(id: number): Observable<any> {
     return this.http.delete(`${this.baseUrl}/products/${id}`);
+  }
+
+  // Admin Chat
+  getAdminMessages(): Observable<AdminMessage[]> {
+    return this.http.get<AdminMessage[]>(`${this.baseUrl}/admin/chat`);
+  }
+
+  sendAdminMessage(content: string, senderId: number, senderName: string): Observable<AdminMessage> {
+    return this.http.post<AdminMessage>(`${this.baseUrl}/admin/chat`, { content, senderId, senderName });
   }
 
   // Auth
