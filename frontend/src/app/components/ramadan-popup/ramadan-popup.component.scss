@@ -1,0 +1,199 @@
+.ramadan-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.ramadan-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 500px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 2px solid #D4AF37;
+  border-radius: 20px;
+  padding: 40px 20px;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.3), 
+              inset 0 0 20px rgba(212, 175, 55, 0.1);
+  text-align: center;
+  color: #fff;
+  overflow: hidden;
+
+  .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #D4AF37;
+    transition: transform 0.3s ease;
+    
+    &:hover {
+      transform: rotate(90deg);
+      background-color: rgba(212, 175, 55, 0.1);
+    }
+  }
+
+  .popup-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .moon-decoration {
+    position: absolute;
+    top: -20px;
+    right: -20px; /* Pushed further right */
+    width: 60px;
+    height: 60px;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.5));
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .stars-left {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 80px;
+    height: 80px;
+    
+    .star {
+      position: absolute;
+      width: 25px;
+      height: 25px;
+      opacity: 0.8;
+      filter: drop-shadow(0 0 5px rgba(212, 175, 55, 0.8));
+      
+      &.star-1 {
+        top: 0;
+        left: 0;
+        animation: twinkle 3s ease-in-out infinite;
+      }
+      
+      &.star-2 {
+        top: 25px;
+        left: 30px;
+        width: 15px;
+        height: 15px;
+        animation: twinkle 4s ease-in-out infinite 1s;
+      }
+    }
+  }
+
+  .lanterns-center {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    position: absolute;
+    top: -55px; /* Lifted higher */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    z-index: 1; /* Behind text if overlap occurs, but here it's decoration */
+    
+    .lantern {
+      width: 35px;
+      height: 70px;
+      
+      &.lantern-1 {
+        animation: swing 4s ease-in-out infinite;
+        transform-origin: top center;
+      }
+      
+      &.lantern-2 {
+        animation: swing 5s ease-in-out infinite 1s;
+        transform-origin: top center;
+        width: 25px;
+        margin-top: 10px;
+      }
+    }
+  }
+
+  .ramadan-title {
+    font-family: 'Playfair Display', serif; /* Elegant font if available, fallback to serif */
+    font-size: 2.5rem;
+    color: #D4AF37;
+    margin-top: 60px; /* Increased further to clear center lanterns */
+    margin-bottom: 15px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    background: linear-gradient(to right, #D4AF37, #FDC830, #D4AF37);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% auto;
+    animation: shine 3s linear infinite;
+  }
+
+  .ramadan-message {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: #e0e0e0;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+
+  .decorative-line {
+    width: 100px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    margin: 20px auto 0;
+  }
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+@keyframes shine {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+  .ramadan-popup {
+    width: 85%;
+    padding: 30px 15px;
+    
+    .ramadan-title {
+      font-size: 1.8rem;
+    }
+    
+    .ramadan-message {
+      font-size: 1rem;
+    }
+    
+    .moon-decoration {
+      width: 40px;
+      height: 40px;
+      top: -10px;
+      right: 10px;
+    }
+    
+    .lanterns {
+      left: 10px;
+      transform: scale(0.8);
+      transform-origin: top left;
+    }
+  }
+}

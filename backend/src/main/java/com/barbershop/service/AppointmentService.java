@@ -52,14 +52,18 @@ public class AppointmentService {
     @Autowired
     private PushNotificationService pushNotificationService;
 
-    private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime) {
+    private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, boolean skipRamadanCheck, boolean isAdmin) {
         // Ramadan Special Rule (Feb 19 - March 20)
-        if (isRamadan(date)) {
+        if (!skipRamadanCheck && isRamadan(date)) {
             boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
+            // Admin can book until 18:00
+            if (isAdmin) {
+                inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(18, 0));
+            }
             boolean inSecondWindow = !startTime.isBefore(LocalTime.of(19, 0)) && !endTime.isAfter(LocalTime.of(22, 0));
             
             if (!inFirstWindow && !inSecondWindow) {
-                throw new ConflictException("Pendant le Ramadan, les réservations ne sont autorisées que de 12h à 17h et de 19h à 22h.");
+                throw new ConflictException("Pendant le Ramadan, les réservations ne sont autorisées que de 12h à 17h (18h pour admin) et de 19h à 22h.");
             }
         }
 
@@ -103,7 +107,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public synchronized Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean useReward) {
+    public synchronized Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean useReward, boolean isBookedByAdmin) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Barber barber = barberRepository.findById(barberId)
@@ -122,7 +126,9 @@ public class AppointmentService {
         LocalTime endTime = startTime.plusMinutes(totalDuration); 
 
         // Check for conflicts (appointments and admin blockages)
-        checkConflicts(barberId, date, startTime, endTime);
+        // Check if user is admin or booked by admin
+        boolean isAdmin = isBookedByAdmin || (user != null && user.getRole() == User.Role.ADMIN);
+        checkConflicts(barberId, date, startTime, endTime, false, isAdmin);
 
         Appointment appointment = new Appointment();
         appointment.setUser(user);
@@ -134,31 +140,26 @@ public class AppointmentService {
 
         if (useReward) {
             if (user.getAvailableRewards() > 0) {
-                // Discount: free "Coupe" and "Barbe" if present in selected services
-                boolean hasCoupe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("coupe"));
-                boolean hasBarbe = selectedServices.stream().anyMatch(s -> s.getName().toLowerCase().contains("barbe"));
+                // New Reward Logic: 50% off total + Free "Masque Noir"
+                double newTotal = 0.0;
                 
-                if (hasCoupe || hasBarbe) {
-                    double coupePrice = selectedServices.stream()
-                        .filter(s -> s.getName().toLowerCase().contains("coupe"))
-                        .mapToDouble(com.barbershop.entity.Service::getPrice)
-                        .findFirst()
-                        .orElse(0.0);
-                    double barbePrice = selectedServices.stream()
-                        .filter(s -> s.getName().toLowerCase().contains("barbe"))
-                        .mapToDouble(com.barbershop.entity.Service::getPrice)
-                        .findFirst()
-                        .orElse(0.0);
-                    total -= (coupePrice + barbePrice);
+                for (com.barbershop.entity.Service s : selectedServices) {
+                    if (s.getName().toLowerCase().contains("masque noir")) {
+                        // Masque Noir is free
+                        newTotal += 0.0;
+                    } else {
+                        // All other services are 50% off
+                        newTotal += (s.getPrice() * 0.5);
+                    }
                 }
                 
-                if (total < 0) total = 0;
+                total = newTotal;
                 
                 rewardApplied = true;
                 user.setAvailableRewards(user.getAvailableRewards() - 1);
                 user.setUsedRewards(user.getUsedRewards() + 1);
                 userRepository.save(user);
-                logger.info("Reward applied for user {}. 'Coupe' and 'Barbe' discounted. New total: {}", user.getName(), total);
+                logger.info("Reward applied for user {}. 50% discount + Free Masque Noir. New total: {}", user.getName(), total);
             }
         }
 
@@ -226,13 +227,16 @@ public class AppointmentService {
         return !date.isBefore(start) && !date.isAfter(end);
     }
 
-    public List<LocalTime> getAvailableSlots(Long barberId, LocalDate date) {
+    public List<LocalTime> getAvailableSlots(Long barberId, LocalDate date, boolean isAdmin) {
         List<LocalTime> allTimes = new ArrayList<>();
         
         if (isRamadan(date)) {
             // Ramadan hours: 12h-17h and 19h-22h
             LocalTime t1 = LocalTime.of(12, 0);
-            while (t1.isBefore(LocalTime.of(17, 0))) {
+            // If admin, extend first window to 18:00
+            LocalTime endOfFirstWindow = isAdmin ? LocalTime.of(18, 0) : LocalTime.of(17, 0);
+            
+            while (t1.isBefore(endOfFirstWindow)) {
                 allTimes.add(t1);
                 t1 = t1.plusMinutes(15);
             }
@@ -436,31 +440,68 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment modifyAppointment(Long appointmentId, LocalDate newDate, LocalTime newStartTime) {
-        Appointment oldAppt = appointmentRepository.findById(appointmentId)
+    public Appointment modifyAppointment(Long appointmentId, LocalDate newDate, LocalTime newStartTime, List<Long> newServiceIds) {
+        Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
         
-        // 1. Mark old appointment as CANCELLED (so it becomes available for others)
-        oldAppt.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(oldAppt);
+        // Update basic fields
+        appt.setDate(newDate);
+        appt.setStartTime(newStartTime);
+        
+        // Update services if provided
+        if (newServiceIds != null && !newServiceIds.isEmpty()) {
+            List<com.barbershop.entity.Service> selectedServices = serviceRepository.findAllById(newServiceIds);
+            if (!selectedServices.isEmpty()) {
+                appt.setServices(selectedServices);
+                
+                // Recalculate price
+                double total = selectedServices.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
+                
+                if (appt.isRewardApplied()) {
+                     double newTotal = 0.0;
+                     for (com.barbershop.entity.Service s : selectedServices) {
+                        if (s.getName().toLowerCase().contains("masque noir")) {
+                            // Masque Noir is free
+                        } else {
+                            newTotal += (s.getPrice() * 0.5);
+                        }
+                    }
+                    total = newTotal;
+                }
+                appt.setTotalPrice(total);
+            }
+        }
 
-        // 2. Create new appointment with same details but new date/time
-        Appointment newAppt = new Appointment();
-        newAppt.setUser(oldAppt.getUser());
-        newAppt.setBarber(oldAppt.getBarber());
-        newAppt.setServices(new ArrayList<>(oldAppt.getServices()));
-        newAppt.setTotalPrice(oldAppt.getTotalPrice());
-        newAppt.setRewardApplied(oldAppt.isRewardApplied());
-        newAppt.setDate(newDate);
-        newAppt.setStartTime(newStartTime);
-        newAppt.setEndTime(newStartTime.plusMinutes(30));
-        newAppt.setStatus(AppointmentStatus.MODIFIED); // Marked as MODIFIED
-        newAppt.setAdminViewed(false);
+        // Calculate required duration
+        int requiredDuration = appt.getServices().stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
+        if (requiredDuration == 0) requiredDuration = 30; // Default
 
-        // Check for conflicts (appointments and admin blockages)
-        checkConflicts(newAppt.getBarber().getId(), newAppt.getDate(), newAppt.getStartTime(), newAppt.getEndTime());
+        // Best Effort Duration Adjustment
+        LocalTime validEndTime = newStartTime;
+        LocalTime proposedEndTime = newStartTime.plusMinutes(requiredDuration);
+        
+        // Iterate in 15 min slots
+        LocalTime checkTime = newStartTime;
+        while (checkTime.isBefore(proposedEndTime)) {
+            LocalTime nextSlot = checkTime.plusMinutes(15);
+            
+            if (isSlotAvailable(appt.getBarber().getId(), newDate, checkTime, nextSlot, appointmentId)) {
+                validEndTime = nextSlot;
+                checkTime = nextSlot;
+            } else {
+                break;
+            }
+        }
+        
+        if (validEndTime.equals(newStartTime)) {
+             throw new ConflictException("Le créneau sélectionné n'est pas disponible.");
+        }
 
-        Appointment saved = appointmentRepository.save(newAppt);
+        appt.setEndTime(validEndTime);
+        appt.setStatus(AppointmentStatus.MODIFIED);
+        appt.setAdminViewed(false);
+
+        Appointment saved = appointmentRepository.save(appt);
 
         // Notification Push pour modification
         String servicesNames = saved.getServices().stream()
@@ -471,7 +512,6 @@ public class AppointmentService {
         String message = String.format("%s a modifié son rendez-vous pour %s. Nouvelle date: %s à %s", 
             saved.getUser().getName(), servicesNames, newDate, newStartTime);
 
-        // Envoyer au barbier concerné
         if (saved.getBarber() != null) {
             pushNotificationService.sendNotificationToBarber(saved.getBarber().getId(), title, message);
         } else {
@@ -479,6 +519,57 @@ public class AppointmentService {
         }
 
         return saved;
+    }
+
+    private boolean isSlotAvailable(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, Long excludeAppointmentId) {
+        // 1. Check Ramadan
+        if (isRamadan(date)) {
+            boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
+            boolean inSecondWindow = !startTime.isBefore(LocalTime.of(19, 0)) && !endTime.isAfter(LocalTime.of(22, 0));
+            if (!inFirstWindow && !inSecondWindow) {
+                return false;
+            }
+        }
+
+        // 2. Check conflicts with other appointments
+        List<Appointment> conflicts = appointmentRepository.findConflictingAppointments(barberId, date, startTime, endTime);
+        boolean hasConflict = conflicts.stream().anyMatch(a -> !a.getId().equals(excludeAppointmentId));
+        if (hasConflict) {
+            return false;
+        }
+
+        // 3. Check conflicts with admin blockages
+        List<BlockedSlot> blockages = blockedSlotRepository.findByDate(date);
+        for (BlockedSlot b : blockages) {
+            boolean barberMatches = (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId)));
+            if (barberMatches) {
+                if (b.getStartTime() == null || b.getStartTime().isBlank()) {
+                    return false; 
+                }
+                try {
+                    String bStartStr = b.getStartTime().trim();
+                    if (bStartStr.length() == 5) bStartStr += ":00";
+                    LocalTime bStart = LocalTime.parse(bStartStr);
+                    
+                    LocalTime bEnd;
+                    if (b.getEndTime() != null && !b.getEndTime().isBlank()) {
+                        String bEndStr = b.getEndTime().trim();
+                        if (bEndStr.length() == 5) bEndStr += ":00";
+                        bEnd = LocalTime.parse(bEndStr);
+                    } else {
+                        bEnd = bStart.plusMinutes(15);
+                    }
+                    
+                    if (startTime.isBefore(bEnd) && endTime.isAfter(bStart)) {
+                        return false;
+                    }
+                } catch (Exception e) {
+                    logger.error("Error parsing blockage time: '{}' - '{}'", b.getStartTime(), b.getEndTime(), e);
+                }
+            }
+        }
+        
+        return true;
     }
 
     @Transactional
@@ -514,8 +605,14 @@ public class AppointmentService {
         appt.setStatus(AppointmentStatus.CANCELLED);
         appointmentRepository.saveAndFlush(appt); // Force flush to ensure DB is updated before checkConflicts
 
+        boolean skipRamadanCheck = false;
+        // If date and start time are unchanged, skip Ramadan check (allow changing service/price/client)
+        if (appt.getDate().equals(date) && appt.getStartTime().equals(startTime)) {
+            skipRamadanCheck = true;
+        }
+
         try {
-            checkConflicts(barberId, date, startTime, endTime);
+            checkConflicts(barberId, date, startTime, endTime, skipRamadanCheck, true); 
         } catch (Exception e) {
             appt.setStatus(originalStatus);
             appointmentRepository.save(appt);
@@ -604,10 +701,27 @@ public class AppointmentService {
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
 
-        LocalTime endTime = startTime.plusMinutes(30);
+        List<com.barbershop.entity.Service> services = new ArrayList<>();
+        double totalPrice = 0.0;
+        int totalDuration = 30; // Default duration
+
+        if (serviceIds != null && !serviceIds.isEmpty()) {
+            for (Long sid : serviceIds) {
+                serviceRepository.findById(sid).ifPresent(s -> {
+                    services.add(s);
+                });
+            }
+            totalPrice = services.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
+            int durationSum = services.stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
+            if (durationSum > 0) {
+                totalDuration = durationSum;
+            }
+        }
+
+        LocalTime endTime = startTime.plusMinutes(totalDuration);
         
         // Check for conflicts (appointments and admin blockages)
-        checkConflicts(barberId, date, startTime, endTime);
+        checkConflicts(barberId, date, startTime, endTime, false, true); // No force for lock slot yet, assumed admin
 
         Appointment appointment = new Appointment();
         
@@ -632,17 +746,6 @@ public class AppointmentService {
 
         appointment.setBarber(barber);
         
-        List<com.barbershop.entity.Service> services = new ArrayList<>();
-        double totalPrice = 0.0;
-        if (serviceIds != null && !serviceIds.isEmpty()) {
-            for (Long sid : serviceIds) {
-                serviceRepository.findById(sid).ifPresent(s -> {
-                    services.add(s);
-                });
-            }
-            totalPrice = services.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
-        }
-        
         appointment.setServices(services);
         appointment.setTotalPrice(totalPrice);
         appointment.setDate(date);
@@ -665,15 +768,28 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
         
-        // If it's a deletion of a booked/modified appointment with reward, refund it
-        if (appointment.isRewardApplied() && appointment.getStatus() != AppointmentStatus.DONE) {
-            User user = appointment.getUser();
-            if (user != null) {
+        // Handle Loyalty Logic for Deletion
+        User user = appointment.getUser();
+        if (user != null) {
+            // 1. Always refund reward if it was applied (regardless of status, if we delete it, we revert the usage)
+            if (appointment.isRewardApplied()) {
                 user.setAvailableRewards(user.getAvailableRewards() + 1);
                 user.setUsedRewards(Math.max(0, user.getUsedRewards() - 1));
-                userRepository.save(user);
                 logger.info("Reward refunded to user {} due to deletion of appointment {}", user.getName(), id);
             }
+            
+            // 2. If appointment was DONE, revert the loyalty point and any reward triggered by it
+            if (appointment.getStatus() == AppointmentStatus.DONE) {
+                user.setTotalAppointments(Math.max(0, user.getTotalAppointments() - 1));
+                
+                // If the removed appointment was a milestone (e.g. 5th, 10th), remove the earned reward
+                // We just decremented, so we check if (newTotal + 1) % 5 == 0
+                if ((user.getTotalAppointments() + 1) % 5 == 0) {
+                    user.setAvailableRewards(Math.max(0, user.getAvailableRewards() - 1));
+                    logger.info("Loyalty reward removed from user {} due to deletion of DONE appointment {}", user.getName(), id);
+                }
+            }
+            userRepository.save(user);
         }
         
         appointmentRepository.deleteById(id);

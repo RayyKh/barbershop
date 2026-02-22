@@ -11,7 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
-import { ApiService, Appointment } from '../../services/api.service';
+import { ApiService, Appointment, Service } from '../../services/api.service';
 
 @Component({
   selector: 'app-my-appointments',
@@ -58,7 +58,7 @@ import { ApiService, Appointment } from '../../services/api.service';
                 <div class="progress-bar-fill" [style.width.%]="((user.totalAppointments || 0) % 5) * 20"></div>
               </div>
               <p class="loyalty-tip" *ngIf="user.availableRewards > 0">
-                Une "Coupe + Barbe" gratuite sera appliquée à votre prochaine réservation de ce service !
+                50% de réduction + Masque Noir gratuit sur votre prochaine réservation !
               </p>
               <p class="loyalty-tip" *ngIf="user.availableRewards === 0">
                 Encore {{ 5 - ((user.totalAppointments || 0) % 5) }} rendez-vous pour votre prochaine récompense !
@@ -154,6 +154,19 @@ import { ApiService, Appointment } from '../../services/api.service';
               </div>
 
               <div class="modify-panel" *ngIf="isModifying(element.id)">
+                
+                <div class="services-selection" *ngIf="services.length > 0">
+                    <label class="grid-label">Services:</label>
+                    <div class="service-chips">
+                        <div *ngFor="let s of services" 
+                             class="service-chip"
+                             [class.selected]="isServiceSelected(element.id, s.id)"
+                             (click)="toggleService(element.id, s.id)">
+                            {{s.name}}
+                        </div>
+                    </div>
+                </div>
+
                 <mat-form-field appearance="outline">
                   <mat-label>Nouvelle date</mat-label>
                   <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
@@ -224,6 +237,19 @@ import { ApiService, Appointment } from '../../services/api.service';
               </div>
 
               <div class="modify-panel mobile" *ngIf="isModifying(element.id)">
+                
+                <div class="services-selection" *ngIf="services.length > 0">
+                    <label class="grid-label">Services:</label>
+                    <div class="service-chips">
+                        <div *ngFor="let s of services" 
+                             class="service-chip"
+                             [class.selected]="isServiceSelected(element.id, s.id)"
+                             (click)="toggleService(element.id, s.id)">
+                            {{s.name}}
+                        </div>
+                    </div>
+                </div>
+
                 <mat-form-field appearance="outline" class="full-width">
                   <mat-label>Nouvelle date</mat-label>
                   <input matInput [matDatepicker]="mobilePicker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
@@ -357,6 +383,29 @@ import { ApiService, Appointment } from '../../services/api.service';
       opacity: 1 !important;
     }
     .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+    
+    .services-selection { margin-bottom: 12px; }
+    .service-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .service-chip {
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.2);
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        color: #fff;
+    }
+    .service-chip:hover {
+        border-color: #d4af37;
+        background: rgba(212, 175, 55, 0.1);
+    }
+    .service-chip.selected {
+        background: #d4af37;
+        color: #000;
+        border-color: #d4af37;
+        font-weight: bold;
+    }
+
     .hours-grid-container {
       margin-top: 12px;
     }
@@ -490,11 +539,12 @@ import { ApiService, Appointment } from '../../services/api.service';
 })
 export class MyAppointmentsComponent implements OnInit, OnDestroy {
   appointments: Appointment[] = [];
+  services: Service[] = [];
   user: any = null;
   isAuthenticated: boolean = false;
   idForm: FormGroup;
   displayedColumns: string[] = ['date', 'time', 'service', 'barber', 'status', 'actions'];
-  modifying: { [key: number]: { date: Date; slots: string[]; time?: string; uiSlots?: any[] } } = {};
+  modifying: { [key: number]: { date: Date; slots: string[]; time?: string; uiSlots?: any[]; serviceIds?: number[] } } = {};
   contactEmail: string = '';
   contactPhone: string = '';
   private refreshInterval: any;
@@ -508,6 +558,10 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.apiService.getServices().subscribe(services => {
+      this.services = services;
+    });
+
     this.apiService.appointmentBooked$.subscribe(() => {
       this.snackBar.open('Nouveau rendez-vous ajouté', 'OK', { duration: 3000 });
       this.reloadAppointments();
@@ -703,11 +757,16 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     }
     // Initialiser avec la date du jour par défaut
     const now = new Date();
-    this.modifying[id] = { date: now, slots: [], uiSlots: [] };
     
     // Charger les créneaux pour aujourd'hui immédiatement
     const appt = this.appointments.find(a => a.id === id);
     if (appt) {
+      this.modifying[id] = { 
+        date: now, 
+        slots: [], 
+        uiSlots: [],
+        serviceIds: appt.services.map(s => s.id) 
+      };
       this.loadModifySlots(appt, now);
     }
   }
@@ -729,6 +788,34 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     
     state.date = d;
     this.loadModifySlots(a, d);
+  }
+  
+  isServiceSelected(apptId: number, serviceId: number): boolean {
+    return this.modifying[apptId]?.serviceIds?.includes(serviceId) || false;
+  }
+
+  toggleService(apptId: number, serviceId: number) {
+    const state = this.modifying[apptId];
+    if (!state || !state.serviceIds) return;
+
+    const index = state.serviceIds.indexOf(serviceId);
+    if (index > -1) {
+      if (state.serviceIds.length > 1) {
+        state.serviceIds.splice(index, 1);
+      } else {
+        // Prevent deselecting all services (at least one required)
+        this.snackBar.open('Vous devez sélectionner au moins un service.', 'OK', { duration: 2000 });
+        return;
+      }
+    } else {
+      state.serviceIds.push(serviceId);
+    }
+    
+    // Reload slots because duration might have changed
+    const appt = this.appointments.find(a => a.id === apptId);
+    if (appt) {
+      this.loadModifySlots(appt, state.date);
+    }
   }
   
   loadModifySlots(a: Appointment, date: Date) {
@@ -790,11 +877,23 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         }
       }
       
-      // 4. Calculate needed duration based on appointment services
-      let totalDuration = 30; // Default
-      if (a.services && a.services.length > 0) {
-          totalDuration = a.services.reduce((acc, s) => acc + s.duration, 0);
+      // 4. Calculate needed duration based on SELECTED services
+      let totalDuration = 0;
+      const selectedServiceIds = state.serviceIds || [];
+      
+      if (selectedServiceIds.length > 0 && this.services.length > 0) {
+        // Calculate from selected services
+        selectedServiceIds.forEach(sid => {
+          const s = this.services.find(srv => srv.id === sid);
+          if (s) totalDuration += s.duration;
+        });
+      } else if (a.services && a.services.length > 0) {
+        // Fallback to appointment services if something is wrong
+        totalDuration = a.services.reduce((acc, s) => acc + s.duration, 0);
       }
+      
+      if (totalDuration === 0) totalDuration = 30; // Default min duration
+      
       const slotsNeeded = Math.ceil(totalDuration / 15);
       
       const now = new Date();
@@ -813,6 +912,17 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         
         let canFit = true;
         
+        // Relaxed availability check for Best Effort support:
+        // Only check if the start slot is available.
+        // The backend will handle truncating the duration if full time isn't available.
+        if (!freeSlotsInMinutes.includes(totalMin)) {
+            canFit = false;
+        }
+
+        // Optional: We could check for at least 15-30 mins, but "Best Effort" implies taking whatever is there.
+        // If we want to be slightly safer, we could ensure at least one slot is free (which we just did).
+        
+        /* Original strict check
         const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
         for (let j = 0; j < effectiveSlotsNeeded; j++) {
           const targetMinutes = totalMin + (j * 15);
@@ -821,6 +931,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
             break;
           }
         }
+        */
 
         const h = Math.floor(totalMin / 60);
         const m = totalMin % 60;
@@ -869,7 +980,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     const dd = String(state.date.getDate()).padStart(2, '0');
     const dateStr = `${yyyy}-${mm}-${dd}`;
     
-    this.apiService.modifyAppointment(a.id, dateStr, state.time).subscribe({
+    this.apiService.modifyAppointment(a.id, dateStr, state.time, state.serviceIds).subscribe({
       next: () => {
         delete this.modifying[a.id];
         this.snackBar.open('Rendez-vous modifié', 'OK', { duration: 3000 });

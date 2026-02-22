@@ -84,7 +84,7 @@ public class AppointmentController {
             }
         }
 
-        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), request.getDate(), request.getStartTime(), request.isUseReward());
+        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), request.getDate(), request.getStartTime(), request.isUseReward(), isLoggedAsAdmin);
         notifyEmitters(appt);
         return appt;
     }
@@ -93,13 +93,30 @@ public class AppointmentController {
     public List<LocalTime> getAvailableSlots(
             @RequestParam Long barberId, 
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return appointmentService.getAvailableSlots(barberId, date);
+        
+        boolean isAdmin = false;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !authentication.getPrincipal().equals("anonymousUser")) {
+             String username = authentication.getName();
+             User user = userRepository.findByUsername(username).orElse(null);
+             if (user != null && user.getRole() == User.Role.ADMIN) {
+                 isAdmin = true;
+             }
+        }
+
+        return appointmentService.getAvailableSlots(barberId, date, isAdmin);
     }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<Appointment> getAllAppointments() {
-        return appointmentService.getAllAppointments();
+    public List<Appointment> getAllAppointments(
+            @RequestParam(required = false) Long barberId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) com.barbershop.entity.AppointmentStatus status,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false, defaultValue = "date,startTime") String sort
+    ) {
+        return filter(barberId, date, status, q, sort);
     }
 
     @GetMapping("/filter")
@@ -187,9 +204,10 @@ public class AppointmentController {
     public Appointment modifyAppointment(
             @PathVariable Long id,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
+            @RequestParam(required = false) List<Long> serviceIds
     ) {
-        Appointment appt = appointmentService.modifyAppointment(id, date, startTime);
+        Appointment appt = appointmentService.modifyAppointment(id, date, startTime, serviceIds);
         notifyEmitters(appt);
         return appt;
     }

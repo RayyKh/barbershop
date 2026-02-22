@@ -69,6 +69,8 @@ export class BookingComponent implements OnInit {
 
   private cdr = inject(ChangeDetectorRef);
 
+  isAdmin = false;
+
   constructor(
     private _formBuilder: FormBuilder,
     private apiService: ApiService,
@@ -90,6 +92,11 @@ export class BookingComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Check if user is admin
+    this.apiService.getCurrentUser().subscribe(user => {
+      this.isAdmin = user?.role === 'ADMIN';
+    });
+
     this.apiService.getServices().subscribe(data => {
       this.services = data;
     });
@@ -115,41 +122,47 @@ export class BookingComponent implements OnInit {
 
   get canApplyReward(): boolean {
     if (!this.user || (this.user.availableRewards || 0) <= 0) return false;
-    
     const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
-    if (!selected || !selected.length) return false;
-    
-    const hasCoupe = selected.some(s => s.name.toLowerCase().includes('coupe'));
-    const hasBarbe = selected.some(s => s.name.toLowerCase().includes('barbe'));
-    
-    return hasCoupe && hasBarbe;
+    return !!selected && selected.length > 0;
   }
 
   get totalSelectedPrice(): number {
     const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
     if (!selected || !selected.length) return 0;
     
-    let total = selected.reduce((acc, s) => acc + s.price, 0);
-    
-    if (this.bookingFormGroup.get('useRewardCtrl')?.value && this.canApplyReward) {
-      // Find the services to discount. Priority: "Coupe + Barbe" pack, or individual "Coupe" and "Barbe"
-      const pack = selected.find(s => s.name.toLowerCase().includes('coupe') && s.name.toLowerCase().includes('barbe'));
-      
-      if (pack) {
-        total -= pack.price;
-      } else {
-        const coupe = selected.find(s => s.name.toLowerCase().includes('coupe'));
-        const barbe = selected.find(s => s.name.toLowerCase().includes('barbe'));
-        if (coupe && barbe) {
-          total -= (coupe.price + barbe.price);
+    let total = 0;
+    const useReward = this.bookingFormGroup.get('useRewardCtrl')?.value && this.canApplyReward;
+
+    if (useReward) {
+      selected.forEach(s => {
+        if (s.name.toLowerCase().includes('masque noir')) {
+          // Free
+          total += 0;
+        } else {
+          // 50% off
+          total += (s.price * 0.5);
         }
-      }
+      });
+    } else {
+      total = selected.reduce((acc, s) => acc + s.price, 0);
     }
     
     return total;
   }
 
+  updateValidators() {
+    const timeCtrl = this.bookingFormGroup.get('timeCtrl');
+    
+    if (this.isAdmin) {
+      timeCtrl?.clearValidators();
+    } else {
+      timeCtrl?.setValidators([Validators.required]);
+    }
+    timeCtrl?.updateValueAndValidity();
+  }
+
   onDateChange() {
+    this.updateValidators();
     this.fetchSlots();
   }
   
@@ -336,48 +349,61 @@ export class BookingComponent implements OnInit {
   }
 
   book() {
-    if (this.bookingFormGroup.valid) {
-      const formValue = this.bookingFormGroup.value;
-      const request: AppointmentRequest = {
-        serviceIds: formValue.servicesCtrl.map((s: Service) => s.id),
-        barberId: formValue.barberCtrl.id,
-        date: this.formatDateLocal(formValue.dateCtrl),
-        startTime: formValue.timeCtrl,
-        userName: formValue.userCtrl.name,
-        userFirstName: formValue.userCtrl.firstName,
-        userPhone: formValue.userCtrl.phone,
-        useReward: formValue.useRewardCtrl
-      };
-
-      this.isLoading = true;
-      this.apiService.bookAppointment(request).subscribe({
-        next: (res) => {
-          this.isLoading = false;
-          this.apiService.notifyAppointmentBooked(res);
-          try {
-            localStorage.setItem('lastUserPhone', request.userPhone || '');
-          } catch {}
-          this.snackBar.open('Rendez-vous confirmé !', 'OK', { duration: 3000 });
-          
-          // Update user rewards in session storage if used
-          if (request.useReward && this.user) {
-            this.user.availableRewards = (this.user.availableRewards || 0) - 1;
-            this.user.usedRewards = (this.user.usedRewards || 0) + 1;
-            sessionStorage.setItem('user', JSON.stringify(this.user));
-          }
-
-          this.isBookingSuccess = true;
-          setTimeout(() => {
-            // Refresh the page completely to allow the next customer to start fresh
-            window.location.href = '/'; 
-          }, 3000);
-        },
-        error: (err) => {
-          this.isLoading = false;
-          this.snackBar.open('Erreur lors de la réservation: ' + err.message, 'OK', { duration: 3500 });
-        }
-      });
+    if (this.bookingFormGroup.invalid) {
+      this.bookingFormGroup.markAllAsTouched();
+      this.snackBar.open('Veuillez remplir tous les champs obligatoires.', 'Fermer', { duration: 3000 });
+      return;
     }
+
+    const formValue = this.bookingFormGroup.value;
+    
+    // Determine time
+    let time = formValue.timeCtrl;
+    const timeStr = time.length === 5 ? time + ':00' : time;
+
+    const request: AppointmentRequest = {
+      serviceIds: formValue.servicesCtrl.map((s: Service) => s.id),
+      barberId: formValue.barberCtrl.id,
+      date: this.formatDateLocal(formValue.dateCtrl),
+      startTime: timeStr,
+      userName: formValue.userCtrl.name,
+      userFirstName: formValue.userCtrl.firstName,
+      userPhone: formValue.userCtrl.phone,
+      useReward: formValue.useRewardCtrl
+    };
+
+    this.isLoading = true;
+    this.apiService.bookAppointment(request).subscribe({
+      next: (res) => {
+        this.isLoading = false;
+        this.apiService.notifyAppointmentBooked(res);
+        try {
+          localStorage.setItem('lastUserPhone', request.userPhone || '');
+        } catch {}
+        this.snackBar.open('Rendez-vous confirmé !', 'OK', { duration: 3000 });
+        
+        // Update user rewards in session storage if used
+        if (request.useReward && this.user) {
+          this.user.availableRewards = (this.user.availableRewards || 0) - 1;
+          this.user.usedRewards = (this.user.usedRewards || 0) + 1;
+          sessionStorage.setItem('user', JSON.stringify(this.user));
+        }
+
+        this.isBookingSuccess = true;
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          // Refresh the page completely to allow the next customer to start fresh
+          window.location.href = '/'; 
+        }, 3000);
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.snackBar.open(err.error?.message || 'Erreur lors de la réservation', 'Fermer', {
+          duration: 5000,
+          panelClass: ['error-snackbar']
+        });
+      }
+    });
   }
 
   private formatDateLocal(d: Date): string {

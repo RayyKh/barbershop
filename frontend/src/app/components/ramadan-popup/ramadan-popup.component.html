@@ -1,0 +1,45 @@
+<div class="ramadan-overlay" *ngIf="isVisible" (click)="closePopup()">
+  <div class="ramadan-popup" [@fadeInOut] (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-btn" (click)="closePopup()">
+      <mat-icon>close</mat-icon>
+    </button>
+    
+    <div class="popup-content">
+      <div class="moon-decoration">
+        <svg viewBox="0 0 100 100" class="crescent-moon">
+          <path d="M50 0 C20 0 0 20 0 50 C0 80 20 100 50 100 C40 100 30 90 30 50 C30 10 40 0 50 0 Z" fill="#D4AF37" />
+        </svg>
+      </div>
+      
+      <div class="stars-left">
+        <svg viewBox="0 0 100 100" class="star star-1">
+          <path d="M50 0 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z" fill="#D4AF37" />
+        </svg>
+        <svg viewBox="0 0 100 100" class="star star-2">
+          <path d="M50 0 L61 35 L98 35 L68 57 L79 91 L50 70 L21 91 L32 57 L2 35 L39 35 Z" fill="#D4AF37" />
+        </svg>
+      </div>
+
+      <div class="lanterns-center">
+        <div class="lantern lantern-1">
+           <svg viewBox="0 0 50 100">
+             <path d="M25 0 L25 20 M10 20 L40 20 L35 80 L15 80 Z M25 80 L25 100" stroke="#D4AF37" fill="rgba(212, 175, 55, 0.2)" stroke-width="2"/>
+           </svg>
+        </div>
+        <div class="lantern lantern-2">
+           <svg viewBox="0 0 50 100">
+             <path d="M25 0 L25 30 M10 30 L40 30 L35 70 L15 70 Z M25 70 L25 90" stroke="#D4AF37" fill="rgba(212, 175, 55, 0.2)" stroke-width="2"/>
+           </svg>
+        </div>
+      </div>
+
+      <h2 class="ramadan-title">Ramadan Moubarak</h2>
+      <p class="ramadan-message">
+        Chers clients, bienvenue.<br>
+        Que ce mois sacré vous apporte paix et sérénité.
+      </p>
+      
+      <div class="decorative-line"></div>
+    </div>
+  </div>
+</div>

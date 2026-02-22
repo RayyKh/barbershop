@@ -262,24 +262,24 @@
                   <span class="reward-applied-tag" *ngIf="a.rewardApplied">FIDÉLITÉ</span>
                 </div>
               </div>
-              <div>
-                <span class="status">
+                <div class="status-cell">
                   {{ a.status }}
                   <span *ngIf="(a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && !a.adminViewed" class="pill-new" (click)="markViewed(a)">
                     {{ a.status === 'MODIFIED' ? 'MODIFIED' : (a.status === 'BLOCKED' ? 'LOCKED' : 'NEW') }}
                   </span>
-                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button color="primary" (click)="markDone(a)" title="Marquer comme terminé">
-                    <mat-icon>check_circle</mat-icon>
-                  </button>
-                  <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button class="gold-icon-btn" (click)="editAppointment(a)" title="Modifier">
-                    <mat-icon>edit</mat-icon>
-                  </button>
-                  <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && a.adminViewed)" mat-icon-button color="warn" class="delete-btn" (click)="deleteAppointment(a)" title="Supprimer de la liste">
-                    <mat-icon>close</mat-icon>
-                  </button>
-                </span>
-                <button *ngIf="a.status === 'BLOCKED'" mat-button color="warn" (click)="unlock(a)">Déverrouiller</button>
-              </div>
+                  <div class="action-buttons">
+                    <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button color="primary" (click)="markDone(a)" title="Marquer comme terminé">
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+                    <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button class="gold-icon-btn" (click)="editAppointment(a)" title="Modifier">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button color="warn" class="delete-btn" (click)="deleteAppointment(a)" title="Supprimer définitivement">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                    <button *ngIf="a.status === 'BLOCKED'" mat-button color="warn" (click)="unlock(a)">Déverrouiller</button>
+                  </div>
+                </div>
             </div>
 
             <!-- Mobile Cards -->
@@ -331,8 +331,8 @@
                       <button *ngIf="a.status === 'BOOKED' || a.status === 'MODIFIED' || a.status === 'BLOCKED'" mat-icon-button class="gold-icon-btn" size="small" (click)="editAppointment(a)" title="Modifier">
                         <mat-icon>edit</mat-icon>
                       </button>
-                      <button *ngIf="a.status === 'CANCELLED' || ((a.status==='BOOKED' || a.status==='MODIFIED' || a.status==='BLOCKED') && a.adminViewed)" mat-icon-button color="warn" size="small" (click)="deleteAppointment(a)" title="Supprimer de la liste">
-                        <mat-icon>close</mat-icon>
+                      <button mat-icon-button color="warn" size="small" (click)="deleteAppointment(a)" title="Supprimer définitivement" style="display: inline-flex !important; opacity: 1 !important; visibility: visible !important;">
+                        <mat-icon>delete</mat-icon>
                       </button>
                     </div>
                   </div>

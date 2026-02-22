@@ -40,6 +40,14 @@ public class DataSeeder implements CommandLineRunner {
         serviceRepository.save(service);
     }
 
+    private void deleteService(String name) {
+        serviceRepository.findByName(name).ifPresent(service -> {
+            service.setActive(false);
+            serviceRepository.save(service);
+            System.out.println("Service désactivé (soft delete): " + name);
+        });
+    }
+
     @Override
     public void run(String... args) throws Exception {
         // Create or Update Super Admin
@@ -52,24 +60,43 @@ public class DataSeeder implements CommandLineRunner {
         admin.setPhone("0600000000");
         userRepository.save(admin);
 
+        // Ensure all existing services have active status set to true by default
+        serviceRepository.findAll().forEach(service -> {
+            if (service.getActive() == null) {
+                service.setActive(true);
+                serviceRepository.save(service);
+            }
+        });
+
+        // Suppression des services demandés (Soft Delete)
+        deleteService("Coupe (cheveux courts)");
+        deleteService("Coupe + Barbe avec machine (Zéro)");
+        deleteService("Coupe + Barbe Dégradé");
+
         // Create or Update Default Services
-        saveOrUpdateService("Coupe", "Coupe aux ciseaux ou tondeuse", 10.0, 30);
+        // Services principaux
         saveOrUpdateService("Barbe", "Taille de barbe", 7.0, 30);
-        saveOrUpdateService("Coupe (cheveux courts)", "Coupe cheveux courts", 8.0, 30);
         saveOrUpdateService("Barbe (courte)", "Taille barbe courte", 5.0, 30);
-        saveOrUpdateService("Coupe + Barbe avec machine (Zéro)", "Pack complet tondeuse", 10.0, 45);
-        saveOrUpdateService("Coupe + Barbe Dégradé", "Pack dégradé précis", 13.0, 45);
-        saveOrUpdateService("Coupe + Barbe Dégradé + Fixation", "Pack complet avec finition", 15.0, 45);
-        saveOrUpdateService("Coupe + Barbe + Brushing", "Style complet", 20.0, 45);
-        saveOrUpdateService("Coupe + Barbe + Masque Noir", "Soin complet", 20.0, 45);
-        saveOrUpdateService("Patchs pour les yeux", "Soin contour des yeux", 5.0, 15);
+        saveOrUpdateService("Coupe", "Coupe aux ciseaux ou tondeuse", 10.0, 45);
+        
+        // Packs Coupe + Barbe
+        saveOrUpdateService("Coupe + Barbe Dégradé + Fixation", "Pack complet avec finition", 15.0, 60);
+        saveOrUpdateService("Coupe + Barbe + Brushing", "Style complet", 20.0, 60);
+        saveOrUpdateService("Coupe + Barbe + Masque Noir", "Soin complet", 20.0, 60);
+        
+        // Enfant
         saveOrUpdateService("Coupe d'enfant (jusqu'à 5 ans)", "Coupe junior", 7.0, 30);
+        
+        // Soins
+        saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Masque Noir)", "Soin relaxant", 25.0, 60);
+        saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Argile Verte, Mask Gold, Patchs pour les yeux)", "Soin prestige", 50.0, 60);
+        saveOrUpdateService("Protéine", "Traitement capillaire", 80.0, 90);
+
+        // Autres services (Durée par défaut 15 min)
+        saveOrUpdateService("Patchs pour les yeux", "Soin contour des yeux", 5.0, 15);
         saveOrUpdateService("Brushing", "Mise en forme", 7.0, 15);
         saveOrUpdateService("Masque Noir", "Soin purifiant", 8.0, 15);
         saveOrUpdateService("Épilation à la cire", "Nettoyage précis", 3.0, 15);
-        saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Masque Noir)", "Soin relaxant", 25.0, 45);
-        saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Argile Verte, Mask Gold, Patchs pour les yeux)", "Soin prestige", 50.0, 45);
-        saveOrUpdateService("Protéine", "Traitement capillaire", 80.0, 90);
 
         // Create Default Barbers (Aladin, Hamouda, Ahmed)
         if (barberRepository.count() == 0) {

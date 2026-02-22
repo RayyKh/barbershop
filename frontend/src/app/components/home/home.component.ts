@@ -43,10 +43,10 @@ export class HomeComponent implements OnInit {
 
   galleryImages: string[] = [
     
-    'assets/img1.jpeg',
-    'assets/img2.jpeg',
-    'assets/img3.jpeg',
-    'assets/img4.jpeg',
+    'assets/img13.jpeg',
+    'assets/img14.jpeg',
+    'assets/img15.jpeg',
+    'assets/img16.jpeg',
     'assets/img5.jpeg',
     'assets/img6.jpeg',
     'assets/img7.jpeg',

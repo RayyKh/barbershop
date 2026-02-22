@@ -97,8 +97,23 @@
     }
 }
 
-.option-text {
-    font-weight: 500;
+.admin-time-entry {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: rgba(255, 0, 0, 0.05);
+  border: 1px dashed #ff4081;
+  border-radius: 8px;
+
+  h4 {
+    color: #ff4081;
+    margin-bottom: 5px;
+  }
+
+  .admin-hint {
+    font-size: 0.8rem;
+    color: #aaa;
+    margin-bottom: 10px;
+  }
 }
 
 .option-price {

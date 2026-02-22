@@ -23,6 +23,9 @@ public class Service {
 
     private Integer duration = 60; // Duration in minutes, default 60
 
+    @Column(columnDefinition = "boolean default true")
+    private Boolean active = true;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -33,4 +36,6 @@ public class Service {
     public void setPrice(Double price) { this.price = price; }
     public Integer getDuration() { return duration; }
     public void setDuration(Integer duration) { this.duration = duration; }
+    public Boolean getActive() { return active; }
+    public void setActive(Boolean active) { this.active = active; }
 }

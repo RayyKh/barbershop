@@ -56,6 +56,7 @@ export interface AppointmentRequest {
   userPhone?: string;
   userEmail?: string;
   useReward?: boolean;
+  force?: boolean;
 }
 
 export interface RevenueDetail {
@@ -319,8 +320,11 @@ export class ApiService {
     return this.http.delete(`${this.baseUrl}/appointments/${id}`);
   }
 
-  modifyAppointment(id: number, date: string, startTime: string): Observable<Appointment> {
+  modifyAppointment(id: number, date: string, startTime: string, serviceIds?: number[]): Observable<Appointment> {
     const params = new URLSearchParams({ date, startTime });
+    if (serviceIds && serviceIds.length > 0) {
+      params.set('serviceIds', serviceIds.join(','));
+    }
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/modify?${params.toString()}`, {});
   }
 
