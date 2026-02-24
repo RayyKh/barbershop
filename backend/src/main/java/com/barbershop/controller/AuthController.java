@@ -105,17 +105,18 @@ public class AuthController {
         }
 
         String username = authentication.getName();
-        User user = userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
-        
-        List<String> roles = user.getRole() == User.Role.ADMIN ? List.of("ROLE_ADMIN") : List.of("ROLE_CLIENT");
-
-        return ResponseEntity.ok(new JwtResponse("",
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                roles,
-                user.getTotalAppointments(),
-                user.getAvailableRewards(),
-                user.getUsedRewards()));
+        return userRepository.findByUsername(username)
+                .<ResponseEntity<?>>map(user -> {
+                    List<String> roles = user.getRole() == User.Role.ADMIN ? List.of("ROLE_ADMIN") : List.of("ROLE_CLIENT");
+                    return ResponseEntity.ok(new JwtResponse("",
+                            user.getId(),
+                            user.getUsername(),
+                            user.getEmail(),
+                            roles,
+                            user.getTotalAppointments(),
+                            user.getAvailableRewards(),
+                            user.getUsedRewards()));
+                })
+                .orElseGet(() -> ResponseEntity.status(401).body(new MessageResponse("User not found")));
     }
 }

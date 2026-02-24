@@ -167,6 +167,11 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
                     </div>
                 </div>
 
+                <div class="warning-msg" *ngIf="isOriginalTimeInvalid(element.id)">
+                    <mat-icon inline>error_outline</mat-icon>
+                    <span>Attention: La durée sélectionnée rend votre créneau actuel indisponible. Veuillez choisir un autre horaire.</span>
+                </div>
+
                 <mat-form-field appearance="outline">
                   <mat-label>Nouvelle date</mat-label>
                   <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
@@ -248,6 +253,11 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
                             {{s.name}}
                         </div>
                     </div>
+                </div>
+
+                <div class="warning-msg" *ngIf="isOriginalTimeInvalid(element.id)">
+                    <mat-icon inline>error_outline</mat-icon>
+                    <span>Attention: La durée sélectionnée rend votre créneau actuel indisponible. Veuillez choisir un autre horaire.</span>
                 </div>
 
                 <mat-form-field appearance="outline" class="full-width">
@@ -385,6 +395,28 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
     .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
     
     .services-selection { margin-bottom: 12px; }
+    .services-locked-msg {
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-style: italic;
+    }
+    .warning-msg {
+        background: rgba(244, 67, 54, 0.1);
+        color: #f44336;
+        border: 1px solid #f44336;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        line-height: 1.4;
+    }
     .service-chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .service-chip {
         padding: 6px 12px;
@@ -544,7 +576,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
   isAuthenticated: boolean = false;
   idForm: FormGroup;
   displayedColumns: string[] = ['date', 'time', 'service', 'barber', 'status', 'actions'];
-  modifying: { [key: number]: { date: Date; slots: string[]; time?: string; uiSlots?: any[]; serviceIds?: number[] } } = {};
+  modifying: { [key: number]: { date: Date; slots: string[]; time?: string; uiSlots?: any[]; serviceIds?: number[]; originalTimeInvalid?: boolean } } = {};
   contactEmail: string = '';
   contactPhone: string = '';
   private refreshInterval: any;
@@ -775,6 +807,15 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     return !!this.modifying[id];
   }
 
+  isOriginalTimeInvalid(id: number): boolean {
+    return this.modifying[id]?.originalTimeInvalid || false;
+  }
+
+  getAppointmentDuration(appt: Appointment): number {
+    if (!appt || !appt.services) return 0;
+    return appt.services.reduce((total, s) => total + (s.duration || 0), 0);
+  }
+
   getModifyDate(id: number): Date | null {
     return this.modifying[id]?.date || null;
   }
@@ -837,21 +878,22 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         const parts = s.split(':');
         return parseInt(parts[0]) * 60 + parseInt(parts[1]);
       });
-      
-      // 2. If same day as original appointment, add original time to free slots
-      // (So user can keep same time or see it as available)
+
+      // Inject the current appointment's original slots into available slots (if date matches)
+      // This allows the user to re-select their current time or use it as part of a new duration
       if (dateStr === a.date) {
-         const apptStartParts = a.startTime.split(':');
-         const apptStartMin = parseInt(apptStartParts[0]) * 60 + parseInt(apptStartParts[1]);
-         
-         const apptEndParts = a.endTime.split(':');
-         const apptEndMin = parseInt(apptEndParts[0]) * 60 + parseInt(apptEndParts[1]);
-         
-         for (let m = apptStartMin; m < apptEndMin; m += 15) {
-           if (!freeSlotsInMinutes.includes(m)) {
-             freeSlotsInMinutes.push(m);
-           }
-         }
+        const [h, m] = a.startTime.split(':').map(Number);
+        const startMin = h * 60 + m;
+        // Use the original duration of the appointment
+        const duration = this.getAppointmentDuration(a);
+        const slotsCount = Math.ceil(duration / 15);
+        
+        for (let i = 0; i < slotsCount; i++) {
+            const slot = startMin + (i * 15);
+            if (!freeSlotsInMinutes.includes(slot)) {
+                freeSlotsInMinutes.push(slot);
+            }
+        }
       }
       
       // 3. Generate full day slots based on barber schedule
@@ -912,17 +954,15 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         
         let canFit = true;
         
-        // Relaxed availability check for Best Effort support:
-        // Only check if the start slot is available.
-        // The backend will handle truncating the duration if full time isn't available.
+        /*
+        // Best Effort Logic (Disabled for Strict User Requirement)
         if (!freeSlotsInMinutes.includes(totalMin)) {
             canFit = false;
         }
+        */
 
-        // Optional: We could check for at least 15-30 mins, but "Best Effort" implies taking whatever is there.
-        // If we want to be slightly safer, we could ensure at least one slot is free (which we just did).
-        
-        /* Original strict check
+        // Strict Check: Ensure ALL needed slots are available.
+        // This prevents a 15-min slot from expanding into a booked slot.
         const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
         for (let j = 0; j < effectiveSlotsNeeded; j++) {
           const targetMinutes = totalMin + (j * 15);
@@ -931,7 +971,6 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
             break;
           }
         }
-        */
 
         const h = Math.floor(totalMin / 60);
         const m = totalMin % 60;
@@ -948,6 +987,19 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
       });
       
       state.uiSlots = newSlotsUI;
+
+      // Check if original time is invalidated
+      state.originalTimeInvalid = false;
+      if (dateStr === a.date) {
+        // Normalize a.startTime to match slot format (HH:mm:00)
+        const originalTimeStr = a.startTime.length === 5 ? a.startTime + ":00" : a.startTime;
+        const originalSlot = newSlotsUI.find(s => s.time === originalTimeStr);
+        
+        // If the original slot exists but is not available, then it's invalid
+        if (originalSlot && !originalSlot.isAvailable) {
+            state.originalTimeInvalid = true;
+        }
+      }
     });
   }
 
