@@ -112,6 +112,9 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
+        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
+            throw new BadRequestException("Ce barbier n'est plus disponible pour la réservation");
+        }
         
         List<com.barbershop.entity.Service> selectedServices = serviceRepository.findAllById(serviceIds);
         if (selectedServices.isEmpty()) {
@@ -579,6 +582,9 @@ public class AppointmentService {
 
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
+        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
+            throw new BadRequestException("Ce barbier n'est plus disponible");
+        }
 
         // Update Client Name if provided
         if (clientName != null && !clientName.isBlank()) {

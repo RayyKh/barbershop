@@ -17,7 +17,11 @@ public class BarberController {
 
     @GetMapping
     public List<Barber> getAllBarbers() {
-        return barberService.getAllBarbers();
+        return barberService
+                .getAllBarbers()
+                .stream()
+                .filter(b -> b.getName() == null || !b.getName().equalsIgnoreCase("Ahmed"))
+                .toList();
     }
 
     @GetMapping("/{id}")

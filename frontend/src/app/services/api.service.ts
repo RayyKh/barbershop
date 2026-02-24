@@ -197,48 +197,28 @@ export class ApiService {
   getBarbers(): Observable<Barber[]> {
     return this.http.get<Barber[]>(`${this.baseUrl}/barbers`).pipe(
       map((barbers) => {
-        const descriptions: { [key: string]: { specialty: string, desc: string } } = {
-          'Aladin': {
-            specialty: 'Barber – Expert en Détails',
-            desc: 'Perfectionniste dans les moindres détails : contours, barbe, finitions et rasage. Chaque coupe est soignée jusqu’à la dernière touche.'
-          },
-          'Hamouda': {
-            specialty: 'Barber – Style & Créativité',
-            desc: 'Passionné par les tendances et la créativité. Il propose des looks uniques et modernes, avec une touche artistique qui fait la différence.'
-          },
-          'Ahmed': {
-            specialty: 'Barber – Spécialiste Type Fade',
-            desc: 'Spécialisé dans le Type Fade, ce barbier maîtrise les dégradés précis et équilibrés, parfaitement adaptés à la morphologie du visage. Idéal pour un style moderne et net.'
+        // Exclure Ahmed côté frontend par sécurité et harmoniser les métadonnées
+        const filtered = barbers.filter(b => b.name?.toLowerCase() !== 'ahmed');
+        const enriched = filtered.map(b => {
+          if (b.name === 'Aladin') {
+            return {
+              ...b,
+              speciality: b.speciality || 'Barber – Expert en Détails',
+              description: b.description || 'Perfectionniste dans les moindres détails : contours, barbe, finitions et rasage. Chaque coupe est soignée jusqu’à la dernière touche.',
+              photo: b.photo || 'ala.jpeg'
+            };
           }
-        };
-
-        const desiredNames = ['Aladin', 'Hamouda', 'Ahmed'];
-        const transformed = barbers.slice(0);
-        
-        for (let i = 0; i < Math.min(desiredNames.length, transformed.length); i++) {
-          const name = desiredNames[i];
-          transformed[i] = {
-            ...transformed[i],
-            name: name,
-            speciality: descriptions[name]?.specialty || transformed[i].speciality || 'Barbier',
-            description: descriptions[name]?.desc || transformed[i].description,
-            photo: name === 'Aladin' ? 'ala.jpeg' : `${name.toLowerCase()}.jpeg`
-          };
-        }
-        
-        if (transformed.length < desiredNames.length) {
-          for (let i = transformed.length; i < desiredNames.length; i++) {
-            const name = desiredNames[i];
-            transformed.push({
-              id: 1000 + i,
-              name: name,
-              speciality: descriptions[name]?.specialty || 'Barbier',
-              description: descriptions[name]?.desc,
-              photo: `${name.toLowerCase()}.jpeg`
-            });
+          if (b.name === 'Hamouda') {
+            return {
+              ...b,
+              speciality: b.speciality || 'Barber – Style & Créativité',
+              description: b.description || 'Passionné par les tendances et la créativité. Il propose des looks uniques et modernes, avec une touche artistique qui fait la différence.',
+              photo: b.photo || 'hamouda.jpeg'
+            };
           }
-        }
-        return transformed;
+          return b;
+        });
+        return enriched;
       })
     );
   }
