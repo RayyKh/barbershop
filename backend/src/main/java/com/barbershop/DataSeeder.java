@@ -48,13 +48,31 @@ public class DataSeeder implements CommandLineRunner {
         });
     }
 
+    private void saveOrUpdateBarber(String name, String speciality, String photo, String description, String username, String rawPassword) {
+        User linkedUser = userRepository.findByUsername(username).orElseGet(() -> {
+            User u = new User();
+            u.setUsername(username);
+            u.setName(name);
+            u.setRole(User.Role.ADMIN);
+            u.setPassword(passwordEncoder.encode(rawPassword));
+            return userRepository.save(u);
+        });
+        Barber b = barberRepository.findAll().stream().filter(x -> name.equalsIgnoreCase(x.getName())).findFirst().orElse(new Barber());
+        b.setName(name);
+        b.setSpeciality(speciality);
+        b.setPhoto(photo);
+        b.setDescription(description);
+        b.setUser(linkedUser);
+        barberRepository.save(b);
+    }
+
     @Override
     public void run(String... args) throws Exception {
         // Create or Update Super Admin
         User admin = userRepository.findByUsername("superadmin123").orElse(new User());
         admin.setName("Super Admin");
         admin.setUsername("superadmin123");
-        admin.setPassword(passwordEncoder.encode("aladinbarbershop123"));
+        admin.setPassword(passwordEncoder.encode("aladinbarbershop2026#"));
         admin.setRole(User.Role.ADMIN);
         admin.setEmail("superadmin@barber.com");
         admin.setPhone("0600000000");
@@ -104,6 +122,24 @@ public class DataSeeder implements CommandLineRunner {
             barberRepository.save(new Barber(null, "Hamouda", "Barbier", "hamouda.jpeg", "Expert en taille de barbe traditionnelle et soins du visage. Un savoir-faire unique.", null));
             barberRepository.save(new Barber(null, "Ahmed", "Barbier", "ahmed.jpeg", "Maîtrise parfaite des coupes classiques et des styles vintage. Le souci du détail.", null));
         }
+
+        saveOrUpdateBarber(
+                "omar",
+                "Fade Technicien",
+                "achref.jpeg",
+                "Barber professionnel, technique, rapide et créatif, garantissant des coupes précises et modernes.",
+                "omar",
+                "aladinbarbershop2026#"
+        );
+
+        saveOrUpdateBarber(
+                "achref",
+                "Achref – Le Magicien",
+                "omar.jpeg",
+                "Achref se distingue par sa précision et son sens du détail. Il prend son temps, écoute son client et transforme chaque coupe en véritable œuvre.",
+                "achref",
+                "aladinbarbershop2026#"
+        );
 
         // Create or Update Default Products
         if (productRepository.count() < 10) {
