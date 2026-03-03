@@ -65,6 +65,16 @@ public class DataSeeder implements CommandLineRunner {
         b.setUser(linkedUser);
         barberRepository.save(b);
     }
+    
+    private void updateBarberPhoto(String name, String photo) {
+        barberRepository.findAll().stream()
+                .filter(b -> b.getName() != null && b.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .ifPresent(b -> {
+                    b.setPhoto(photo);
+                    barberRepository.save(b);
+                });
+    }
 
     @Override
     public void run(String... args) throws Exception {
@@ -135,11 +145,13 @@ public class DataSeeder implements CommandLineRunner {
         saveOrUpdateBarber(
                 "achref",
                 "Achref – Le Magicien",
-                "omar.jpeg",
+                "omar2.jpeg",
                 "Achref se distingue par sa précision et son sens du détail. Il prend son temps, écoute son client et transforme chaque coupe en véritable œuvre.",
                 "achref",
                 "aladinbarbershop2026#"
         );
+        
+        updateBarberPhoto("Hamouda", "hamouda2.jpeg");
 
         // Create or Update Default Products
         if (productRepository.count() < 10) {

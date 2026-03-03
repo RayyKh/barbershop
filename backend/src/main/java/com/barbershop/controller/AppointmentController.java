@@ -1,26 +1,34 @@
 package com.barbershop.controller;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
 import com.barbershop.dto.AppointmentRequest;
+import com.barbershop.dto.RevenueReportDTO;
 import com.barbershop.entity.Appointment;
 import com.barbershop.entity.BlockedSlot;
 import com.barbershop.entity.User;
 import com.barbershop.repository.UserRepository;
 import com.barbershop.service.AppointmentService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.List;
-import java.util.Optional;
-
-import com.barbershop.dto.RevenueReportDTO;
 
 @RestController
 @RequestMapping("/api/appointments")
@@ -249,9 +257,10 @@ public class AppointmentController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.TIME) LocalTime startTime,
             @RequestParam List<Long> serviceIds,
-            @RequestParam(required = false) String clientName
+            @RequestParam(required = false) String clientName,
+            @RequestParam(required = false) String clientPhone
     ) {
-        Appointment appt = appointmentService.adminUpdateAppointment(id, barberId, date, startTime, serviceIds, clientName);
+        Appointment appt = appointmentService.adminUpdateAppointment(id, barberId, date, startTime, serviceIds, clientName, clientPhone);
         notifyEmitters(appt);
         return appt;
     }

@@ -329,7 +329,7 @@ export class AdminDashboardComponent implements OnInit {
       // Logique de génération des créneaux de 15 min identique au client
       const dayOfWeek = new Date(date).getDay();
       let startHour = 10;
-      let endHour = 21;
+      let endHour = 22;
 
       const name = barber.name.toLowerCase();
       if (dayOfWeek === 1) { // Lundi
@@ -359,9 +359,12 @@ export class AdminDashboardComponent implements OnInit {
       const newSlotsUI: SlotUI[] = [];
 
       fullDaySlots.forEach((totalMin, index) => {
-        const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+        let isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+        if (this.currentUser && this.currentUser.role === 'ADMIN') {
+          isPast = false;
+        }
         
-        if (isPast) return; // Masquer les créneaux passés
+        // if (isPast) return; // Masquer les créneaux passés
 
         const isLastSlot = index === fullDaySlots.length - 1;
         

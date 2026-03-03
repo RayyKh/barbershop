@@ -59,13 +59,15 @@ export class EditAppointmentDialogComponent implements OnInit {
     const serviceIds = data.appointment.services ? data.appointment.services.map(s => s.id) : [];
     const barberId = data.appointment.barber ? data.appointment.barber.id : null;
     const clientName = data.appointment.user ? data.appointment.user.name : '';
+    const clientPhone = data.appointment.user ? data.appointment.user.phone : '';
     
     this.editForm = this.fb.group({
       barberId: [barberId, Validators.required],
       date: [apptDate, Validators.required],
       startTime: [data.appointment.startTime, Validators.required],
       serviceIds: [serviceIds, Validators.required],
-      clientName: [clientName, Validators.required]
+      clientName: [clientName, Validators.required],
+      clientPhone: [clientPhone, [Validators.required, Validators.pattern(/^[0-9]{8,}$/)]]
     });
   }
 
@@ -246,7 +248,8 @@ export class EditAppointmentDialogComponent implements OnInit {
       const val = this.editForm.value;
       const result = {
         ...val,
-        date: this.formatDateLocal(new Date(val.date))
+        date: this.formatDateLocal(new Date(val.date)),
+        clientPhone: val.clientPhone // Add clientPhone here
       };
       this.dialogRef.close(result);
     }

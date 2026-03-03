@@ -1,6 +1,29 @@
 package com.barbershop.service;
 
-import com.barbershop.entity.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.temporal.WeekFields;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.barbershop.dto.RevenueReportDTO;
+import com.barbershop.entity.Appointment;
+import com.barbershop.entity.AppointmentStatus;
+import com.barbershop.entity.Barber;
+import com.barbershop.entity.BlockedSlot;
+import com.barbershop.entity.User;
 import com.barbershop.exception.BadRequestException;
 import com.barbershop.exception.ConflictException;
 import com.barbershop.exception.ResourceNotFoundException;
@@ -9,26 +32,6 @@ import com.barbershop.repository.BarberRepository;
 import com.barbershop.repository.BlockedSlotRepository;
 import com.barbershop.repository.ServiceRepository;
 import com.barbershop.repository.UserRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.barbershop.dto.RevenueReportDTO;
-import java.time.temporal.TemporalAdjusters;
-import java.time.temporal.WeekFields;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
 
 @Service
 public class AppointmentService {
@@ -576,7 +579,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment adminUpdateAppointment(Long id, Long barberId, LocalDate date, LocalTime startTime, List<Long> serviceIds, String clientName) {
+    public Appointment adminUpdateAppointment(Long id, Long barberId, LocalDate date, LocalTime startTime, List<Long> serviceIds, String clientName, String clientPhone) {
         Appointment appt = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
 
@@ -592,6 +595,27 @@ public class AppointmentService {
             if (user != null) {
                 user.setName(clientName);
                 userRepository.save(user);
+            }
+        }
+
+        // Update Client Phone if provided
+        if (clientPhone != null && !clientPhone.isBlank()) {
+            User user = appt.getUser();
+            if (user != null) {
+                // Check if phone number is actually different to avoid unnecessary updates
+                if (!clientPhone.equals(user.getPhone())) {
+                    // Also check if the new phone number is already taken by another user
+                    Optional<User> existingUserWithNewPhone = userRepository.findByPhone(clientPhone);
+                    if (existingUserWithNewPhone.isPresent() && !existingUserWithNewPhone.get().getId().equals(user.getId())) {
+                        throw new ConflictException("Le numéro de téléphone " + clientPhone + " est déjà utilisé par un autre client.");
+                    }
+                    user.setPhone(clientPhone);
+                    // If username is based on phone, update it too
+                    if (user.getUsername().equals(appt.getUser().getPhone())) {
+                        user.setUsername(clientPhone);
+                    }
+                    userRepository.save(user);
+                }
             }
         }
 

@@ -293,6 +293,9 @@ export class ApiService {
     if (data.clientName) {
       params.set('clientName', data.clientName);
     }
+    if (data.clientPhone) {
+      params.set('clientPhone', data.clientPhone);
+    }
     return this.http.put<Appointment>(`${this.baseUrl}/appointments/${id}/update?${params.toString()}`, {});
   }
 

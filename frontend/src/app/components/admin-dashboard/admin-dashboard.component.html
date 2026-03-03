@@ -85,7 +85,6 @@
                      [class.available]="slot.isAvailable"
                      [class.unavailable]="!slot.isAvailable"
                      [class.selected]="lockForm.get('time')?.value === slot.time"
-                     [style.display]="slot.isPast ? 'none' : 'flex'"
                      (click)="slot.isAvailable ? lockForm.patchValue({ time: slot.time }) : null">
                   {{slot.time}}
                 </div>

@@ -12,6 +12,15 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="full-width gold-form-field">
+        <mat-label>Téléphone du Client</mat-label>
+        <input matInput formControlName="clientPhone" type="tel" pattern="[0-9]*" inputmode="numeric">
+        <mat-icon matSuffix>phone</mat-icon>
+        <mat-error *ngIf="editForm.get('clientPhone')?.hasError('pattern')">
+          Numéro invalide (8 chiffres minimum)
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width gold-form-field">
         <mat-label>Barbier</mat-label>
         <mat-select formControlName="barberId">
           <mat-option *ngFor="let b of barbers" [value]="b.id">{{ b.name }}</mat-option>
