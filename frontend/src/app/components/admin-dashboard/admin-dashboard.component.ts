@@ -326,11 +326,19 @@ export class AdminDashboardComponent implements OnInit {
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
 
-      // Logique de génération des créneaux de 15 min identique au client
+      // Logique de génération des créneaux de 15 min
       const dayOfWeek = new Date(date).getDay();
       let startHour = 10;
       let endHour = 22;
 
+      // START OF MODIFICATION: Extend hours for Admin (00:00 - 03:00) and Night (until 23:45)
+      // Since this is Admin dashboard, we always want to see extended hours if they exist
+      startHour = 0; 
+      endHour = 24;
+      // END OF MODIFICATION
+
+      /* 
+      // Old Logic
       const name = barber.name.toLowerCase();
       if (dayOfWeek === 1) { // Lundi
         startHour = 12;
@@ -340,9 +348,15 @@ export class AdminDashboardComponent implements OnInit {
         else if (name.includes("ahmed")) startHour = 11;
         else startHour = 10;
       }
+      */
 
       const fullDaySlots: number[] = [];
       for (let h = startHour; h < endHour; h++) {
+        // Filter out 04:00 - 09:00 to keep UI clean, unless there are slots returned by backend?
+        // But backend only returns AVAILABLE slots.
+        // Let's just show 00-03 and 10-24.
+        if (h >= 4 && h < 10) continue; 
+
         for (let m = 0; m < 60; m += 15) {
           fullDaySlots.push(h * 60 + m);
         }

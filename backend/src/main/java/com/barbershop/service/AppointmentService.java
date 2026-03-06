@@ -58,15 +58,54 @@ public class AppointmentService {
     private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, boolean skipRamadanCheck, boolean isAdmin) {
         // Ramadan Special Rule (Feb 19 - March 20)
         if (!skipRamadanCheck && isRamadan(date)) {
+            // 1. Afternoon Window
             boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
             // Admin can book until 18:00
             if (isAdmin) {
                 inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(18, 0));
             }
-            boolean inSecondWindow = !startTime.isBefore(LocalTime.of(19, 0)) && !endTime.isAfter(LocalTime.of(22, 0));
+
+            // 2. Evening & Night Window
+            // Determine allowed limits
+            boolean isSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
+            boolean isPostSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+
+            boolean validTime = false;
+
+            // Check Afternoon
+            if (inFirstWindow) validTime = true;
+
+            // Check Evening (Start >= 19:00)
+            if (!validTime && !startTime.isBefore(LocalTime.of(19, 0))) {
+                if (isAdmin) {
+                    // Admin can book anytime in evening (extends to next morning effectively)
+                    validTime = true;
+                } else if (isSpecialDate) {
+                    // Clients on 17, 18, 19 March: Book up to 00:00 (so start times up to 23:45 allowed)
+                    validTime = true;
+                } else {
+                    // Normal Client: End <= 22:00
+                    // Check if endTime is within 19:00-22:00
+                    // Note: endTime 22:00 is allowed.
+                    if (!endTime.isAfter(LocalTime.of(22, 0)) && !endTime.equals(LocalTime.MIDNIGHT)) {
+                        validTime = true;
+                    }
+                }
+            }
+
+            // Check Early Morning (00:00 - 03:00)
+            // This corresponds to the late night of the previous day
+            if (!validTime && !startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(3, 0))) {
+                if (isAdmin) {
+                    validTime = true;
+                } else if (isPostSpecialDate && startTime.equals(LocalTime.MIDNIGHT)) {
+                    // Clients on 18, 19, 20 March (Night of 17, 18, 19): Allow 00:00 slot ONLY
+                    validTime = true;
+                }
+            }
             
-            if (!inFirstWindow && !inSecondWindow) {
-                throw new ConflictException("Pendant le Ramadan, les réservations ne sont autorisées que de 12h à 17h (18h pour admin) et de 19h à 22h.");
+            if (!validTime) {
+                throw new ConflictException("Pendant le Ramadan, les réservations ne sont pas autorisées à cette heure.");
             }
         }
 
@@ -237,9 +276,10 @@ public class AppointmentService {
         List<LocalTime> allTimes = new ArrayList<>();
         
         if (isRamadan(date)) {
-            // Ramadan hours: 12h-17h and 19h-22h
+            // Ramadan hours: 12h-17h and 19h-22h (plus extensions)
+            
+            // 1. Afternoon: 12:00 - 17:00 (18:00 Admin)
             LocalTime t1 = LocalTime.of(12, 0);
-            // If admin, extend first window to 18:00
             LocalTime endOfFirstWindow = isAdmin ? LocalTime.of(18, 0) : LocalTime.of(17, 0);
             
             while (t1.isBefore(endOfFirstWindow)) {
@@ -247,11 +287,49 @@ public class AppointmentService {
                 t1 = t1.plusMinutes(15);
             }
             
+            // 2. Evening: 19:00 - ...
+            boolean isSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
+            
             LocalTime t2 = LocalTime.of(19, 0);
-            while (t2.isBefore(LocalTime.of(22, 0))) {
-                allTimes.add(t2);
-                t2 = t2.plusMinutes(15);
+            LocalTime endOfEvening;
+            
+            if (isAdmin || isSpecialDate) {
+                // Extend to end of day (23:45)
+                endOfEvening = LocalTime.MAX;
+            } else {
+                // Normal: 22:00
+                endOfEvening = LocalTime.of(22, 0);
             }
+            
+            while (t2.isBefore(endOfEvening) && !t2.equals(LocalTime.MIDNIGHT)) {
+                allTimes.add(t2);
+                LocalTime next = t2.plusMinutes(15);
+                if (next.isBefore(t2) || next.equals(LocalTime.MIDNIGHT)) break;
+                t2 = next;
+            }
+            
+            // 3. Early Morning (00:00 - 03:00)
+            boolean isPostSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+            
+            LocalTime t3 = LocalTime.MIDNIGHT;
+            // Admin: Up to 03:00 (inclusive of start time 03:00? "Jusqu'à 03:00". Usually means 03:00 is the limit. Let's include 03:00 slot.)
+            LocalTime endOfMorning = LocalTime.of(3, 15);
+            
+            while (t3.isBefore(endOfMorning)) {
+                boolean add = false;
+                if (isAdmin) {
+                    add = true;
+                } else if (isPostSpecialDate && t3.equals(LocalTime.MIDNIGHT)) {
+                    // Only 00:00 for Clients on specific dates
+                    add = true;
+                }
+                
+                if (add) {
+                    allTimes.add(t3);
+                }
+                t3 = t3.plusMinutes(15);
+            }
+
         } else {
             LocalTime startOfDay;
             LocalTime endOfDay;
@@ -283,6 +361,29 @@ public class AppointmentService {
             while (currentSlot.isBefore(endOfDay)) {
                 allTimes.add(currentSlot);
                 currentSlot = currentSlot.plusMinutes(15);
+            }
+            
+            // Admin Extension for Non-Ramadan (Permanent "From today")
+            if (isAdmin) {
+                // 1. Fill gap if any between endOfDay and 03:00?
+                // Assuming endOfDay (21:00) is earlier than 03:00 (Next Day).
+                
+                // Add slots from endOfDay to 23:45
+                LocalTime late = endOfDay;
+                while (late.isBefore(LocalTime.MAX) && !late.equals(LocalTime.MIDNIGHT)) {
+                     // Check if late is before midnight
+                     allTimes.add(late);
+                     LocalTime next = late.plusMinutes(15);
+                     if (next.isBefore(late) || next.equals(LocalTime.MIDNIGHT)) break;
+                     late = next;
+                }
+                
+                // Add slots from 00:00 to 03:00
+                LocalTime morning = LocalTime.MIDNIGHT;
+                while (morning.isBefore(LocalTime.of(3, 15))) {
+                    allTimes.add(morning);
+                    morning = morning.plusMinutes(15);
+                }
             }
         }
         

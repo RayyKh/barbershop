@@ -285,8 +285,38 @@ export class BookingComponent implements OnInit {
           else startHour = 10;
         }
 
+        // Special Dates Logic for Client
+        const d = new Date(date);
+        const y = d.getFullYear();
+        const mMonth = d.getMonth() + 1; // 1-12
+        const day = d.getDate();
+
+        // Check for March 17, 18, 19, 2026 (Evening extension to 00:00)
+        // Note: "Jusqu'à 00:00" means up to 23:45 start time.
+        if (y === 2026 && mMonth === 3 && (day === 17 || day === 18 || day === 19)) {
+            endHour = 24; // Allow up to 23:45
+        }
+        
+        // Check for March 18, 19, 20, 2026 (Morning extension 00:00)
+        // Note: The prompt said "jusqu'à 00:00" for 17,18,19.
+        // Usually implies the session of 17th goes to 00:00 (which is 18th morning).
+        // If I am viewing 18th, I might see 00:00 slot.
+        // Let's enable startHour = 0 for 18, 19, 20.
+        if (y === 2026 && mMonth === 3 && (day === 18 || day === 19 || day === 20)) {
+            startHour = 0;
+        }
+
+        // Ramadan General Logic (if needed)
+        // If it's Ramadan, maybe we should extend to 22:00?
+        // Current endHour is 21.
+        // Let's extend to 24 generally if it's Ramadan dates?
+        // But for now, stick to specific request.
+        
         const fullDaySlots: number[] = [];
         for (let h = startHour; h < endHour; h++) {
+          // Skip 01:00 to 09:00 (keep 00:00 if startHour is 0)
+          if (h >= 1 && h < 10) continue; 
+
           for (let m = 0; m < 60; m += 15) {
             fullDaySlots.push(h * 60 + m);
           }
