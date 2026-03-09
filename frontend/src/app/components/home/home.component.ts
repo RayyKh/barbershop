@@ -93,10 +93,26 @@ export class HomeComponent implements OnInit {
   scrollToBooking() {
     const element = document.getElementById('booking');
     if (element) {
+      // 1. Try standard scrollIntoView with block start
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // 2. Fallback / Adjustment for Navbar Offset
+      // Since scrollIntoView doesn't support offset, we might need to adjust manually after a slight delay
+      // OR we just use window.scrollTo which we can control perfectly.
+      // Let's prefer window.scrollTo for precise control over the offset.
+      
       setTimeout(() => {
-        window.scrollBy(0, -100);
-      }, 600);
+          const headerOffset = 85; 
+          const elementPosition = element.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+    
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+      }, 50); // Small delay to ensure any layout shifts are done
+    } else {
+        console.warn('Booking section not found');
     }
   }
 

@@ -184,6 +184,7 @@ export class BookingComponent implements OnInit {
 
   onStepChange(event: any) {
     // Scroll fluide vers le haut du formulaire avec un léger délai pour laisser le stepper finir sa transition
+    /*
     setTimeout(() => {
       const bookingElement = document.getElementById('booking');
       if (bookingElement) {
@@ -197,6 +198,7 @@ export class BookingComponent implements OnInit {
         });
       }
     }, 50);
+    */
 
     // Si on arrive à l'étape de confirmation (index 4)
     if (event.selectedIndex === 4) {

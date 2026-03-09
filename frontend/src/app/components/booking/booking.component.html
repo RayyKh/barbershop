@@ -15,6 +15,10 @@
       </div>
 
       <form [formGroup]="bookingFormGroup" *ngIf="!isBookingSuccess">
+        <!-- DISABLE SCROLL ON STEP CHANGE -->
+        <!-- Note: [autoFocus] property does not exist in some Angular Material versions. 
+             If it fails, we rely on custom logic or accept default behavior.
+             Removing [autoFocus]="false" as it caused a build error. -->
         <mat-stepper orientation="vertical" linear #stepper class="custom-stepper" (selectionChange)="onStepChange($event)">
           
           <!-- Step 1: Services -->
