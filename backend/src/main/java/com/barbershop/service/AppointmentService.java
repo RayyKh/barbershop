@@ -59,16 +59,23 @@ public class AppointmentService {
         // Ramadan Special Rule (Feb 19 - March 20)
         if (!skipRamadanCheck && isRamadan(date)) {
             // 1. Afternoon Window
-            boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
+            boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
+            boolean isOpenFrom10 = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 20;
+
+            LocalTime firstWindowStart = isOpenFrom10 ? LocalTime.of(10, 0) : LocalTime.of(12, 0);
+            boolean inFirstWindow = !startTime.isBefore(firstWindowStart) && !endTime.isAfter(LocalTime.of(17, 0));
             // Admin can book until 18:00
             if (isAdmin) {
-                inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(18, 0));
+                inFirstWindow = !startTime.isBefore(firstWindowStart) && !endTime.isAfter(LocalTime.of(18, 0));
             }
 
             // 2. Evening & Night Window
             // Determine allowed limits
-            boolean isSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
-            boolean isPostSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+            boolean isSpecialDate = isMarch2026 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
+            boolean isPostSpecialDate = isMarch2026 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+
+            boolean isMidnightExtensionDate = isMarch2026 && date.getDayOfMonth() >= 12 && date.getDayOfMonth() <= 17;
+            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 21;
 
             boolean validTime = false;
 
@@ -80,9 +87,8 @@ public class AppointmentService {
                 if (isAdmin) {
                     // Admin can book anytime in evening (extends to next morning effectively)
                     validTime = true;
-                } else if (isSpecialDate) {
-                    // Clients on 17, 18, 19 March: Book up to 00:00 (so start times up to 23:45 allowed)
-                    validTime = true;
+                } else if (isSpecialDate || isOpenFrom10) {
+                    validTime = !endTime.isBefore(startTime);
                 } else {
                     // Normal Client: End <= 22:00
                     // Check if endTime is within 19:45-22:00
@@ -98,9 +104,10 @@ public class AppointmentService {
             if (!validTime && !startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(3, 0))) {
                 if (isAdmin) {
                     validTime = true;
-                } else if (isPostSpecialDate && startTime.equals(LocalTime.MIDNIGHT)) {
-                    // Clients on 18, 19, 20 March (Night of 17, 18, 19): Allow 00:00 slot ONLY
+                } else if ((isPostSpecialDate || isMidnightExtensionDate) && startTime.equals(LocalTime.MIDNIGHT)) {
                     validTime = true;
+                } else if (isNightTo3ExtensionDate) {
+                    validTime = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(3, 0));
                 }
             }
             
@@ -279,7 +286,9 @@ public class AppointmentService {
             // Ramadan hours: 12h-17h and 19h45-22h (plus extensions)
             
             // 1. Afternoon: 12:00 - 17:00 (18:00 Admin)
-            LocalTime t1 = LocalTime.of(12, 0);
+            boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
+            boolean isOpenFrom10 = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 20;
+            LocalTime t1 = isOpenFrom10 ? LocalTime.of(10, 0) : LocalTime.of(12, 0);
             LocalTime endOfFirstWindow = isAdmin ? LocalTime.of(18, 0) : LocalTime.of(17, 0);
             
             while (t1.isBefore(endOfFirstWindow)) {
@@ -288,19 +297,15 @@ public class AppointmentService {
             }
             
             // 2. Evening: 19:45 - ...
-            boolean isSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
+            boolean isSpecialDate = isMarch2026 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
             
             LocalTime t2 = LocalTime.of(19, 45);
             LocalTime endOfEvening;
             
-            if (isAdmin || isSpecialDate) {
+            if (isAdmin || isSpecialDate || isOpenFrom10) {
                 // Extend to end of day (23:45)
                 endOfEvening = LocalTime.MAX;
             } else {
-                // Normal: 22:00 (end of slot must be 22:00? or last slot is 21:45?)
-                // "jusqu'à 22H" usually means the session ends at 22:00.
-                // So the last slot is 21:45 (assuming 15min slots).
-                // Or if we check start times: < 22:00 means 21:45 is the last start time.
                 endOfEvening = LocalTime.of(22, 0);
             }
             
@@ -312,18 +317,20 @@ public class AppointmentService {
             }
             
             // 3. Early Morning (00:00 - 03:00)
-            boolean isPostSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+            boolean isPostSpecialDate = isMarch2026 && (date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19 || date.getDayOfMonth() == 20);
+            boolean isMidnightExtensionDate = isMarch2026 && date.getDayOfMonth() >= 12 && date.getDayOfMonth() <= 17;
+            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 21;
             
             LocalTime t3 = LocalTime.MIDNIGHT;
-            // Admin: Up to 03:00 (inclusive of start time 03:00? "Jusqu'à 03:00". Usually means 03:00 is the limit. Let's include 03:00 slot.)
             LocalTime endOfMorning = LocalTime.of(3, 15);
             
             while (t3.isBefore(endOfMorning)) {
                 boolean add = false;
                 if (isAdmin) {
                     add = true;
-                } else if (isPostSpecialDate && t3.equals(LocalTime.MIDNIGHT)) {
-                    // Only 00:00 for Clients on specific dates
+                } else if ((isPostSpecialDate || isMidnightExtensionDate) && t3.equals(LocalTime.MIDNIGHT)) {
+                    add = true;
+                } else if (isNightTo3ExtensionDate) {
                     add = true;
                 }
                 

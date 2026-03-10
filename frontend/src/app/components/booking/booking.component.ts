@@ -293,37 +293,46 @@ export class BookingComponent implements OnInit {
         const mMonth = d.getMonth() + 1; // 1-12
         const day = d.getDate();
 
-        // Check for March 17, 18, 19, 2026 (Evening extension to 00:00)
-        // Note: "Jusqu'à 00:00" means up to 23:45 start time.
-        if (y === 2026 && mMonth === 3 && (day === 17 || day === 18 || day === 19)) {
-            endHour = 24; // Allow up to 23:45
-        }
-        
-        // Check for March 18, 19, 20, 2026 (Morning extension 00:00)
-        // Note: The prompt said "jusqu'à 00:00" for 17,18,19.
-        // Usually implies the session of 17th goes to 00:00 (which is 18th morning).
-        // If I am viewing 18th, I might see 00:00 slot.
-        // Let's enable startHour = 0 for 18, 19, 20.
-        if (y === 2026 && mMonth === 3 && (day === 18 || day === 19 || day === 20)) {
-            startHour = 0;
-        }
-
-        // Ramadan General Logic (if needed)
-        // If it's Ramadan, extend to 22:00
+        const isMarch2026 = y === 2026 && mMonth === 3;
         const isRamadan = (dateStr >= '2026-02-19' && dateStr <= '2026-03-20');
-        if (isRamadan) {
-            endHour = 22; // Allow up to 21:45
+
+        const forceOpenFrom10 = isMarch2026 && day >= 11 && day <= 20;
+        const forceLateEvening = isMarch2026 && day >= 11 && day <= 20;
+        const midnightOnly = isMarch2026 && day >= 12 && day <= 17;
+        const nightTo3 = isMarch2026 && day >= 18 && day <= 21;
+
+        if (forceOpenFrom10) {
+          startHour = 10;
+        }
+
+        if (forceLateEvening) {
+          endHour = 24;
+        } else if (isRamadan) {
+          endHour = 22;
         }
         
-        const fullDaySlots: number[] = [];
-        for (let h = startHour; h < endHour; h++) {
-          // Skip 01:00 to 09:00 (keep 00:00 if startHour is 0)
-          if (h >= 1 && h < 10) continue; 
+        const slotsSet = new Set<number>();
 
-          for (let m = 0; m < 60; m += 15) {
-            fullDaySlots.push(h * 60 + m);
+        if (midnightOnly) {
+          slotsSet.add(0);
+        }
+
+        if (nightTo3) {
+          for (let min = 0; min <= 180; min += 15) {
+            slotsSet.add(min);
           }
         }
+
+        for (let h = startHour; h < endHour; h++) {
+          if (!nightTo3 && h >= 1 && h < 10) continue;
+          if (nightTo3 && h >= 4 && h < 10) continue;
+
+          for (let m = 0; m < 60; m += 15) {
+            slotsSet.add(h * 60 + m);
+          }
+        }
+
+        const fullDaySlots = Array.from(slotsSet).sort((a, b) => a - b);
 
         // Convertir les slots reçus du backend (libres) en minutes
         const freeSlotsInMinutes = slots.map(s => {
@@ -343,6 +352,14 @@ export class BookingComponent implements OnInit {
                 const isLastSlot = index === fullDaySlots.length - 1;
                 
                 let canFit = true;
+
+                if (nightTo3 && totalMin <= 180 && (totalMin + totalDuration) > 180) {
+                  canFit = false;
+                }
+
+                if (canFit && forceLateEvening && totalMin >= 600 && (totalMin + totalDuration) > 1440) {
+                  canFit = false;
+                }
                 
                 // Vérifier si toute la durée du service rentre
                 // Exception pour le dernier créneau : dépassement autorisé de 5-10 min
