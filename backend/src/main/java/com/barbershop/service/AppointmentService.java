@@ -75,8 +75,8 @@ public class AppointmentService {
             // Check Afternoon
             if (inFirstWindow) validTime = true;
 
-            // Check Evening (Start >= 19:00)
-            if (!validTime && !startTime.isBefore(LocalTime.of(19, 0))) {
+            // Check Evening (Start >= 19:45)
+            if (!validTime && !startTime.isBefore(LocalTime.of(19, 45))) {
                 if (isAdmin) {
                     // Admin can book anytime in evening (extends to next morning effectively)
                     validTime = true;
@@ -85,7 +85,7 @@ public class AppointmentService {
                     validTime = true;
                 } else {
                     // Normal Client: End <= 22:00
-                    // Check if endTime is within 19:00-22:00
+                    // Check if endTime is within 19:45-22:00
                     // Note: endTime 22:00 is allowed.
                     if (!endTime.isAfter(LocalTime.of(22, 0)) && !endTime.equals(LocalTime.MIDNIGHT)) {
                         validTime = true;
@@ -276,7 +276,7 @@ public class AppointmentService {
         List<LocalTime> allTimes = new ArrayList<>();
         
         if (isRamadan(date)) {
-            // Ramadan hours: 12h-17h and 19h-22h (plus extensions)
+            // Ramadan hours: 12h-17h and 19h45-22h (plus extensions)
             
             // 1. Afternoon: 12:00 - 17:00 (18:00 Admin)
             LocalTime t1 = LocalTime.of(12, 0);
@@ -287,17 +287,20 @@ public class AppointmentService {
                 t1 = t1.plusMinutes(15);
             }
             
-            // 2. Evening: 19:00 - ...
+            // 2. Evening: 19:45 - ...
             boolean isSpecialDate = date.getYear() == 2026 && date.getMonthValue() == 3 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
             
-            LocalTime t2 = LocalTime.of(19, 0);
+            LocalTime t2 = LocalTime.of(19, 45);
             LocalTime endOfEvening;
             
             if (isAdmin || isSpecialDate) {
                 // Extend to end of day (23:45)
                 endOfEvening = LocalTime.MAX;
             } else {
-                // Normal: 22:00
+                // Normal: 22:00 (end of slot must be 22:00? or last slot is 21:45?)
+                // "jusqu'à 22H" usually means the session ends at 22:00.
+                // So the last slot is 21:45 (assuming 15min slots).
+                // Or if we check start times: < 22:00 means 21:45 is the last start time.
                 endOfEvening = LocalTime.of(22, 0);
             }
             

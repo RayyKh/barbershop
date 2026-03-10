@@ -309,10 +309,11 @@ export class BookingComponent implements OnInit {
         }
 
         // Ramadan General Logic (if needed)
-        // If it's Ramadan, maybe we should extend to 22:00?
-        // Current endHour is 21.
-        // Let's extend to 24 generally if it's Ramadan dates?
-        // But for now, stick to specific request.
+        // If it's Ramadan, extend to 22:00
+        const isRamadan = (dateStr >= '2026-02-19' && dateStr <= '2026-03-20');
+        if (isRamadan) {
+            endHour = 22; // Allow up to 21:45
+        }
         
         const fullDaySlots: number[] = [];
         for (let h = startHour; h < endHour; h++) {
