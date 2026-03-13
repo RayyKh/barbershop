@@ -101,6 +101,14 @@ public class AppointmentService {
                 }
             }
 
+            if (!validTime && isAdmin) {
+                LocalTime adminGapStart = LocalTime.of(16, 45);
+                LocalTime adminGapEnd = LocalTime.of(19, 45);
+                if (!startTime.isBefore(adminGapStart) && !endTime.isAfter(adminGapEnd)) {
+                    validTime = true;
+                }
+            }
+
             // Check Early Morning (00:00 - 03:00)
             // This corresponds to the late night of the previous day
             if (!validTime && !startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(3, 0))) {
@@ -297,6 +305,14 @@ public class AppointmentService {
             while (t1.isBefore(endOfFirstWindow)) {
                 allTimes.add(t1);
                 t1 = t1.plusMinutes(15);
+            }
+
+            if (isAdmin) {
+                LocalTime tGap = LocalTime.of(18, 0);
+                while (tGap.isBefore(LocalTime.of(19, 45))) {
+                    allTimes.add(tGap);
+                    tGap = tGap.plusMinutes(15);
+                }
             }
             
             // 2. Evening: 19:45 - ...
