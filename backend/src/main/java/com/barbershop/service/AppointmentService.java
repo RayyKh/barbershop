@@ -104,7 +104,7 @@ public class AppointmentService {
             if (!validTime && isAdmin) {
                 LocalTime adminGapStart = LocalTime.of(16, 45);
                 LocalTime adminGapEnd = LocalTime.of(19, 45);
-                if (!startTime.isBefore(adminGapStart) && !endTime.isAfter(adminGapEnd)) {
+                if (!startTime.isBefore(adminGapStart) && startTime.isBefore(adminGapEnd)) {
                     validTime = true;
                 }
             }
