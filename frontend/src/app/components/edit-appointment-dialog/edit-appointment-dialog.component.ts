@@ -127,31 +127,16 @@ export class EditAppointmentDialogComponent implements OnInit {
           }
         }
         
-        // --- GENERATE ALL POSSIBLE SLOTS (UI) ---
-        // Logic duplicated from BookingComponent to match "Green/Red" style
-        const selectedDate = new Date(date);
-        const dayOfWeek = selectedDate.getDay();
-        const selectedBarber = this.barbers.find(b => b.id === barberId);
-        const barberName = selectedBarber ? selectedBarber.name.toLowerCase() : '';
-        
-        let startHour = 10;
-        let endHour = 21; // End of last slot start
-
-        if (dayOfWeek === 1) { // Monday
-          startHour = 12;
-          endHour = 18;
-        } else {
-          if (barberName.includes("hamouda")) startHour = 12;
-          else if (barberName.includes("ahmed")) startHour = 11;
-          else startHour = 10;
+        const slotsSet = new Set<number>();
+        for (let min = 0; min <= 180; min += 15) {
+          slotsSet.add(min);
         }
-
-        const fullDaySlots: number[] = [];
-        for (let h = startHour; h < endHour; h++) {
+        for (let h = 10; h < 24; h++) {
           for (let m = 0; m < 60; m += 15) {
-            fullDaySlots.push(h * 60 + m);
+            slotsSet.add(h * 60 + m);
           }
         }
+        const fullDaySlots = Array.from(slotsSet).sort((a, b) => a - b);
         
         // Calculate needed duration for NEW selected services
         let totalDuration = 30; // Default
@@ -169,7 +154,7 @@ export class EditAppointmentDialogComponent implements OnInit {
         const newSlotsUI: SlotUI[] = [];
         const currentSelectedTime = this.editForm.get('startTime')?.value;
 
-        fullDaySlots.forEach((totalMin, index) => {
+        fullDaySlots.forEach((totalMin) => {
           const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
           
           // Masquer les créneaux passés sauf si c'est l'heure actuelle du rendez-vous qu'on modifie
@@ -179,17 +164,22 @@ export class EditAppointmentDialogComponent implements OnInit {
           // Si on garde l'heure actuelle et qu'elle est passée, elle sera "hidden" mais la valeur du form reste.
           if (isPast) return;
 
-          const isLastSlot = index === fullDaySlots.length - 1;
-          
           let canFit = true;
+
+          if (totalMin <= 180 && (totalMin + totalDuration) > 180) {
+            canFit = false;
+          }
+          if (canFit && totalMin >= 600 && (totalMin + totalDuration) > 1440) {
+            canFit = false;
+          }
           
-          // Check if duration fits
-          const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
-          for (let j = 0; j < effectiveSlotsNeeded; j++) {
-            const targetMinutes = totalMin + (j * 15);
-            if (!freeSlotsInMinutes.includes(targetMinutes)) {
-              canFit = false;
-              break;
+          if (canFit) {
+            for (let j = 0; j < slotsNeeded; j++) {
+              const targetMinutes = totalMin + (j * 15);
+              if (!freeSlotsInMinutes.includes(targetMinutes)) {
+                canFit = false;
+                break;
+              }
             }
           }
 
@@ -197,9 +187,6 @@ export class EditAppointmentDialogComponent implements OnInit {
           const m = totalMin % 60;
           const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`; // HH:mm:ss format for backend
           
-          // Display format HH:mm
-          const displayTime = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-
           newSlotsUI.push({
             time: timeStr, // Value for form
             isAvailable: canFit,
