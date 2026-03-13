@@ -296,13 +296,16 @@ export class BookingComponent implements OnInit {
         const isMarch2026 = y === 2026 && mMonth === 3;
         const isRamadan = (dateStr >= '2026-02-19' && dateStr <= '2026-03-20');
 
-        const forceOpenFrom10 = isMarch2026 && day >= 11 && day <= 20;
-        const forceLateEvening = isMarch2026 && day >= 11 && day <= 20;
-        const midnightOnly = isMarch2026 && day >= 12 && day <= 17;
+        const forceOpenFrom10 = isMarch2026 && day >= 17 && day <= 20;
+        const forceOpenFrom12 = isMarch2026 && day >= 11 && day <= 16;
+        const forceLateEvening = isMarch2026 && day >= 17 && day <= 20;
         const nightTo3 = isMarch2026 && day >= 18 && day <= 21;
+        const march11To16EarlyClose = isMarch2026 && day >= 11 && day <= 16;
 
         if (forceOpenFrom10) {
           startHour = 10;
+        } else if (forceOpenFrom12) {
+          startHour = 12;
         }
 
         if (forceLateEvening) {
@@ -312,10 +315,6 @@ export class BookingComponent implements OnInit {
         }
         
         const slotsSet = new Set<number>();
-
-        if (midnightOnly) {
-          slotsSet.add(0);
-        }
 
         if (nightTo3) {
           for (let min = 0; min <= 180; min += 15) {
@@ -328,7 +327,9 @@ export class BookingComponent implements OnInit {
           if (nightTo3 && h >= 4 && h < 10) continue;
 
           for (let m = 0; m < 60; m += 15) {
-            slotsSet.add(h * 60 + m);
+            const totalMin = h * 60 + m;
+            if (march11To16EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
+            slotsSet.add(totalMin);
           }
         }
 
