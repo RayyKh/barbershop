@@ -317,11 +317,12 @@ public class AppointmentService {
             
             // 2. Evening: 19:45 - ...
             boolean isSpecialDate = isMarch2026 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
+            boolean isMarch16 = isMarch2026 && date.getDayOfMonth() == 16;
             
             LocalTime t2 = LocalTime.of(19, 45);
             LocalTime endOfEvening;
             
-            if (isAdmin || isSpecialDate || isLateEveningExtendedDate) {
+            if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
                 // Extend to end of day (23:45)
                 endOfEvening = LocalTime.MAX;
             } else if (isLateEveningEarlyCloseDate) {
@@ -337,17 +338,18 @@ public class AppointmentService {
                 t2 = next;
             }
             
-            // 3. Early Morning (00:00 - 03:00)
-            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 21;
+            // 3. Early Morning (00:00 - 06:00)
+            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 19;
+            boolean isNightTo6ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 20 && date.getDayOfMonth() <= 21;
             
             LocalTime t3 = LocalTime.MIDNIGHT;
-            LocalTime endOfMorning = LocalTime.of(3, 15);
+            LocalTime endOfMorning = (isNightTo6ExtensionDate) ? LocalTime.of(6, 15) : LocalTime.of(3, 15);
             
             while (t3.isBefore(endOfMorning)) {
                 boolean add = false;
                 if (isAdmin) {
                     add = true;
-                } else if (isNightTo3ExtensionDate) {
+                } else if (isNightTo3ExtensionDate || isNightTo6ExtensionDate) {
                     add = true;
                 }
                 
@@ -391,7 +393,10 @@ public class AppointmentService {
             }
             
             // Admin Extension for Non-Ramadan (Permanent "From today")
-            if (isAdmin) {
+            // Special Case: March 21 (Next Day after Ramadan) - Everyone can book until 06:00
+            boolean isMarch21_2026 = date.getYear() == 2026 && date.getMonthValue() == 3 && date.getDayOfMonth() == 21;
+
+            if (isAdmin || isMarch21_2026) {
                 // 1. Fill gap if any between endOfDay and 03:00?
                 // Assuming endOfDay (21:00) is earlier than 03:00 (Next Day).
                 
@@ -405,9 +410,10 @@ public class AppointmentService {
                      late = next;
                 }
                 
-                // Add slots from 00:00 to 03:00
+                // Add slots from 00:00 to 03:00 (or 06:00 for March 21)
                 LocalTime morning = LocalTime.MIDNIGHT;
-                while (morning.isBefore(LocalTime.of(3, 15))) {
+                LocalTime endOfMorning = isMarch21_2026 ? LocalTime.of(6, 15) : LocalTime.of(3, 15);
+                while (morning.isBefore(endOfMorning)) {
                     allTimes.add(morning);
                     morning = morning.plusMinutes(15);
                 }

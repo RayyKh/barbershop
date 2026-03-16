@@ -299,18 +299,27 @@ export class BookingComponent implements OnInit {
         const forceOpenFrom10 = isMarch2026 && day >= 17 && day <= 20;
         const forceOpenFrom12 = isMarch2026 && day >= 11 && day <= 16;
         const forceLateEvening = isMarch2026 && day >= 17 && day <= 20;
-        const nightTo3 = isMarch2026 && day >= 18 && day <= 21;
-        const march11To16EarlyClose = isMarch2026 && day >= 11 && day <= 16;
+        const nightTo3 = isMarch2026 && (day === 18 || day === 19);
+        const nightTo6 = isMarch2026 && (day === 20 || day === 21);
+        const march11To15EarlyClose = isMarch2026 && day >= 11 && day <= 15;
+
+        const isMarch16 = isMarch2026 && day === 16;
 
         if (forceOpenFrom10) {
           startHour = 10;
         } else if (forceOpenFrom12) {
           startHour = 12;
+        } else if (nightTo6 && day === 21) {
+          // On March 21, if we only want until 06:00, we can set start/end specially
+          // but the loop below handles startHour/endHour. 
+          // If we set startHour=0 and endHour=6, it works.
+          startHour = 0;
+          endHour = 6;
         }
 
-        if (forceLateEvening) {
+        if (forceLateEvening || isMarch16) {
           endHour = 24;
-        } else if (isRamadan) {
+        } else if (isRamadan && !nightTo6) {
           endHour = 22;
         }
         
@@ -322,13 +331,19 @@ export class BookingComponent implements OnInit {
           }
         }
 
+        if (nightTo6) {
+          for (let min = 0; min <= 360; min += 15) {
+            slotsSet.add(min);
+          }
+        }
+
         for (let h = startHour; h < endHour; h++) {
-          if (!nightTo3 && h >= 1 && h < 10) continue;
-          if (nightTo3 && h >= 4 && h < 10) continue;
+          if (!nightTo3 && !nightTo6 && h >= 1 && h < 10) continue;
+          if ((nightTo3 || nightTo6) && h >= (nightTo6 ? 7 : 4) && h < 10) continue;
 
           for (let m = 0; m < 60; m += 15) {
             const totalMin = h * 60 + m;
-            if (march11To16EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
+            if (march11To15EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
             slotsSet.add(totalMin);
           }
         }
@@ -358,7 +373,11 @@ export class BookingComponent implements OnInit {
                   canFit = false;
                 }
 
-                if (canFit && forceLateEvening && totalMin >= 600 && (totalMin + totalDuration) > 1440) {
+                if (nightTo6 && totalMin <= 360 && (totalMin + totalDuration) > 360) {
+                  canFit = false;
+                }
+
+                if (canFit && (forceLateEvening || isMarch16) && totalMin >= 600 && (totalMin + totalDuration) > 1440) {
                   canFit = false;
                 }
                 
