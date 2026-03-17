@@ -127,7 +127,7 @@
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Heure de fin (Optionnel)</mat-label>
                 <mat-select formControlName="endTime">
-                  <mat-option [value]="null">Créneau unique (30 min)</mat-option>
+                  <mat-option [value]="null">Créneau unique (15 min)</mat-option>
                   <mat-option *ngFor="let h of allAvailableHours" [value]="h" [disabled]="h <= adminBlockForm.value.startTime">
                     {{ h.substring(0, 5) }}
                   </mat-option>

@@ -298,54 +298,75 @@ export class BookingComponent implements OnInit {
 
         const forceOpenFrom10 = isMarch2026 && day >= 17 && day <= 20;
         const forceOpenFrom12 = isMarch2026 && day >= 11 && day <= 16;
-        const forceLateEvening = isMarch2026 && day >= 17 && day <= 20;
+        const forceLateEvening = isMarch2026 && day >= 17 && day <= 19; // Modifié pour s'arrêter le 19
         const nightTo3 = isMarch2026 && (day === 18 || day === 19);
-        const nightTo6 = isMarch2026 && (day === 20 || day === 21);
+        const nightTo6 = isMarch2026 && (day === 20); // Le 19 au soir vers le 20 matin
         const march11To15EarlyClose = isMarch2026 && day >= 11 && day <= 15;
 
+        // NOUVELLES RÈGLES SPÉCIALES MARS 2026
+        const isClosedForClient = isMarch2026 && (day === 21 || day === 23);
+        const isMarch20ClientWindow = isMarch2026 && day === 20;
+        const isMarch22 = isMarch2026 && day === 22;
         const isMarch16 = isMarch2026 && day === 16;
-
-        if (forceOpenFrom10) {
-          startHour = 10;
-        } else if (forceOpenFrom12) {
-          startHour = 12;
-        } else if (nightTo6 && day === 21) {
-          // On March 21, if we only want until 06:00, we can set start/end specially
-          // but the loop below handles startHour/endHour. 
-          // If we set startHour=0 and endHour=6, it works.
-          startHour = 0;
-          endHour = 6;
-        }
-
-        if (forceLateEvening || isMarch16) {
-          endHour = 24;
-        } else if (isRamadan && !nightTo6) {
-          endHour = 22;
-        }
         
         const slotsSet = new Set<number>();
 
-        if (nightTo3) {
-          for (let min = 0; min <= 180; min += 15) {
-            slotsSet.add(min);
-          }
+        if (isClosedForClient && !this.isAdmin) {
+          this.allSlotsUI = [];
+          this.availableSlots = [];
+          return;
         }
 
-        if (nightTo6) {
-          for (let min = 0; min <= 360; min += 15) {
-            slotsSet.add(min);
-          }
-        }
+        if (isMarch20ClientWindow && !this.isAdmin) {
+           // Le 20 mars pour le client : UNIQUEMENT 00h00 à 06h00
+           for (let min = 0; min <= 360; min += 15) {
+             slotsSet.add(min);
+           }
+        } else {
+           // Comportement pour Admin ou pour Client (hors fenêtre spéciale 20 mars)
+           if (forceOpenFrom10) {
+             startHour = 10;
+           } else if (forceOpenFrom12) {
+             startHour = 12;
+           }
 
-        for (let h = startHour; h < endHour; h++) {
-          if (!nightTo3 && !nightTo6 && h >= 1 && h < 10) continue;
-          if ((nightTo3 || nightTo6) && h >= (nightTo6 ? 7 : 4) && h < 10) continue;
+           if (forceLateEvening || isMarch16) {
+             endHour = 24;
+           } else if (isRamadan && !isMarch22 && !isClosedForClient) {
+             endHour = 22;
+           }
 
-          for (let m = 0; m < 60; m += 15) {
-            const totalMin = h * 60 + m;
-            if (march11To15EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
-            slotsSet.add(totalMin);
-          }
+           if (this.isAdmin && isMarch2026 && day <= 19) {
+              // Admin 24h/24 jusqu'au 19 mars inclus
+              for (let min = 0; min < 1440; min += 15) {
+                slotsSet.add(min);
+              }
+           } else {
+              // Créneaux de nuit standards ou Ramadan
+              if (nightTo3) {
+                for (let min = 0; min <= 180; min += 15) {
+                  slotsSet.add(min);
+                }
+              }
+
+              if (nightTo6 && day === 20) {
+                for (let min = 0; min <= 360; min += 15) {
+                  slotsSet.add(min);
+                }
+              }
+
+              // Plage horaire standard
+              for (let h = startHour; h < endHour; h++) {
+                if (!nightTo3 && !nightTo6 && h >= 1 && h < 10) continue;
+                if ((nightTo3 || nightTo6) && h >= (nightTo6 ? 7 : 4) && h < 10) continue;
+
+                for (let m = 0; m < 60; m += 15) {
+                  const totalMin = h * 60 + m;
+                  if (march11To15EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
+                  slotsSet.add(totalMin);
+                }
+              }
+           }
         }
 
         const fullDaySlots = Array.from(slotsSet).sort((a, b) => a - b);

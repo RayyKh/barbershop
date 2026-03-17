@@ -121,10 +121,10 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   generateAllHours() {
-    // Génère les heures de 10h00 à 22h00 par pas de 15 minutes
+    // Génère les heures de 00h00 à 23h45 par pas de 15 minutes (24/24)
     this.allAvailableHours = [];
-    const startHour = 10;
-    const endHour = 22;
+    const startHour = 0;
+    const endHour = 24;
     
     for (let h = startHour; h < endHour; h++) {
       for (let m = 0; m < 60; m += 15) {
@@ -132,8 +132,8 @@ export class AdminDashboardComponent implements OnInit {
         this.allAvailableHours.push(time);
       }
     }
-    // Ajouter 22:00:00 comme dernière heure possible de fin (ou de début si on veut)
-    this.allAvailableHours.push("22:00:00");
+    // Ajouter 23:59:00 comme dernière heure possible de fin
+    this.allAvailableHours.push("23:59:00");
   }
 
   ngOnInit(): void {
@@ -196,6 +196,14 @@ export class AdminDashboardComponent implements OnInit {
         endTimeCtrl?.setValue(null);
         endTimeCtrl?.disable();
       }
+    });
+
+    this.adminBlockForm.get('date')?.valueChanges.subscribe(() => {
+      this.generateAvailableHours();
+    });
+
+    this.adminBlockForm.get('barberId')?.valueChanges.subscribe(() => {
+      this.generateAvailableHours();
     });
 
     // Chat Init
@@ -305,10 +313,15 @@ export class AdminDashboardComponent implements OnInit {
   }
 
   generateAvailableHours() {
-    const barber = this.lockForm.get('barber')?.value;
-    const date = this.lockForm.get('date')?.value;
-    const selectedServices = this.lockForm.get('services')?.value as Service[];
-    
+    const lockBarber = this.lockForm.get('barber')?.value;
+    const lockDate = this.lockForm.get('date')?.value;
+    const blockBarberId = this.adminBlockForm.get('barberId')?.value;
+    const blockDate = this.adminBlockForm.get('date')?.value;
+
+    // We can fetch slots for either the lock form or the block form
+    const barber = lockBarber || (blockBarberId ? this.barbers.find(b => b.id === blockBarberId) : null);
+    const date = lockDate || blockDate;
+
     if (!barber || !date) {
       this.allSlotsUI = [];
       this.availableHours = [];
@@ -316,6 +329,7 @@ export class AdminDashboardComponent implements OnInit {
     }
     
     const dateStr = this.formatDateLocal(new Date(date));
+    const selectedServices = this.lockForm.get('services')?.value as Service[];
     const totalDuration = selectedServices && selectedServices.length > 0 
       ? selectedServices.reduce((acc, s) => acc + s.duration, 0)
       : 30; // Durée par défaut si aucun service sélectionné
@@ -327,36 +341,12 @@ export class AdminDashboardComponent implements OnInit {
       const currentMinute = now.getMinutes();
 
       // Logique de génération des créneaux de 15 min
-      const dayOfWeek = new Date(date).getDay();
-      let startHour = 10;
-      let endHour = 22;
-
-      // START OF MODIFICATION: Extend hours for Admin (00:00 - 03:00) and Night (until 23:45)
-      // Since this is Admin dashboard, we always want to see extended hours if they exist
-      startHour = 0; 
-      endHour = 24;
-      // END OF MODIFICATION
-
-      /* 
-      // Old Logic
-      const name = barber.name.toLowerCase();
-      if (dayOfWeek === 1) { // Lundi
-        startHour = 12;
-        endHour = 18;
-      } else {
-        if (name.includes("hamouda")) startHour = 12;
-        else if (name.includes("ahmed")) startHour = 11;
-        else startHour = 10;
-      }
-      */
+      let startHour = 0;
+      let endHour = 24;
 
       const fullDaySlots: number[] = [];
       for (let h = startHour; h < endHour; h++) {
-        // Filter out 04:00 - 09:00 to keep UI clean, unless there are slots returned by backend?
-        // But backend only returns AVAILABLE slots.
-        // Let's just show 00-03 and 10-24.
-        if (h >= 4 && h < 10) continue; 
-
+        // En tant qu'admin, on veut voir TOUTES les heures pour pouvoir bloquer n'importe quand
         for (let m = 0; m < 60; m += 15) {
           fullDaySlots.push(h * 60 + m);
         }
@@ -378,8 +368,6 @@ export class AdminDashboardComponent implements OnInit {
           isPast = false;
         }
         
-        // if (isPast) return; // Masquer les créneaux passés
-
         const isLastSlot = index === fullDaySlots.length - 1;
         
         let canFit = true;
@@ -397,10 +385,10 @@ export class AdminDashboardComponent implements OnInit {
 
         const h = Math.floor(totalMin / 60);
         const m = totalMin % 60;
-        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
 
         newSlotsUI.push({
-          time: timeStr,
+          time: timeStr.substring(0, 5),
           isAvailable: canFit,
           isPast: isPast
         });
