@@ -139,7 +139,7 @@ export class AdminDashboardComponent implements OnInit {
   ngOnInit(): void {
 
     this.api.getServices().subscribe(s => this.services = s);
-    this.api.getBarbers().subscribe(b => { 
+    this.api.getBarbers(true).subscribe(b => { 
       this.barbers = b; 
       // Sélectionner le premier barbier par défaut si disponible
       if (this.barbers.length > 0) {
@@ -328,7 +328,7 @@ export class AdminDashboardComponent implements OnInit {
       return;
     }
     
-    const dateStr = this.formatDateLocal(new Date(date));
+    const dateStr = this.formatDateLocal(date);
     const selectedServices = this.lockForm.get('services')?.value as Service[];
     const totalDuration = selectedServices && selectedServices.length > 0 
       ? selectedServices.reduce((acc, s) => acc + s.duration, 0)
@@ -551,11 +551,29 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
-  private formatDateLocal(d: Date): string {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  formatDisplayDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    // Utiliser des slashes et forcer l'heure à midi pour éviter tout décalage de fuseau horaire
+    // qui pourrait faire reculer la date d'un jour si interprétée à minuit.
+    return new Date(dateStr.replace(/-/g, '/') + ' 12:00:00');
+  }
+
+  formatDateLocal(d: any): string {
+    if (!d) return '';
+    
+    // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    // Sinon, on convertit en objet Date et on extrait les composants LOCAUX
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   filterByBarber(barberId: number): Appointment[] {

@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatNativeDateModule } from '@angular/material/core';
@@ -13,6 +12,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
 import { MatTabsModule } from '@angular/material/tabs';
+import { RouterLink } from '@angular/router';
 import { ApiService, Barber, RevenueReport } from '../../services/api.service';
 
 @Component({
@@ -61,7 +61,7 @@ export class AdminRevenueComponent implements OnInit {
   }
 
   loadBarbers(): void {
-    this.apiService.getBarbers().subscribe(barbers => {
+    this.apiService.getBarbers(true).subscribe(barbers => {
       this.barbers = barbers;
       if (this.barbers.length > 0) {
         this.selectedBarberId = this.barbers[0].id;
@@ -113,6 +113,7 @@ export class AdminRevenueComponent implements OnInit {
   }
 
   getWeekRangeDisplay(): string {
+    // currentDate est un objet Date, on n'a pas besoin de formatDisplayDate ici
     const d = new Date(this.currentDate);
     const day = d.getDay();
     // Ajuster pour obtenir le lundi de la semaine
@@ -137,7 +138,24 @@ export class AdminRevenueComponent implements OnInit {
     }
   }
 
-  formatDate(date: Date): string {
+  formatDisplayDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    // Utiliser des slashes et forcer l'heure à midi pour éviter tout décalage de fuseau horaire
+    return new Date(dateStr.replace(/-/g, '/') + ' 12:00:00');
+  }
+
+  formatDate(d: any): string {
+    if (!d) return '';
+    
+    // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    // Sinon, on convertit en objet Date et on extrait les composants LOCAUX
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');

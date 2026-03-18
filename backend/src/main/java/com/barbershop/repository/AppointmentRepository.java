@@ -26,7 +26,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     @Query("SELECT a FROM Appointment a WHERE a.barber.id = :barberId " +
            "AND a.date = :date " +
-           "AND a.status IN ('BOOKED','BLOCKED','MODIFIED')")
+           "AND a.status IN ('BOOKED','BLOCKED','MODIFIED','DONE')")
     List<Appointment> findActiveByBarberAndDate(
             @Param("barberId") Long barberId,
             @Param("date") LocalDate date);

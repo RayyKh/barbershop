@@ -1,16 +1,24 @@
 package com.barbershop;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import jakarta.annotation.PostConstruct;
 import java.util.TimeZone;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+
+import jakarta.annotation.PostConstruct;
+
 @SpringBootApplication
+@EnableAsync
 public class BarbershopApplication {
+
+	static {
+		TimeZone.setDefault(TimeZone.getTimeZone("Africa/Tunis"));
+		System.setProperty("user.timezone", "Africa/Tunis");
+	}
 
 	@PostConstruct
 	public void init() {
-		// Setting Spring Boot SetTimeZone
 		TimeZone.setDefault(TimeZone.getTimeZone("Africa/Tunis"));
 	}
 

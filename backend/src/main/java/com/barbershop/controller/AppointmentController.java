@@ -2,6 +2,9 @@ package com.barbershop.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,9 +95,29 @@ public class AppointmentController {
             }
         }
 
-        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), request.getDate(), request.getStartTime(), request.isUseReward(), isLoggedAsAdmin);
+        LocalDate bookingDate = parseBookingDate(request.getDate());
+        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), bookingDate, request.getStartTime(), request.isUseReward(), isLoggedAsAdmin);
         notifyEmitters(appt);
         return appt;
+    }
+
+    private LocalDate parseBookingDate(String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            throw new IllegalArgumentException("Date de réservation invalide");
+        }
+        String trimmed = rawDate.trim();
+        try {
+            if (trimmed.length() == 10 && trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return LocalDate.parse(trimmed);
+            }
+            if (trimmed.length() >= 10 && trimmed.charAt(10) == 'T') {
+                OffsetDateTime odt = OffsetDateTime.parse(trimmed);
+                return odt.atZoneSameInstant(ZoneId.of("Africa/Tunis")).toLocalDate();
+            }
+            return LocalDate.parse(trimmed.substring(0, 10));
+        } catch (DateTimeParseException | IndexOutOfBoundsException ex) {
+            throw new IllegalArgumentException("Format de date invalide: " + rawDate, ex);
+        }
     }
 
     @GetMapping("/available")

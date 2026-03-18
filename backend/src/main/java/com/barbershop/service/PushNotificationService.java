@@ -10,6 +10,7 @@ import nl.martijndwars.webpush.PushService;
 import nl.martijndwars.webpush.Subscription;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,6 +82,7 @@ public class PushNotificationService {
         subscriptionRepository.deleteByEndpoint(endpoint);
     }
 
+    @Async
     public void sendNotificationToBarber(Long barberId, String title, String message) {
         // 1. Envoyer à tous les abonnements spécifiquement liés à ce barbier
         List<PushSubscription> barberSubscriptions = subscriptionRepository.findByBarberId(barberId);
@@ -94,12 +96,14 @@ public class PushNotificationService {
         sendToSubscriptions(generalAdminSubscriptions, title, message);
     }
 
+    @Async
     public void sendNotificationToUser(User user, String title, String message) {
         if (user == null) return;
         List<PushSubscription> userSubscriptions = subscriptionRepository.findByUser(user);
         sendToSubscriptions(userSubscriptions, title, message);
     }
 
+    @Async
     public void sendNotificationToAdmins(String title, String message) {
         List<PushSubscription> adminSubscriptions = subscriptionRepository.findByUserRole(User.Role.ADMIN);
         sendToSubscriptions(adminSubscriptions, title, message);

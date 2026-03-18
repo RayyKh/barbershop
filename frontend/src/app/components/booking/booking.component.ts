@@ -93,9 +93,19 @@ export class BookingComponent implements OnInit {
 
   ngOnInit() {
     // Check if user is admin
-    this.apiService.getCurrentUser().subscribe(user => {
-      this.isAdmin = user?.role === 'ADMIN';
-    });
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      this.apiService.getCurrentUser().subscribe({
+        next: (user) => {
+          this.isAdmin = user?.role === 'ADMIN';
+        },
+        error: () => {
+          this.isAdmin = false;
+        }
+      });
+    } else {
+      this.isAdmin = false;
+    }
 
     this.apiService.getServices().subscribe(data => {
       this.services = data;
@@ -266,13 +276,8 @@ export class BookingComponent implements OnInit {
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
 
-        // 1. Définir la plage horaire complète (ex: 10h - 21h par tranches de 15min)
-        // Note: Le backend renvoie déjà la liste de tous les créneaux théoriques possibles pour ce jour
-        // (y compris ceux déjà réservés, car on en a besoin pour savoir s'ils sont rouges)
-        // Mais attendez, le backend actuel ne renvoie QUE les libres.
-        // On va générer tous les créneaux de la journée basés sur les horaires du salon.
-        
-        const dayOfWeek = date.getDay(); // 0=Dim, 1=Lun, ...
+        // 1. Définir la plage horaire complète
+        const dayOfWeek = (date instanceof Date) ? date.getDay() : new Date(date).getDay();
         let startHour = 10;
         let endHour = 21;
 
@@ -287,12 +292,7 @@ export class BookingComponent implements OnInit {
           else startHour = 10;
         }
 
-        // Special Dates Logic for Client
-        const d = new Date(date);
-        const y = d.getFullYear();
-        const mMonth = d.getMonth() + 1; // 1-12
-        const day = d.getDate();
-
+        const [y, mMonth, day] = dateStr.split('-').map(Number);
         const isMarch2026 = y === 2026 && mMonth === 3;
         const isRamadan = (dateStr >= '2026-02-19' && dateStr <= '2026-03-20');
 
@@ -300,12 +300,13 @@ export class BookingComponent implements OnInit {
         const forceOpenFrom12 = isMarch2026 && day >= 11 && day <= 16;
         const forceLateEvening = isMarch2026 && day >= 17 && day <= 19; // Modifié pour s'arrêter le 19
         const nightTo3 = isMarch2026 && (day === 18 || day === 19);
-        const nightTo6 = isMarch2026 && (day === 20); // Le 19 au soir vers le 20 matin
+        const nightTo6 = isMarch2026 && (day === 20 || day === 21); // Le 19 au soir vers le 20 matin, et le 20 au soir vers le 21 matin
         const march11To15EarlyClose = isMarch2026 && day >= 11 && day <= 15;
 
-        // NOUVELLES RÈGLES SPÉCIALES MARS 2026
-        const isClosedForClient = isMarch2026 && (day === 21 || day === 23);
+        // NOUVELLES RÈGLE SPÉCIALES MARS 2026
+        const isClosedForClient = isMarch2026 && (day === 23); // Retiré le 21 car matin ouvert et après-midi normal
         const isMarch20ClientWindow = isMarch2026 && day === 20;
+        const isMarch21ClientMorning = isMarch2026 && day === 21;
         const isMarch22 = isMarch2026 && day === 22;
         const isMarch16 = isMarch2026 && day === 16;
         
@@ -349,7 +350,7 @@ export class BookingComponent implements OnInit {
                 }
               }
 
-              if (nightTo6 && day === 20) {
+              if (nightTo6 && (day === 20 || day === 21)) {
                 for (let min = 0; min <= 360; min += 15) {
                   slotsSet.add(min);
                 }
@@ -378,41 +379,34 @@ export class BookingComponent implements OnInit {
           return parseInt(cleanTime[0], 10) * 60 + parseInt(cleanTime[1], 10);
         });
 
-        const slotsNeeded = Math.ceil(totalDuration / 15);
+        // Calculer combien de créneaux de 15 min sont nécessaires
+        const slotsNeeded = Math.ceil(totalDuration / 15) || 1; // Au moins 1 slot
               const newSlotsUI: SlotUI[] = [];
 
-              fullDaySlots.forEach((totalMin, index) => {
-                const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
-                
-                if (isPast) return; // Masquer les créneaux passés
+        fullDaySlots.forEach((totalMin, index) => {
+          const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
+          
+          if (isPast) return; // Masquer les créneaux passés
 
-                const isLastSlot = index === fullDaySlots.length - 1;
-                
-                let canFit = true;
-
-                if (nightTo3 && totalMin <= 180 && (totalMin + totalDuration) > 180) {
+          let canFit = true;
+          
+          // Un créneau doit être dans la liste des créneaux libres du backend
+          if (!freeSlotsInMinutes.includes(totalMin)) {
+            canFit = false;
+          } else {
+            // Vérifier si toute la durée du service rentre
+            // Si duration = 45 min, on vérifie totalMin, totalMin+15, totalMin+30
+            const needed = Math.ceil(totalDuration / 15) || 1;
+            if (needed > 1) {
+              for (let j = 1; j < needed; j++) {
+                const targetMinutes = totalMin + (j * 15);
+                if (!freeSlotsInMinutes.includes(targetMinutes)) {
                   canFit = false;
+                  break;
                 }
-
-                if (nightTo6 && totalMin <= 360 && (totalMin + totalDuration) > 360) {
-                  canFit = false;
-                }
-
-                if (canFit && (forceLateEvening || isMarch16) && totalMin >= 600 && (totalMin + totalDuration) > 1440) {
-                  canFit = false;
-                }
-                
-                // Vérifier si toute la durée du service rentre
-                // Exception pour le dernier créneau : dépassement autorisé de 5-10 min
-                const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
-                
-                for (let j = 0; j < effectiveSlotsNeeded; j++) {
-                  const targetMinutes = totalMin + (j * 15);
-                  if (!freeSlotsInMinutes.includes(targetMinutes)) {
-                    canFit = false;
-                    break;
-                  }
-                }
+              }
+            }
+          }
 
           const h = Math.floor(totalMin / 60);
           const m = totalMin % 60;
@@ -497,10 +491,21 @@ export class BookingComponent implements OnInit {
     });
   }
 
-  private formatDateLocal(d: Date): string {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  private formatDateLocal(d: any): string {
+    if (!d) return '';
+    
+    // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    // Sinon, on convertit en objet Date et on extrait les composants LOCAUX
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }

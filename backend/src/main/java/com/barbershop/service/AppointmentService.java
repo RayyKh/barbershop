@@ -56,88 +56,111 @@ public class AppointmentService {
     private PushNotificationService pushNotificationService;
 
     private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, boolean skipRamadanCheck, boolean isAdmin) {
-        // Ramadan Special Rule (Feb 19 - March 20)
-        if (!skipRamadanCheck && isRamadan(date)) {
-            // 1. Afternoon Window
-            boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
-            boolean isOpenFrom10 = isMarch2026 && date.getDayOfMonth() >= 17 && date.getDayOfMonth() <= 20;
-            boolean isOpenFrom12 = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 16;
-            boolean isLateEveningExtendedDate = isMarch2026 && date.getDayOfMonth() >= 17 && date.getDayOfMonth() <= 20;
-            boolean isLateEveningEarlyCloseDate = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 16;
+        // 1. Ramadan and Special Extensions Validation
+        boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
+        int dayOfMonth = date.getDayOfMonth();
+        boolean isMarch21_2026 = isMarch2026 && dayOfMonth == 21;
 
-            LocalTime firstWindowStart = isOpenFrom10 ? LocalTime.of(10, 0) : (isOpenFrom12 ? LocalTime.of(12, 0) : LocalTime.of(12, 0));
-            boolean inFirstWindow = !startTime.isBefore(firstWindowStart) && !endTime.isAfter(LocalTime.of(17, 0));
-            // Admin can book until 18:00
-            if (isAdmin) {
-                inFirstWindow = !startTime.isBefore(firstWindowStart) && !endTime.isAfter(LocalTime.of(18, 0));
-            }
-
-            // 2. Evening & Night Window
-            // Determine allowed limits
-            boolean isSpecialDate = isMarch2026 && (date.getDayOfMonth() == 17 || date.getDayOfMonth() == 18 || date.getDayOfMonth() == 19);
-            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 21;
-
+        if (!skipRamadanCheck && (isRamadan(date) || isMarch21_2026)) {
             boolean validTime = false;
 
-            // Check Afternoon
-            if (inFirstWindow) validTime = true;
+            // Check Morning Extension Window
+            boolean isNightTo3ExtensionDate = isMarch2026 && (dayOfMonth == 18 || dayOfMonth == 19);
+            boolean isNightTo6ExtensionDate = isMarch2026 && (dayOfMonth == 20 || dayOfMonth == 21);
+            
+            LocalTime endOfMorning = LocalTime.MIDNIGHT;
+            if (isNightTo6ExtensionDate) endOfMorning = LocalTime.of(6, 15);
+            else if (isNightTo3ExtensionDate) endOfMorning = LocalTime.of(3, 15);
 
-            // Check Evening (Start >= 19:45)
-            if (!validTime && !startTime.isBefore(LocalTime.of(19, 45))) {
-                if (isAdmin) {
-                    // Admin can book anytime in evening (extends to next morning effectively)
+            if (!startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(6, 0))) {
+                if (isAdmin || (!startTime.isBefore(LocalTime.MIDNIGHT) && !endTime.isAfter(endOfMorning))) {
                     validTime = true;
-                } else if (isSpecialDate || isLateEveningExtendedDate) {
-                    validTime = !endTime.isBefore(startTime);
-                } else if (isLateEveningEarlyCloseDate) {
-                    validTime = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(21, 45));
-                } else {
-                    // Normal Client: End <= 22:00
-                    // Check if endTime is within 19:45-22:00
-                    // Note: endTime 22:00 is allowed.
-                    if (!endTime.isAfter(LocalTime.of(22, 0)) && !endTime.equals(LocalTime.MIDNIGHT)) {
+                }
+            }
+
+            // Check Afternoon Window
+            if (!validTime) {
+                boolean isOpenFrom10 = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+                boolean isOpenFrom12 = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
+                
+                LocalTime firstWindowStart;
+                if (isOpenFrom10 || isMarch21_2026) firstWindowStart = LocalTime.of(10, 0);
+                else if (isOpenFrom12) firstWindowStart = LocalTime.of(12, 0);
+                else firstWindowStart = LocalTime.of(12, 0);
+
+                LocalTime firstWindowEnd;
+                if (isMarch21_2026) firstWindowEnd = LocalTime.of(21, 0);
+                else if (isAdmin) firstWindowEnd = LocalTime.of(18, 0);
+                else firstWindowEnd = LocalTime.of(17, 0);
+
+                if (!startTime.isBefore(firstWindowStart) && !endTime.isAfter(firstWindowEnd)) {
+                    validTime = true;
+                }
+            }
+
+            // Check Evening Window (Only for Ramadan days)
+            if (!validTime && isRamadan(date) && !isMarch21_2026) {
+                if (isAdmin) {
+                    // Admin can book in the gap 18:00 - 19:45
+                    if (!startTime.isBefore(LocalTime.of(18, 0)) && !startTime.isAfter(LocalTime.of(19, 45))) {
                         validTime = true;
+                    }
+                }
+
+                if (!validTime && !startTime.isBefore(LocalTime.of(19, 45))) {
+                    LocalTime endOfEvening;
+                    boolean isSpecialDate = isMarch2026 && (dayOfMonth == 17 || dayOfMonth == 18 || dayOfMonth == 19);
+                    boolean isMarch16 = isMarch2026 && dayOfMonth == 16;
+                    boolean isLateEveningExtendedDate = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+                    boolean isLateEveningEarlyCloseDate = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
+
+                    if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
+                        validTime = !endTime.isBefore(startTime);
+                    } else if (isLateEveningEarlyCloseDate) {
+                        validTime = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(21, 45));
+                    } else {
+                        validTime = !endTime.isAfter(LocalTime.of(22, 0)) && !endTime.equals(LocalTime.MIDNIGHT);
                     }
                 }
             }
 
-            if (!validTime && isAdmin) {
-                LocalTime adminGapStart = LocalTime.of(16, 45);
-                LocalTime adminGapEnd = LocalTime.of(19, 45);
-                if (!startTime.isBefore(adminGapStart) && startTime.isBefore(adminGapEnd)) {
-                    validTime = true;
-                }
-            }
-
-            // Check Early Morning (00:00 - 03:00)
-            // This corresponds to the late night of the previous day
-            if (!validTime && !startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(3, 0))) {
-                if (isAdmin) {
-                    validTime = true;
-                } else if (isNightTo3ExtensionDate) {
-                    validTime = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(3, 0));
-                }
-            }
-            
             if (!validTime) {
                 throw new ConflictException("Pendant le Ramadan, les réservations ne sont pas autorisées à cette heure.");
             }
         }
 
-        // 1. Check conflicts with other appointments
-        List<Appointment> existing = appointmentRepository.findActiveByBarberAndDate(barberId, date);
+        // 2. Check conflicts with other ACTIVE appointments
+        // Fetch from previous day as well to catch appointments overlapping midnight
+        List<Appointment> currentDayAppts = appointmentRepository.findActiveByBarberAndDate(barberId, date);
+        List<Appointment> prevDayAppts = appointmentRepository.findActiveByBarberAndDate(barberId, date.minusDays(1));
+        
+        List<Appointment> existing = new ArrayList<>(currentDayAppts);
+        existing.addAll(prevDayAppts);
+
         for (Appointment appt : existing) {
             LocalTime aStart = appt.getStartTime();
             LocalTime aEnd = appt.getEndTime();
             
+            // Si le RDV est de la veille, il ne bloque que s'il finit APRÈS minuit (sur le jour actuel)
+            if (appt.getDate().equals(date.minusDays(1))) {
+                // Si end.isBefore(start), cela signifie qu'il a traversé minuit (ex: 23:45 -> 00:15)
+                // SAUF si end == 00:00, auquel cas il s'arrête pile au début du jour actuel
+                if (aEnd.equals(LocalTime.MIDNIGHT) || !aEnd.isBefore(aStart)) {
+                    continue;
+                }
+                aStart = LocalTime.MIDNIGHT;
+            }
+
             boolean aEndsAtMidnight = aEnd.equals(LocalTime.MIDNIGHT);
             boolean newEndsAtMidnight = endTime.equals(LocalTime.MIDNIGHT);
 
             boolean overlap;
             if (aEndsAtMidnight) {
-                overlap = startTime.isBefore(LocalTime.MAX) && endTime.isAfter(aStart);
-                if (newEndsAtMidnight) overlap = true;
+                // Si le RDV finit à minuit, il y a chevauchement si le nouveau créneau finit après le début du RDV
+                // (et commence avant minuit, ce qui est toujours vrai ici)
+                overlap = newEndsAtMidnight || endTime.isAfter(aStart);
             } else if (newEndsAtMidnight) {
+                // Si le nouveau créneau finit à minuit, il y a chevauchement s'il commence avant la fin du RDV
                 overlap = startTime.isBefore(aEnd);
             } else {
                 overlap = startTime.isBefore(aEnd) && endTime.isAfter(aStart);
@@ -148,7 +171,7 @@ public class AppointmentService {
             }
         }
 
-        // 2. Check conflicts with admin blockages
+        // 3. Check conflicts with admin blockages
         List<BlockedSlot> blockages = blockedSlotRepository.findByDate(date);
         for (BlockedSlot b : blockages) {
             boolean barberMatches = (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId)));
@@ -188,7 +211,7 @@ public class AppointmentService {
                         throw new ConflictException("Ce créneau est bloqué par l'administrateur.");
                     }
                 } catch (Exception e) {
-                    logger.error("Error parsing blockage time: '{}' - '{}'", b.getStartTime(), b.getEndTime(), e);
+                    logger.error("Error parsing blockage time: '{}'", b.getStartTime());
                 }
             }
         }
@@ -203,7 +226,7 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
-        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
+        if (barber.getName() != null && (barber.getName().equalsIgnoreCase("Ahmed") || barber.getName().equalsIgnoreCase("omar"))) {
             throw new BadRequestException("Ce barbier n'est plus disponible pour la réservation");
         }
         
@@ -327,111 +350,79 @@ public class AppointmentService {
     public List<LocalTime> getAvailableSlots(Long barberId, LocalDate date, boolean isAdmin) {
         List<LocalTime> allTimes = new ArrayList<>();
         
-        if (isRamadan(date)) {
-            // Ramadan hours logic
-            boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
-            int day = date.getDayOfMonth();
+        boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
+        int dayOfMonth = date.getDayOfMonth();
+        boolean isMarch21_2026 = isMarch2026 && dayOfMonth == 21;
 
-            // RÈGLES SPÉCIALES MARS 2026
-            boolean isClosedForClient = isMarch2026 && (day == 21 || day == 23);
-            boolean isMarch20ClientWindow = isMarch2026 && day == 20;
+        if (isRamadan(date) || isMarch21_2026) {
+            // 1. Morning Extension Window (00:00 - 06:15)
+            boolean isNightTo3ExtensionDate = isMarch2026 && (dayOfMonth == 18 || dayOfMonth == 19);
+            boolean isNightTo6ExtensionDate = isMarch2026 && (dayOfMonth == 20 || dayOfMonth == 21);
             
-            if (isClosedForClient && !isAdmin) {
-                return new ArrayList<>(); // Complètement fermé pour le client
-            }
-
-            if (isMarch20ClientWindow && !isAdmin) {
-                // Pour le 20 mars, le client ne voit QUE de 00:00 à 06:00
-                LocalTime t3 = LocalTime.MIDNIGHT;
-                LocalTime endOfMorning = LocalTime.of(6, 15);
-                while (t3.isBefore(endOfMorning)) {
-                    allTimes.add(t3);
-                    t3 = t3.plusMinutes(15);
+            LocalTime tMorning = LocalTime.MIDNIGHT;
+            LocalTime endOfMorning = LocalTime.MIDNIGHT;
+            if (isNightTo6ExtensionDate) endOfMorning = LocalTime.of(6, 15);
+            else if (isNightTo3ExtensionDate) endOfMorning = LocalTime.of(3, 15);
+            
+            while (tMorning.isBefore(endOfMorning)) {
+                if (!allTimes.contains(tMorning)) {
+                    allTimes.add(tMorning);
                 }
-                allTimes.sort(LocalTime::compareTo);
-                return getAvailableSlotsFromList(barberId, date, allTimes, blockedSlotRepository, appointmentRepository);
+                tMorning = tMorning.plusMinutes(15);
             }
 
-            // 1. Afternoon: 12:00 - 17:00 (18:00 Admin)
-            boolean isOpenFrom10 = isMarch2026 && day >= 17 && day <= 20;
-            boolean isOpenFrom12 = isMarch2026 && day >= 11 && day <= 16;
-            boolean isLateEveningExtendedDate = isMarch2026 && day >= 17 && day <= 20;
-            boolean isLateEveningEarlyCloseDate = isMarch2026 && day >= 11 && day <= 16;
+            // 2. Afternoon Window
+            boolean isOpenFrom10 = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+            boolean isOpenFrom12 = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
             
-            LocalTime t1 = isOpenFrom10 ? LocalTime.of(10, 0) : (isOpenFrom12 ? LocalTime.of(12, 0) : LocalTime.of(12, 0));
-            LocalTime endOfFirstWindow = isAdmin ? LocalTime.of(18, 0) : LocalTime.of(17, 0);
+            LocalTime tAfternoon;
+            if (isOpenFrom10 || isMarch21_2026) tAfternoon = LocalTime.of(10, 0);
+            else if (isOpenFrom12) tAfternoon = LocalTime.of(12, 0);
+            else tAfternoon = LocalTime.of(12, 0);
+
+            LocalTime endOfFirstWindow;
+            if (isMarch21_2026) endOfFirstWindow = LocalTime.of(21, 0);
+            else if (isAdmin) endOfFirstWindow = LocalTime.of(18, 0);
+            else endOfFirstWindow = LocalTime.of(17, 0);
             
-            while (t1.isBefore(endOfFirstWindow)) {
-                allTimes.add(t1);
-                t1 = t1.plusMinutes(15);
+            while (tAfternoon.isBefore(endOfFirstWindow)) {
+                if (!allTimes.contains(tAfternoon)) allTimes.add(tAfternoon);
+                tAfternoon = tAfternoon.plusMinutes(15);
             }
 
-            if (isAdmin) {
-                // Admin 24h/24 jusqu'au 19 mars inclus
-                if (isMarch2026 && day <= 19) {
-                    LocalTime tFull = LocalTime.MIDNIGHT;
-                    while (tFull.isBefore(LocalTime.MAX)) {
-                        if (!allTimes.contains(tFull)) {
-                            allTimes.add(tFull);
-                        }
-                        LocalTime next = tFull.plusMinutes(15);
-                        if (next.isBefore(tFull)) break;
-                        tFull = next;
-                    }
-                    allTimes.sort(LocalTime::compareTo);
-                    return getAvailableSlotsFromList(barberId, date, allTimes, blockedSlotRepository, appointmentRepository);
-                }
-
-                LocalTime tGap = LocalTime.of(18, 0);
-                while (tGap.isBefore(LocalTime.of(19, 45))) {
-                    allTimes.add(tGap);
-                    tGap = tGap.plusMinutes(15);
-                }
-            }
-            
-            // 2. Evening: 19:45 - ...
-            boolean isSpecialDate = isMarch2026 && (day == 17 || day == 18 || day == 19);
-            boolean isMarch16 = isMarch2026 && day == 16;
-            
-            LocalTime t2 = LocalTime.of(19, 45);
-            LocalTime endOfEvening;
-            
-            if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
-                endOfEvening = LocalTime.MAX;
-            } else if (isLateEveningEarlyCloseDate) {
-                endOfEvening = LocalTime.of(21, 45);
-            } else {
-                endOfEvening = LocalTime.of(22, 0);
-            }
-            
-            while (t2.isBefore(endOfEvening) && !t2.equals(LocalTime.MIDNIGHT)) {
-                allTimes.add(t2);
-                LocalTime next = t2.plusMinutes(15);
-                if (next.isBefore(t2) || next.equals(LocalTime.MIDNIGHT)) break;
-                t2 = next;
-            }
-            
-            // 3. Early Morning (00:00 - 06:00)
-            boolean isNightTo3ExtensionDate = isMarch2026 && day >= 18 && day <= 19;
-            boolean isNightTo6ExtensionDate = isMarch2026 && day == 20; // Le 19 au soir jusqu'à 06:00 le 20
-            
-            LocalTime t3 = LocalTime.MIDNIGHT;
-            LocalTime endOfMorning = (isNightTo6ExtensionDate) ? LocalTime.of(6, 15) : LocalTime.of(3, 15);
-            
-            while (t3.isBefore(endOfMorning)) {
-                boolean add = false;
+            // 3. Evening Window
+            if (isRamadan(date) && !isMarch21_2026) {
                 if (isAdmin) {
-                    add = true;
-                } else if (isNightTo3ExtensionDate || (isNightTo6ExtensionDate && date.getDayOfMonth() == 20)) {
-                    // Note: Si date est le 20, les créneaux 00:00-06:00 sont dispos pour le client
-                    add = true;
+                    LocalTime tGap = LocalTime.of(18, 0);
+                    while (tGap.isBefore(LocalTime.of(19, 45))) {
+                        if (!allTimes.contains(tGap)) allTimes.add(tGap);
+                        tGap = tGap.plusMinutes(15);
+                    }
+                }
+
+                LocalTime tEvening = LocalTime.of(19, 45);
+                LocalTime endOfEvening;
+                boolean isSpecialDate = isMarch2026 && (dayOfMonth == 17 || dayOfMonth == 18 || dayOfMonth == 19);
+                boolean isMarch16 = isMarch2026 && dayOfMonth == 16;
+                boolean isLateEveningExtendedDate = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+                boolean isLateEveningEarlyCloseDate = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
+
+                if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
+                    endOfEvening = LocalTime.MAX;
+                } else if (isLateEveningEarlyCloseDate) {
+                    endOfEvening = LocalTime.of(21, 45);
+                } else {
+                    endOfEvening = LocalTime.of(22, 0);
                 }
                 
-                if (add && !allTimes.contains(t3)) {
-                    allTimes.add(t3);
+                while (tEvening.isBefore(endOfEvening) && !tEvening.equals(LocalTime.MIDNIGHT)) {
+                    if (!allTimes.contains(tEvening)) allTimes.add(tEvening);
+                    LocalTime next = tEvening.plusMinutes(15);
+                    if (next.isBefore(tEvening) || next.equals(LocalTime.MIDNIGHT)) break;
+                    tEvening = next;
                 }
-                t3 = t3.plusMinutes(15);
             }
+            
             allTimes.sort(LocalTime::compareTo);
             return getAvailableSlotsFromList(barberId, date, allTimes, blockedSlotRepository, appointmentRepository);
 
@@ -443,19 +434,12 @@ public class AppointmentService {
                 startOfDay = LocalTime.of(12, 0);
                 endOfDay = LocalTime.of(18, 0);
             } else {
-                // Heures d'ouverture spécifiques par barbier
-                // Aladin: 10h, Ahmed: 11h, Hamouda: 12h
                 Optional<Barber> barberOpt = barberRepository.findById(barberId);
                 if (barberOpt.isPresent()) {
                     String name = barberOpt.get().getName().toLowerCase();
-                    if (name.contains("hamouda")) {
-                        startOfDay = LocalTime.of(12, 0);
-                    } else if (name.contains("ahmed")) {
-                        startOfDay = LocalTime.of(11, 0);
-                    } else {
-                        // Aladin ou autres par défaut
-                        startOfDay = LocalTime.of(10, 0);
-                    }
+                    if (name.contains("hamouda")) startOfDay = LocalTime.of(12, 0);
+                    else if (name.contains("ahmed")) startOfDay = LocalTime.of(11, 0);
+                    else startOfDay = LocalTime.of(10, 0);
                 } else {
                     startOfDay = LocalTime.of(10, 0);
                 }
@@ -468,28 +452,16 @@ public class AppointmentService {
                 currentSlot = currentSlot.plusMinutes(15);
             }
             
-            // Admin Extension for Non-Ramadan (Permanent "From today")
-            // Special Case: March 21 (Next Day after Ramadan) - Everyone can book until 06:00
-            boolean isMarch21_2026 = date.getYear() == 2026 && date.getMonthValue() == 3 && date.getDayOfMonth() == 21;
-
-            if (isAdmin || isMarch21_2026) {
-                // 1. Fill gap if any between endOfDay and 03:00?
-                // Assuming endOfDay (21:00) is earlier than 03:00 (Next Day).
-                
-                // Add slots from endOfDay to 23:45
+            if (isAdmin) {
                 LocalTime late = endOfDay;
                 while (late.isBefore(LocalTime.MAX) && !late.equals(LocalTime.MIDNIGHT)) {
-                     // Check if late is before midnight
                      allTimes.add(late);
                      LocalTime next = late.plusMinutes(15);
                      if (next.isBefore(late) || next.equals(LocalTime.MIDNIGHT)) break;
                      late = next;
                 }
-                
-                // Add slots from 00:00 to 03:00 (or 06:00 for March 21)
                 LocalTime morning = LocalTime.MIDNIGHT;
-                LocalTime endOfMorning = isMarch21_2026 ? LocalTime.of(6, 15) : LocalTime.of(3, 15);
-                while (morning.isBefore(endOfMorning)) {
+                while (morning.isBefore(LocalTime.of(3, 15))) {
                     allTimes.add(morning);
                     morning = morning.plusMinutes(15);
                 }
@@ -500,120 +472,142 @@ public class AppointmentService {
     }
 
     private List<LocalTime> getAvailableSlotsFromList(Long barberId, LocalDate date, List<LocalTime> allTimes, BlockedSlotRepository blockedSlotRepository, AppointmentRepository appointmentRepository) {
-        // Check if the whole day is blocked by admin
+        // 1. Check if the whole day is blocked by admin
         List<BlockedSlot> dayBlockages = blockedSlotRepository.findByDate(date);
-        logger.info("Checking availability for barber {} on {}. Found {} total blockages.", barberId, date, dayBlockages.size());
-
-        boolean isWholeDayBlocked = dayBlockages.stream()
-                .anyMatch(b -> {
-                    boolean isNoTime = (b.getStartTime() == null || b.getStartTime().isBlank());
-                    boolean barberMatches = (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId)));
-                    if (isNoTime && barberMatches) {
-                        logger.info("Whole day is blocked for barber {} on {} (Blockage ID: {})", barberId, date, b.getId());
-                        return true;
-                    }
-                    return false;
-                });
         
-        if (isWholeDayBlocked) {
-            return new ArrayList<>();
-        }
-
-        // Fetch booked appointments
-        List<Appointment> bookedAppointments = appointmentRepository.findByBarber_IdAndDate(barberId, date);
-        logger.info("Found {} existing appointments for barber {} on {}", bookedAppointments.size(), barberId, date);
+        // 2. Fetch all appointments for this barber and date, then filter active ones in Java
+        // Fetch from previous day as well to catch appointments overlapping midnight
+        List<Appointment> currentDayAppts = appointmentRepository.findByBarber_IdAndDate(barberId, date);
+        List<Appointment> prevDayAppts = appointmentRepository.findByBarber_IdAndDate(barberId, date.minusDays(1));
         
+        List<Appointment> allAppts = new ArrayList<>(currentDayAppts);
+        allAppts.addAll(prevDayAppts);
+
+        List<Appointment> activeAppts = allAppts.stream()
+                .filter(a -> {
+                    AppointmentStatus s = a.getStatus();
+                    // BOOKED, MODIFIED, BLOCKED, DONE all occupy a slot
+                    return s == AppointmentStatus.BOOKED || 
+                           s == AppointmentStatus.MODIFIED || 
+                           s == AppointmentStatus.BLOCKED ||
+                           s == AppointmentStatus.DONE;
+                })
+                .toList();
+
+        logger.info("Barber {} on {}: found {} total and {} active appointments (including prev day)", barberId, date, allAppts.size(), activeAppts.size());
+
         List<LocalTime> availableSlots = new ArrayList<>();
         for (LocalTime time : allTimes) {
-            boolean isBooked = false;
             LocalTime slotEnd = time.plusMinutes(15);
             
-            // Correction for midnight handling: if slotEnd is MIDNIGHT, it should be treated as 23:59:59 for comparison
-            boolean slotEndsAtMidnight = slotEnd.equals(LocalTime.MIDNIGHT);
-
-            // 1. Check against appointments
-            for (Appointment appt : bookedAppointments) {
-                if (appt.getStatus() == AppointmentStatus.BOOKED || appt.getStatus() == AppointmentStatus.BLOCKED || appt.getStatus() == AppointmentStatus.MODIFIED) {
-                     LocalTime apptStart = appt.getStartTime();
-                     LocalTime apptEnd = appt.getEndTime();
-                     
-                     // Handling apptEnd at midnight
-                     boolean apptEndsAtMidnight = apptEnd.equals(LocalTime.MIDNIGHT);
-
-                     boolean overlap;
-                     if (apptEndsAtMidnight) {
-                         // If appointment ends at midnight, it overlaps if slot start is before midnight
-                         overlap = time.isBefore(LocalTime.MAX) && slotEnd.isAfter(apptStart);
-                         if (slotEndsAtMidnight) overlap = true; // both touch/cross midnight
-                     } else if (slotEndsAtMidnight) {
-                         overlap = time.isBefore(apptEnd);
-                     } else {
-                         overlap = time.isBefore(apptEnd) && slotEnd.isAfter(apptStart);
-                     }
-
-                     if (overlap) {
-                         isBooked = true;
-                         break;
-                     }
-                 }
-             }
+            // A slot is blocked if:
+            // - The whole day is blocked (unless it's early morning extension window)
+            // - There is an overlapping appointment
+            // - There is an overlapping specific blockage
             
-            // 2. Check against specific slot blockages
-            if (!isBooked) {
-                final LocalTime t = time;
-                final LocalTime tEnd = slotEnd;
-                final boolean tEndsAtMidnight = slotEndsAtMidnight;
+            boolean isBlocked = false;
 
-                boolean isSlotBlocked = dayBlockages.stream()
-                        .filter(b -> b.getStartTime() != null && !b.getStartTime().isBlank())
-                        .anyMatch(b -> {
-                            try {
-                                String bStartStr = b.getStartTime().trim();
-                                if (bStartStr.length() == 5) bStartStr += ":00";
-                                LocalTime bStart = LocalTime.parse(bStartStr);
-                                
-                                LocalTime bEnd;
-                                if (b.getEndTime() != null && !b.getEndTime().isBlank()) {
-                                    String bEndStr = b.getEndTime().trim();
-                                    if (bEndStr.length() == 5) bEndStr += ":00";
-                                    bEnd = LocalTime.parse(bEndStr);
-                                } else {
-                                    bEnd = bStart.plusMinutes(30);
-                                }
-                                
-                                boolean bEndsAtMidnight = bEnd.equals(LocalTime.MIDNIGHT);
-                                boolean barberMatches = (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId)));
-                                
-                                boolean overlap;
-                                if (bEndsAtMidnight) {
-                                    overlap = t.isBefore(LocalTime.MAX) && tEnd.isAfter(bStart);
-                                    if (tEndsAtMidnight) overlap = true;
-                                } else if (tEndsAtMidnight) {
-                                    overlap = t.isBefore(bEnd);
-                                } else {
-                                    overlap = t.isBefore(bEnd) && tEnd.isAfter(bStart);
-                                }
-                                
-                                if (barberMatches && overlap) {
-                                    logger.info("Slot {}-{} is blocked by blockage {}-{} (ID: {}) for barber {}", t, tEnd, bStart, bEnd, b.getId(), barberId);
-                                    return true;
-                                }
-                                return false;
-                            } catch (Exception e) {
-                                logger.error("Error parsing blockage time: '{}' - '{}'", b.getStartTime(), b.getEndTime(), e);
-                                return false;
-                            }
-                        });
-                if (isSlotBlocked) {
-                    isBooked = true;
+            // Whole day blockage check
+            boolean isMorningExtension = time.isBefore(LocalTime.of(7, 0));
+            boolean isWholeDayBlocked = dayBlockages.stream()
+                .anyMatch(b -> (b.getStartTime() == null || b.getStartTime().isBlank()) && 
+                               (b.getBarber() == null || (barberId != null && b.getBarber().getId().equals(barberId))));
+            
+            if (isWholeDayBlocked && !isMorningExtension) {
+                isBlocked = true;
+            }
+
+            // Check against appointments
+            if (!isBlocked) {
+                for (Appointment appt : activeAppts) {
+                    LocalTime start = appt.getStartTime();
+                    LocalTime end = appt.getEndTime();
+                    
+                    // Si le RDV est de la veille, il ne bloque que s'il finit APRÈS minuit (sur le jour actuel)
+                    if (appt.getDate().equals(date.minusDays(1))) {
+                        // Si end.isBefore(start), cela signifie qu'il a traversé minuit (ex: 23:45 -> 00:15)
+                        if (!end.isBefore(start) && !end.equals(LocalTime.MIDNIGHT)) {
+                            continue;
+                        }
+                        // Si c'est un RDV qui finit après minuit, pour aujourd'hui, il commence à 00:00
+                        // et finit à 'end' (qui est l'heure sur le jour actuel)
+                        start = LocalTime.MIDNIGHT;
+                    }
+
+                    boolean aEndsAtMidnight = end.equals(LocalTime.MIDNIGHT);
+                    boolean slotEndsAtMidnight = slotEnd.equals(LocalTime.MIDNIGHT);
+                    boolean apptCrossesMidnight = end.isBefore(start);
+
+                    boolean overlap;
+                    if (apptCrossesMidnight) {
+                        // Un RDV qui traverse minuit (ex: 23:30 -> 01:00)
+                        // Il bloque tout ce qui est après son début (23:30-00:00)
+                        // OU tout ce qui est avant sa fin (00:00-01:00)
+                        overlap = !time.isBefore(start) || time.isBefore(end);
+                    } else if (aEndsAtMidnight) {
+                        overlap = slotEndsAtMidnight || slotEnd.isAfter(start);
+                    } else if (slotEndsAtMidnight) {
+                        overlap = time.isBefore(end);
+                    } else {
+                        // Standard case: overlap if slot starts before appt ends AND slot ends after appt starts
+                        overlap = time.isBefore(end) && slotEnd.isAfter(start);
+                    }
+
+                    if (overlap) {
+                        logger.info("Slot {} is blocked by appointment {}-{} (date: {}, status: {})", time, appt.getStartTime(), appt.getEndTime(), appt.getDate(), appt.getStatus());
+                        isBlocked = true;
+                        break;
+                    }
                 }
             }
 
-            if (!isBooked) {
+            // Check against specific slot blockages
+            if (!isBlocked) {
+                for (BlockedSlot b : dayBlockages) {
+                    if (b.getStartTime() == null || b.getStartTime().isBlank()) continue;
+                    if (b.getBarber() != null && !b.getBarber().getId().equals(barberId)) continue;
+
+                    try {
+                        String bStartStr = b.getStartTime().trim();
+                        if (bStartStr.length() == 5) bStartStr += ":00";
+                        LocalTime bStart = LocalTime.parse(bStartStr);
+                        
+                        LocalTime bEnd;
+                        if (b.getEndTime() != null && !b.getEndTime().isBlank()) {
+                            String bEndStr = b.getEndTime().trim();
+                            if (bEndStr.length() == 5) bEndStr += ":00";
+                            bEnd = LocalTime.parse(bEndStr);
+                        } else {
+                            bEnd = bStart.plusMinutes(15);
+                        }
+
+                        boolean bEndsAtMidnight = bEnd.equals(LocalTime.MIDNIGHT);
+                        boolean slotEndsAtMidnight = slotEnd.equals(LocalTime.MIDNIGHT);
+
+                        boolean overlap;
+                        if (bEndsAtMidnight) {
+                            overlap = slotEndsAtMidnight || slotEnd.isAfter(bStart);
+                        } else if (slotEndsAtMidnight) {
+                            overlap = time.isBefore(bEnd);
+                        } else {
+                            overlap = time.isBefore(bEnd) && slotEnd.isAfter(bStart);
+                        }
+
+                        if (overlap) {
+                            logger.info("Slot {} is blocked by specific blockage {}-{}", time, bStart, bEnd);
+                            isBlocked = true;
+                            break;
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error parsing blockage time: {}", b.getStartTime());
+                    }
+                }
+            }
+
+            if (!isBlocked) {
                 availableSlots.add(time);
             }
         }
-        logger.info("Returning {} available slots for barber {} on {}", availableSlots.size(), barberId, date);
         return availableSlots;
     }
 
@@ -640,7 +634,7 @@ public class AppointmentService {
             boolean hasActiveAppointments = existingAppointments.stream()
                 .anyMatch(a -> a.getStatus() == AppointmentStatus.BOOKED || a.getStatus() == AppointmentStatus.MODIFIED);
             if (hasActiveAppointments) {
-                throw new ConflictException("Cette journée contient déjà une ou plusieurs réservations et ne peut donc pas être bloquée.");
+                logger.warn("Admin bloque une journée qui contient déjà des réservations. Date: {}", date);
             }
         } else {
             // Blocage d'un créneau spécifique
@@ -666,18 +660,19 @@ public class AppointmentService {
                         boolean aEndsAtMidnight = aEnd.equals(LocalTime.MIDNIGHT);
                         boolean bEndsAtMidnight = bEnd.equals(LocalTime.MIDNIGHT);
 
+                        boolean overlap;
                         if (aEndsAtMidnight) {
-                            if (bEndsAtMidnight) return true;
-                            return bStart.isBefore(LocalTime.MAX) && bEnd.isAfter(aStart);
+                            overlap = bEndsAtMidnight || bEnd.isAfter(aStart);
                         } else if (bEndsAtMidnight) {
-                            return bStart.isBefore(aEnd);
+                            overlap = bStart.isBefore(aEnd);
                         } else {
-                            return bStart.isBefore(aEnd) && bEnd.isAfter(aStart);
+                            overlap = bStart.isBefore(aEnd) && bEnd.isAfter(aStart);
                         }
+                        return overlap;
                     });
                 
                 if (hasActiveAppointments) {
-                    throw new ConflictException("Ce créneau contient déjà une réservation et ne peut donc pas être bloqué.");
+                    logger.warn("Admin bloque un créneau qui contient déjà une réservation. Date: {} Slot: {}-{}", date, bStart, bEnd);
                 }
             } catch (Exception e) {
                 if (e instanceof ConflictException) throw e;
@@ -706,6 +701,31 @@ public class AppointmentService {
         Appointment appt = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
         
+        // Règle spéciale de surclassement (Upgrade Rule)
+        boolean isSpecialUpgrade = false;
+        if (newServiceIds != null && !newServiceIds.isEmpty()) {
+            List<String> oldNames = appt.getServices().stream().map(com.barbershop.entity.Service::getName).toList();
+            List<com.barbershop.entity.Service> newServices = serviceRepository.findAllById(newServiceIds);
+            List<String> newNames = newServices.stream().map(com.barbershop.entity.Service::getName).toList();
+
+            boolean wasBasic = oldNames.size() == 1 && (
+                oldNames.contains("Coupe") || 
+                oldNames.contains("Barbe") || 
+                oldNames.contains("Barbe (courte)")
+            );
+            boolean isPack = newNames.size() == 1 && newNames.contains("Coupe + Barbe Dégradé + Fixation");
+            
+            boolean wasPack = oldNames.size() == 1 && oldNames.contains("Coupe + Barbe Dégradé + Fixation");
+            boolean isPackWithCire = newNames.size() == 2 && 
+                                   newNames.contains("Coupe + Barbe Dégradé + Fixation") && 
+                                   newNames.contains("Épilation à la cire");
+
+            if ((wasBasic && isPack) || (wasPack && isPackWithCire)) {
+                isSpecialUpgrade = true;
+                logger.info("Special Upgrade Rule applied for appointment {}. Bypassing conflict checks for duration extension.", appointmentId);
+            }
+        }
+
         // Update basic fields
         appt.setDate(newDate);
         appt.setStartTime(newStartTime);
@@ -742,21 +762,26 @@ public class AppointmentService {
         LocalTime validEndTime = newStartTime;
         LocalTime proposedEndTime = newStartTime.plusMinutes(requiredDuration);
         
-        // Iterate in 15 min slots
-        LocalTime checkTime = newStartTime;
-        while (checkTime.isBefore(proposedEndTime)) {
-            LocalTime nextSlot = checkTime.plusMinutes(15);
-            
-            if (isSlotAvailable(appt.getBarber().getId(), newDate, checkTime, nextSlot, appointmentId)) {
-                validEndTime = nextSlot;
-                checkTime = nextSlot;
-            } else {
-                break;
+        if (isSpecialUpgrade) {
+            // Force the proposed end time regardless of conflicts
+            validEndTime = proposedEndTime;
+        } else {
+            // Iterate in 15 min slots
+            LocalTime checkTime = newStartTime;
+            while (checkTime.isBefore(proposedEndTime)) {
+                LocalTime nextSlot = checkTime.plusMinutes(15);
+                
+                if (isSlotAvailable(appt.getBarber().getId(), newDate, checkTime, nextSlot, appointmentId)) {
+                    validEndTime = nextSlot;
+                    checkTime = nextSlot;
+                } else {
+                    break;
+                }
             }
-        }
-        
-        if (validEndTime.equals(newStartTime)) {
-             throw new ConflictException("Le créneau sélectionné n'est pas disponible.");
+            
+            if (validEndTime.equals(newStartTime)) {
+                 throw new ConflictException("Le créneau sélectionné n'est pas disponible.");
+            }
         }
 
         appt.setEndTime(validEndTime);
@@ -785,21 +810,67 @@ public class AppointmentService {
 
     private boolean isSlotAvailable(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, Long excludeAppointmentId) {
         // 1. Check Ramadan
-        if (isRamadan(date)) {
-            boolean inFirstWindow = !startTime.isBefore(LocalTime.of(12, 0)) && !endTime.isAfter(LocalTime.of(17, 0));
-            boolean inSecondWindow = !startTime.isBefore(LocalTime.of(19, 0)) && !endTime.isAfter(LocalTime.of(22, 0));
-            if (!inFirstWindow && !inSecondWindow) {
+        boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
+        boolean isMarch21_2026 = isMarch2026 && date.getDayOfMonth() == 21;
+
+        if (isRamadan(date) || (isMarch21_2026 && startTime.isBefore(LocalTime.of(6, 15)))) {
+            boolean isOpenFrom10 = isMarch2026 && date.getDayOfMonth() >= 17 && date.getDayOfMonth() <= 20;
+            boolean isOpenFrom12 = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 16;
+            boolean isLateEveningExtendedDate = isMarch2026 && date.getDayOfMonth() >= 17 && date.getDayOfMonth() <= 20;
+            boolean isLateEveningEarlyCloseDate = isMarch2026 && date.getDayOfMonth() >= 11 && date.getDayOfMonth() <= 16;
+            boolean isNightTo3ExtensionDate = isMarch2026 && date.getDayOfMonth() >= 18 && date.getDayOfMonth() <= 19;
+            boolean isNightTo6ExtensionDate = isMarch2026 && (date.getDayOfMonth() == 20 || date.getDayOfMonth() == 21);
+
+            LocalTime firstWindowStart = isOpenFrom10 ? LocalTime.of(10, 0) : (isOpenFrom12 ? LocalTime.of(12, 0) : LocalTime.of(12, 0));
+            boolean inFirstWindow = !startTime.isBefore(firstWindowStart) && !endTime.isAfter(LocalTime.of(17, 0));
+            
+            boolean inSecondWindow = false;
+            if (!startTime.isBefore(LocalTime.of(19, 45))) {
+                if (isLateEveningExtendedDate) {
+                    inSecondWindow = !endTime.isBefore(startTime);
+                } else if (isLateEveningEarlyCloseDate) {
+                    inSecondWindow = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(21, 45));
+                } else {
+                    inSecondWindow = !endTime.isAfter(LocalTime.of(22, 0)) && !endTime.equals(LocalTime.MIDNIGHT);
+                }
+            }
+            
+            boolean inThirdWindow = false;
+            if (!startTime.isBefore(LocalTime.MIDNIGHT) && !startTime.isAfter(LocalTime.of(6, 0))) {
+                if (isNightTo3ExtensionDate) {
+                    inThirdWindow = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(3, 15));
+                } else if (isNightTo6ExtensionDate) {
+                    inThirdWindow = !endTime.isBefore(startTime) && !endTime.isAfter(LocalTime.of(6, 15));
+                }
+            }
+
+            if (!inFirstWindow && !inSecondWindow && !inThirdWindow) {
                 return false;
             }
         }
 
         // 2. Check conflicts with other appointments
-        List<Appointment> existing = appointmentRepository.findActiveByBarberAndDate(barberId, date);
+        // Fetch from current and previous day to handle midnight overlaps
+        List<Appointment> currentDayAppts = appointmentRepository.findActiveByBarberAndDate(barberId, date);
+        List<Appointment> prevDayAppts = appointmentRepository.findActiveByBarberAndDate(barberId, date.minusDays(1));
+        
+        List<Appointment> existing = new ArrayList<>(currentDayAppts);
+        existing.addAll(prevDayAppts);
+
         boolean hasConflict = existing.stream().anyMatch(a -> {
             if (a.getId().equals(excludeAppointmentId)) return false;
             
             LocalTime aStart = a.getStartTime();
             LocalTime aEnd = a.getEndTime();
+            
+            // Si le RDV est de la veille, il ne bloque que s'il finit APRÈS minuit (sur le jour actuel)
+            if (a.getDate().equals(date.minusDays(1))) {
+                if (aEnd.equals(LocalTime.MIDNIGHT) || !aEnd.isBefore(aStart)) {
+                    return false;
+                }
+                aStart = LocalTime.MIDNIGHT;
+            }
+
             boolean aEndsAtMidnight = aEnd.equals(LocalTime.MIDNIGHT);
             boolean newEndsAtMidnight = endTime.equals(LocalTime.MIDNIGHT);
 
@@ -858,7 +929,7 @@ public class AppointmentService {
 
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
-        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
+        if (barber.getName() != null && (barber.getName().equalsIgnoreCase("Ahmed") || barber.getName().equalsIgnoreCase("omar"))) {
             throw new BadRequestException("Ce barbier n'est plus disponible");
         }
 
@@ -897,6 +968,28 @@ public class AppointmentService {
             throw new BadRequestException("At least one service must be selected");
         }
 
+        // Règle spéciale de surclassement (Upgrade Rule)
+        boolean isSpecialUpgrade = false;
+        List<String> oldNames = appt.getServices().stream().map(com.barbershop.entity.Service::getName).toList();
+        List<String> newNames = selectedServices.stream().map(com.barbershop.entity.Service::getName).toList();
+
+        boolean wasBasic = oldNames.size() == 1 && (
+            oldNames.contains("Coupe") || 
+            oldNames.contains("Barbe") || 
+            oldNames.contains("Barbe (courte)")
+        );
+        boolean isPack = newNames.size() == 1 && newNames.contains("Coupe + Barbe Dégradé + Fixation");
+        
+        boolean wasPack = oldNames.size() == 1 && oldNames.contains("Coupe + Barbe Dégradé + Fixation");
+        boolean isPackWithCire = newNames.size() == 2 && 
+                               newNames.contains("Coupe + Barbe Dégradé + Fixation") && 
+                               newNames.contains("Épilation à la cire");
+
+        if ((wasBasic && isPack) || (wasPack && isPackWithCire)) {
+            isSpecialUpgrade = true;
+            logger.info("Special Upgrade Rule applied for adminUpdateAppointment {}. Bypassing conflict checks.", id);
+        }
+
         int totalDuration = selectedServices.stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
         LocalTime endTime = startTime.plusMinutes(totalDuration);
 
@@ -915,7 +1008,9 @@ public class AppointmentService {
         }
 
         try {
-            checkConflicts(barberId, date, startTime, endTime, skipRamadanCheck, true); 
+            if (!isSpecialUpgrade) {
+                checkConflicts(barberId, date, startTime, endTime, skipRamadanCheck, true); 
+            }
         } catch (Exception e) {
             appt.setStatus(originalStatus);
             appointmentRepository.save(appt);

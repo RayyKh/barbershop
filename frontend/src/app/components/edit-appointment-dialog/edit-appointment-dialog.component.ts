@@ -55,7 +55,8 @@ export class EditAppointmentDialogComponent implements OnInit {
     this.barbers = data.barbers || [];
     this.services = data.services || [];
 
-    const apptDate = new Date(data.appointment.date);
+    // Fix UTC shift for date string from backend (YYYY-MM-DD)
+    const apptDate = this.parseDateLocal(data.appointment.date);
     const serviceIds = data.appointment.services ? data.appointment.services.map(s => s.id) : [];
     const barberId = data.appointment.barber ? data.appointment.barber.id : null;
     const clientName = data.appointment.user ? data.appointment.user.name : '';
@@ -71,10 +72,17 @@ export class EditAppointmentDialogComponent implements OnInit {
     });
   }
 
+  private parseDateLocal(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    // Utiliser des slashes et forcer l'heure à midi pour éviter tout décalage de fuseau horaire
+    // qui pourrait faire reculer la date d'un jour si interprétée à minuit.
+    return new Date(dateStr.replace(/-/g, '/') + ' 12:00:00');
+  }
+
   ngOnInit(): void {
     // Si les listes sont vides (ex: rechargement ou erreur de chargement parent), on les charge ici
     if (!this.barbers || this.barbers.length === 0) {
-      this.api.getBarbers().subscribe(b => this.barbers = b);
+      this.api.getBarbers(true).subscribe(b => this.barbers = b);
     }
     if (!this.services || this.services.length === 0) {
       this.api.getServices().subscribe(s => this.services = s);
@@ -93,7 +101,7 @@ export class EditAppointmentDialogComponent implements OnInit {
     const serviceIds = this.editForm.get('serviceIds')?.value;
 
     if (barberId && date) {
-      const dateStr = this.formatDateLocal(new Date(date));
+      const dateStr = this.formatDateLocal(date);
       
       this.api.getAvailableSlots(barberId, dateStr).subscribe(slots => {
         // Raw available slots from backend (start times)
@@ -223,11 +231,22 @@ export class EditAppointmentDialogComponent implements OnInit {
       this.allSlotsUI.forEach(s => s.isSelected = (s.time === slot.time));
   }
 
-  private formatDateLocal(d: Date): string {
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  private formatDateLocal(d: any): string {
+    if (!d) return '';
+    
+    // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    // Sinon, on convertit en objet Date et on extrait les composants LOCAUX
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   onSave() {
@@ -235,7 +254,7 @@ export class EditAppointmentDialogComponent implements OnInit {
       const val = this.editForm.value;
       const result = {
         ...val,
-        date: this.formatDateLocal(new Date(val.date)),
+        date: this.formatDateLocal(val.date),
         clientPhone: val.clientPhone // Add clientPhone here
       };
       this.dialogRef.close(result);

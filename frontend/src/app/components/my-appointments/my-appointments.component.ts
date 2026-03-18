@@ -108,7 +108,7 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
           
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef> Date </th>
-            <td mat-cell *matCellDef="let element"> {{element.date | date}} </td>
+            <td mat-cell *matCellDef="let element"> {{formatDisplayDate(element.date) | date}} </td>
           </ng-container>
 
           <ng-container matColumnDef="time">
@@ -214,7 +214,7 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
             <mat-card-content>
               <div class="card-row">
                 <span class="label">Date:</span>
-                <span class="value">{{element.date | date}}</span>
+                <span class="value">{{formatDisplayDate(element.date) | date}}</span>
               </div>
               <div class="card-row">
                 <span class="label">Heure:</span>
@@ -663,6 +663,12 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatDisplayDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    // Utiliser des slashes et forcer l'heure à midi pour éviter tout décalage de fuseau horaire
+    return new Date(dateStr.replace(/-/g, '/') + ' 12:00:00');
+  }
+
   logout() {
     localStorage.removeItem('lastUserFirstName');
     localStorage.removeItem('lastUserPhone');
@@ -1024,13 +1030,28 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     }
   }
 
+  private formatDateLocal(d: any): string {
+    if (!d) return '';
+    
+    // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    // Sinon, on convertit en objet Date et on extrait les composants LOCAUX
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   applyModify(a: Appointment) {
     const state = this.modifying[a.id];
     if (!state || !state.time) return;
-    const yyyy = state.date.getFullYear();
-    const mm = String(state.date.getMonth() + 1).padStart(2, '0');
-    const dd = String(state.date.getDate()).padStart(2, '0');
-    const dateStr = `${yyyy}-${mm}-${dd}`;
+    const dateStr = this.formatDateLocal(state.date);
     
     this.apiService.modifyAppointment(a.id, dateStr, state.time, state.serviceIds).subscribe({
       next: () => {

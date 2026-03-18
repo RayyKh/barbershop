@@ -1,14 +1,13 @@
 package com.barbershop.dto;
 
 import lombok.Data;
-import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Data
 public class AppointmentRequest {
     private Long barberId;
     private java.util.List<Long> serviceIds;
-    private LocalDate date;
+    private String date;
     private LocalTime startTime;
     
     // User details for guest booking
@@ -20,7 +19,7 @@ public class AppointmentRequest {
 
     public Long getBarberId() { return barberId; }
     public java.util.List<Long> getServiceIds() { return serviceIds; }
-    public LocalDate getDate() { return date; }
+    public String getDate() { return date; }
     public LocalTime getStartTime() { return startTime; }
     public String getUserName() { return userName; }
     public String getUserFirstName() { return userFirstName; }

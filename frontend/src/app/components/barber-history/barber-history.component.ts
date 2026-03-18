@@ -52,7 +52,7 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.api.getBarbers().subscribe(b => {
+    this.api.getBarbers(true).subscribe(b => {
       this.barbers = b;
       if (this.barbers.length > 0) {
         this.filterForm.patchValue({ barberId: this.barbers[0].id });
@@ -79,13 +79,33 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
     }
   }
 
+  formatDisplayDate(dateStr: string): Date {
+    if (!dateStr) return new Date();
+    // Utiliser des slashes et forcer l'heure à midi pour éviter tout décalage de fuseau horaire
+    return new Date(dateStr.replace(/-/g, '/') + ' 12:00:00');
+  }
+
+  formatDateLocal(d: any): string {
+    if (!d) return '';
+    if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   loadHistory(): void {
     const { barberId, period, selectedDate, searchTerm } = this.filterForm.value;
     if (!barberId) return;
 
+    const selectedDateStr = this.formatDateLocal(selectedDate);
+
     // On utilise l'API de filtrage existante. 
     this.api.filterAppointments({ barberId }).subscribe(data => {
-      const date = new Date(selectedDate);
+      // Utiliser formatDisplayDate pour éviter le décalage de timezone
+      const selectedDateObj = this.formatDisplayDate(selectedDateStr);
       
       this.appointments = data.filter(app => {
         // Exclure les simples blocages (BLOCKED) sans client de l'historique financier
@@ -93,28 +113,35 @@ export class BarberHistoryComponent implements OnInit, OnDestroy {
           return false;
         }
 
-        const appDate = new Date(app.date);
+        const appDate = this.formatDisplayDate(app.date);
         
         if (period === 'day') {
-          return appDate.toDateString() === date.toDateString();
+          return appDate.getFullYear() === selectedDateObj.getFullYear() &&
+                 appDate.getMonth() === selectedDateObj.getMonth() &&
+                 appDate.getDate() === selectedDateObj.getDate();
         } else if (period === 'week') {
-          const tempDate = new Date(date);
-          const firstDay = new Date(tempDate.setDate(tempDate.getDate() - tempDate.getDay()));
-          const lastDay = new Date(tempDate.setDate(tempDate.getDate() - tempDate.getDay() + 6));
-          // Reset hours for comparison
+          const tempDate = new Date(selectedDateObj);
+          const day = tempDate.getDay();
+          const diff = tempDate.getDate() - day + (day === 0 ? -6 : 1); // Lundi
+          const firstDay = new Date(tempDate.setDate(diff));
           firstDay.setHours(0, 0, 0, 0);
+          
+          const lastDay = new Date(firstDay);
+          lastDay.setDate(firstDay.getDate() + 6);
           lastDay.setHours(23, 59, 59, 999);
+          
           return appDate >= firstDay && appDate <= lastDay;
         } else if (period === 'month') {
-          return appDate.getMonth() === date.getMonth() && appDate.getFullYear() === date.getFullYear();
+          return appDate.getMonth() === selectedDateObj.getMonth() && 
+                 appDate.getFullYear() === selectedDateObj.getFullYear();
         }
         return true;
       });
 
       // Tri par date décroissante
       this.appointments.sort((a, b) => {
-        const dA = new Date(a.date + 'T' + a.startTime);
-        const dB = new Date(b.date + 'T' + b.startTime);
+        const dA = new Date(a.date.replace(/-/g, '/') + ' ' + a.startTime);
+        const dB = new Date(b.date.replace(/-/g, '/') + ' ' + b.startTime);
         return dB.getTime() - dA.getTime();
       });
 
