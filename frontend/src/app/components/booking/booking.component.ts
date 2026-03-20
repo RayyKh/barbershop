@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, OnInit, ViewChild, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { AnimationOptions, LottieComponent } from 'ngx-lottie';
+import { Subscription, interval } from 'rxjs';
 import { ApiService, AppointmentRequest, Barber, Service, User } from '../../services/api.service';
 import { LoaderComponent } from '../loader/loader.component';
 
@@ -49,7 +50,7 @@ export interface SlotUI {
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.scss']
 })
-export class BookingComponent implements OnInit {
+export class BookingComponent implements OnInit, OnDestroy {
   @ViewChild('stepper') stepper!: MatStepper;
   services: Service[] = [];
   barbers: Barber[] = [];
@@ -68,6 +69,7 @@ export class BookingComponent implements OnInit {
   };
 
   private cdr = inject(ChangeDetectorRef);
+  private slotsRefreshSub?: Subscription;
 
   isAdmin = false;
 
@@ -128,6 +130,14 @@ export class BookingComponent implements OnInit {
         });
       }
     }
+
+    this.slotsRefreshSub = interval(10000).subscribe(() => {
+      this.fetchSlots();
+    });
+  }
+
+  ngOnDestroy() {
+    this.slotsRefreshSub?.unsubscribe();
   }
 
   get canApplyReward(): boolean {
