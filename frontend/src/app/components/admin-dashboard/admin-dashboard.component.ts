@@ -344,6 +344,14 @@ export class AdminDashboardComponent implements OnInit {
       let startHour = 0;
       let endHour = 24;
 
+      const isManualTab = this.activeTab === 'manual';
+      const isMondayMarch23_2026 = dateStr === '2026-03-23';
+      const isTuesdayMarch24_2026 = dateStr === '2026-03-24';
+      if (isManualTab && (isMondayMarch23_2026 || isTuesdayMarch24_2026)) {
+        startHour = 10;
+        endHour = 12; // Uniquement de 10h à 12h
+      }
+
       const fullDaySlots: number[] = [];
       for (let h = startHour; h < endHour; h++) {
         // En tant qu'admin, on veut voir TOUTES les heures pour pouvoir bloquer n'importe quand

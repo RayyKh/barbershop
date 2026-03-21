@@ -60,9 +60,18 @@ public class AppointmentService {
         boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
         int dayOfMonth = date.getDayOfMonth();
         boolean isMarch21_2026 = isMarch2026 && dayOfMonth == 21;
+        boolean isMarch23_2026 = isMarch2026 && dayOfMonth == 23;
+        boolean isMarch24_2026 = isMarch2026 && dayOfMonth == 24;
 
-        if (!skipRamadanCheck && (isRamadan(date) || isMarch21_2026)) {
+        if (!skipRamadanCheck && (isRamadan(date) || isMarch21_2026 || isMarch23_2026 || isMarch24_2026)) {
             boolean validTime = false;
+            
+            // Special Rule for March 23 & 24, 2026: Admin only from 10:00 to 12:00
+            if (isMarch23_2026 || isMarch24_2026) {
+                if (isAdmin && !startTime.isBefore(LocalTime.of(10, 0)) && !endTime.isAfter(LocalTime.of(12, 0))) {
+                    validTime = true;
+                }
+            }
 
             // Check Morning Extension Window
             boolean isNightTo3ExtensionDate = isMarch2026 && (dayOfMonth == 18 || dayOfMonth == 19);
@@ -353,73 +362,87 @@ public class AppointmentService {
         boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
         int dayOfMonth = date.getDayOfMonth();
         boolean isMarch21_2026 = isMarch2026 && dayOfMonth == 21;
+        boolean isMarch23_2026 = isMarch2026 && dayOfMonth == 23;
+        boolean isMarch24_2026 = isMarch2026 && dayOfMonth == 24;
 
-        if (isRamadan(date) || isMarch21_2026) {
-            // 1. Morning Extension Window (00:00 - 06:15)
-            boolean isNightTo3ExtensionDate = isMarch2026 && (dayOfMonth == 18 || dayOfMonth == 19);
-            boolean isNightTo6ExtensionDate = isMarch2026 && (dayOfMonth == 20 || dayOfMonth == 21);
-            
-            LocalTime tMorning = LocalTime.MIDNIGHT;
-            LocalTime endOfMorning = LocalTime.MIDNIGHT;
-            if (isNightTo6ExtensionDate) endOfMorning = LocalTime.of(6, 15);
-            else if (isNightTo3ExtensionDate) endOfMorning = LocalTime.of(3, 15);
-            
-            while (tMorning.isBefore(endOfMorning)) {
-                if (!allTimes.contains(tMorning)) {
-                    allTimes.add(tMorning);
-                }
-                tMorning = tMorning.plusMinutes(15);
-            }
-
-            // 2. Afternoon Window
-            boolean isOpenFrom10 = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
-            boolean isOpenFrom12 = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
-            
-            LocalTime tAfternoon;
-            if (isOpenFrom10 || isMarch21_2026) tAfternoon = LocalTime.of(10, 0);
-            else if (isOpenFrom12) tAfternoon = LocalTime.of(12, 0);
-            else tAfternoon = LocalTime.of(12, 0);
-
-            LocalTime endOfFirstWindow;
-            if (isMarch21_2026) endOfFirstWindow = LocalTime.of(21, 0);
-            else if (isAdmin) endOfFirstWindow = LocalTime.of(18, 0);
-            else endOfFirstWindow = LocalTime.of(17, 0);
-            
-            while (tAfternoon.isBefore(endOfFirstWindow)) {
-                if (!allTimes.contains(tAfternoon)) allTimes.add(tAfternoon);
-                tAfternoon = tAfternoon.plusMinutes(15);
-            }
-
-            // 3. Evening Window
-            if (isRamadan(date) && !isMarch21_2026) {
+        if (isRamadan(date) || isMarch21_2026 || isMarch23_2026 || isMarch24_2026) {
+            // Special Rule for March 23 & 24, 2026: Admin only from 10:00 to 12:00
+            if (isMarch23_2026 || isMarch24_2026) {
                 if (isAdmin) {
-                    LocalTime tGap = LocalTime.of(18, 0);
-                    while (tGap.isBefore(LocalTime.of(19, 45))) {
-                        if (!allTimes.contains(tGap)) allTimes.add(tGap);
-                        tGap = tGap.plusMinutes(15);
+                    LocalTime t = LocalTime.of(10, 0);
+                    while (t.isBefore(LocalTime.of(12, 0))) {
+                        allTimes.add(t);
+                        t = t.plusMinutes(15);
                     }
                 }
-
-                LocalTime tEvening = LocalTime.of(19, 45);
-                LocalTime endOfEvening;
-                boolean isSpecialDate = isMarch2026 && (dayOfMonth == 17 || dayOfMonth == 18 || dayOfMonth == 19);
-                boolean isMarch16 = isMarch2026 && dayOfMonth == 16;
-                boolean isLateEveningExtendedDate = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
-                boolean isLateEveningEarlyCloseDate = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
-
-                if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
-                    endOfEvening = LocalTime.MAX;
-                } else if (isLateEveningEarlyCloseDate) {
-                    endOfEvening = LocalTime.of(21, 45);
-                } else {
-                    endOfEvening = LocalTime.of(22, 0);
-                }
+                // No slots for clients on these days via this path (standard slots below)
+            } else {
+                // 1. Morning Extension Window (00:00 - 06:15)
+                boolean isNightTo3ExtensionDate = isMarch2026 && (dayOfMonth == 18 || dayOfMonth == 19);
+                boolean isNightTo6ExtensionDate = isMarch2026 && (dayOfMonth == 20 || dayOfMonth == 21);
                 
-                while (tEvening.isBefore(endOfEvening) && !tEvening.equals(LocalTime.MIDNIGHT)) {
-                    if (!allTimes.contains(tEvening)) allTimes.add(tEvening);
-                    LocalTime next = tEvening.plusMinutes(15);
-                    if (next.isBefore(tEvening) || next.equals(LocalTime.MIDNIGHT)) break;
-                    tEvening = next;
+                LocalTime tMorning = LocalTime.MIDNIGHT;
+                LocalTime endOfMorning = LocalTime.MIDNIGHT;
+                if (isNightTo6ExtensionDate) endOfMorning = LocalTime.of(6, 15);
+                else if (isNightTo3ExtensionDate) endOfMorning = LocalTime.of(3, 15);
+                
+                while (tMorning.isBefore(endOfMorning)) {
+                    if (!allTimes.contains(tMorning)) {
+                        allTimes.add(tMorning);
+                    }
+                    tMorning = tMorning.plusMinutes(15);
+                }
+
+                // 2. Afternoon Window
+                boolean isOpenFrom10 = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+                boolean isOpenFrom12 = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
+                
+                LocalTime tAfternoon;
+                if (isOpenFrom10 || isMarch21_2026) tAfternoon = LocalTime.of(10, 0);
+                else if (isOpenFrom12) tAfternoon = LocalTime.of(12, 0);
+                else tAfternoon = LocalTime.of(12, 0);
+
+                LocalTime endOfFirstWindow;
+                if (isMarch21_2026) endOfFirstWindow = LocalTime.of(21, 0);
+                else if (isAdmin) endOfFirstWindow = LocalTime.of(18, 0);
+                else endOfFirstWindow = LocalTime.of(17, 0);
+                
+                while (tAfternoon.isBefore(endOfFirstWindow)) {
+                    if (!allTimes.contains(tAfternoon)) allTimes.add(tAfternoon);
+                    tAfternoon = tAfternoon.plusMinutes(15);
+                }
+
+                // 3. Evening Window
+                if (isRamadan(date) && !isMarch21_2026) {
+                    if (isAdmin) {
+                        LocalTime tGap = LocalTime.of(18, 0);
+                        while (tGap.isBefore(LocalTime.of(19, 45))) {
+                            if (!allTimes.contains(tGap)) allTimes.add(tGap);
+                            tGap = tGap.plusMinutes(15);
+                        }
+                    }
+
+                    LocalTime tEvening = LocalTime.of(19, 45);
+                    LocalTime endOfEvening;
+                    boolean isSpecialDate = isMarch2026 && (dayOfMonth == 17 || dayOfMonth == 18 || dayOfMonth == 19);
+                    boolean isMarch16 = isMarch2026 && dayOfMonth == 16;
+                    boolean isLateEveningExtendedDate = isMarch2026 && dayOfMonth >= 17 && dayOfMonth <= 20;
+                    boolean isLateEveningEarlyCloseDate = isMarch2026 && dayOfMonth >= 11 && dayOfMonth <= 16;
+
+                    if (isAdmin || isSpecialDate || isLateEveningExtendedDate || isMarch16) {
+                        endOfEvening = LocalTime.MAX;
+                    } else if (isLateEveningEarlyCloseDate) {
+                        endOfEvening = LocalTime.of(21, 45);
+                    } else {
+                        endOfEvening = LocalTime.of(22, 0);
+                    }
+                    
+                    while (tEvening.isBefore(endOfEvening) && !tEvening.equals(LocalTime.MIDNIGHT)) {
+                        if (!allTimes.contains(tEvening)) allTimes.add(tEvening);
+                        LocalTime next = tEvening.plusMinutes(15);
+                        if (next.isBefore(tEvening) || next.equals(LocalTime.MIDNIGHT)) break;
+                        tEvening = next;
+                    }
                 }
             }
             
@@ -431,8 +454,13 @@ public class AppointmentService {
             LocalTime endOfDay;
 
             if (date.getDayOfWeek() == DayOfWeek.MONDAY) {
-                startOfDay = LocalTime.of(12, 0);
+                if (isAdmin && isMarch23_2026) startOfDay = LocalTime.of(10, 0);
+                else startOfDay = LocalTime.of(12, 0);
                 endOfDay = LocalTime.of(18, 0);
+            } else if (date.getDayOfWeek() == DayOfWeek.TUESDAY && isMarch24_2026) {
+                if (isAdmin) startOfDay = LocalTime.of(10, 0);
+                else startOfDay = LocalTime.of(10, 0); // Logic below will handle it
+                endOfDay = LocalTime.of(21, 0);
             } else {
                 Optional<Barber> barberOpt = barberRepository.findById(barberId);
                 if (barberOpt.isPresent()) {

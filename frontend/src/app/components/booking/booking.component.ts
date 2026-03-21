@@ -314,7 +314,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         const march11To15EarlyClose = isMarch2026 && day >= 11 && day <= 15;
 
         // NOUVELLES RÈGLE SPÉCIALES MARS 2026
-        const isClosedForClient = isMarch2026 && (day === 23); // Retiré le 21 car matin ouvert et après-midi normal
+        const isClosedForClient = isMarch2026 && (day === 23 || day === 24); 
         const isMarch20ClientWindow = isMarch2026 && day === 20;
         const isMarch21ClientMorning = isMarch2026 && day === 21;
         const isMarch22 = isMarch2026 && day === 22;
