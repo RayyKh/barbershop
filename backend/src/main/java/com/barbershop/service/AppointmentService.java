@@ -55,6 +55,43 @@ public class AppointmentService {
     @Autowired
     private PushNotificationService pushNotificationService;
 
+    private int toMinuteOfDay(LocalTime time) {
+        return time.getHour() * 60 + time.getMinute();
+    }
+
+    private List<int[]> toSegments(LocalTime start, LocalTime end) {
+        int startMin = toMinuteOfDay(start);
+        int endMin = toMinuteOfDay(end);
+
+        if (startMin == endMin) {
+            return List.of();
+        }
+
+        if (endMin == 0 && startMin > 0) {
+            return List.of(new int[] { startMin, 1440 });
+        }
+
+        if (endMin > startMin) {
+            return List.of(new int[] { startMin, endMin });
+        }
+
+        return List.of(new int[] { startMin, 1440 }, new int[] { 0, endMin });
+    }
+
+    private boolean timesOverlap(LocalTime startA, LocalTime endA, LocalTime startB, LocalTime endB) {
+        List<int[]> segmentsA = toSegments(startA, endA);
+        List<int[]> segmentsB = toSegments(startB, endB);
+
+        for (int[] a : segmentsA) {
+            for (int[] b : segmentsB) {
+                if (a[0] < b[1] && b[0] < a[1]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void checkConflicts(Long barberId, LocalDate date, LocalTime startTime, LocalTime endTime, boolean skipRamadanCheck, boolean isAdmin) {
         // 1. Ramadan and Special Extensions Validation
         boolean isMarch2026 = date.getYear() == 2026 && date.getMonthValue() == 3;
@@ -151,20 +188,7 @@ public class AppointmentService {
                 aStart = LocalTime.MIDNIGHT;
             }
 
-            boolean aEndsAtMidnight = aEnd.equals(LocalTime.MIDNIGHT);
-            boolean newEndsAtMidnight = endTime.equals(LocalTime.MIDNIGHT);
-
-            boolean overlap;
-            if (aEndsAtMidnight) {
-                // Si le RDV finit à minuit, il y a chevauchement si le nouveau créneau finit après le début du RDV
-                // (et commence avant minuit, ce qui est toujours vrai ici)
-                overlap = newEndsAtMidnight || endTime.isAfter(aStart);
-            } else if (newEndsAtMidnight) {
-                // Si le nouveau créneau finit à minuit, il y a chevauchement s'il commence avant la fin du RDV
-                overlap = startTime.isBefore(aEnd);
-            } else {
-                overlap = startTime.isBefore(aEnd) && endTime.isAfter(aStart);
-            }
+            boolean overlap = timesOverlap(startTime, endTime, aStart, aEnd);
 
             if (overlap) {
                 throw new ConflictException("Ce créneau n'est pas disponible car il contient déjà une réservation.");
@@ -194,18 +218,7 @@ public class AppointmentService {
                         bEnd = bStart.plusMinutes(15);
                     }
                     
-                    boolean bEndsAtMidnight = bEnd.equals(LocalTime.MIDNIGHT);
-                    boolean slotEndsAtMidnight = endTime.equals(LocalTime.MIDNIGHT);
-
-                    boolean overlap;
-                    if (bEndsAtMidnight) {
-                        overlap = startTime.isBefore(LocalTime.MAX) && endTime.isAfter(bStart);
-                        if (slotEndsAtMidnight) overlap = true;
-                    } else if (slotEndsAtMidnight) {
-                        overlap = startTime.isBefore(bEnd);
-                    } else {
-                        overlap = startTime.isBefore(bEnd) && endTime.isAfter(bStart);
-                    }
+                    boolean overlap = timesOverlap(startTime, endTime, bStart, bEnd);
 
                     if (overlap) {
                         throw new ConflictException("Ce créneau est bloqué par l'administrateur.");
@@ -534,24 +547,7 @@ public class AppointmentService {
                         start = LocalTime.MIDNIGHT;
                     }
 
-                    boolean aEndsAtMidnight = end.equals(LocalTime.MIDNIGHT);
-                    boolean slotEndsAtMidnight = slotEnd.equals(LocalTime.MIDNIGHT);
-                    boolean apptCrossesMidnight = end.isBefore(start);
-
-                    boolean overlap;
-                    if (apptCrossesMidnight) {
-                        // Un RDV qui traverse minuit (ex: 23:30 -> 01:00)
-                        // Il bloque tout ce qui est après son début (23:30-00:00)
-                        // OU tout ce qui est avant sa fin (00:00-01:00)
-                        overlap = !time.isBefore(start) || time.isBefore(end);
-                    } else if (aEndsAtMidnight) {
-                        overlap = slotEndsAtMidnight || slotEnd.isAfter(start);
-                    } else if (slotEndsAtMidnight) {
-                        overlap = time.isBefore(end);
-                    } else {
-                        // Standard case: overlap if slot starts before appt ends AND slot ends after appt starts
-                        overlap = time.isBefore(end) && slotEnd.isAfter(start);
-                    }
+                    boolean overlap = timesOverlap(time, slotEnd, start, end);
 
                     if (overlap) {
                         logger.info("Slot {} is blocked by appointment {}-{} (date: {}, status: {})", time, appt.getStartTime(), appt.getEndTime(), appt.getDate(), appt.getStatus());
@@ -581,17 +577,7 @@ public class AppointmentService {
                             bEnd = bStart.plusMinutes(15);
                         }
 
-                        boolean bEndsAtMidnight = bEnd.equals(LocalTime.MIDNIGHT);
-                        boolean slotEndsAtMidnight = slotEnd.equals(LocalTime.MIDNIGHT);
-
-                        boolean overlap;
-                        if (bEndsAtMidnight) {
-                            overlap = slotEndsAtMidnight || slotEnd.isAfter(bStart);
-                        } else if (slotEndsAtMidnight) {
-                            overlap = time.isBefore(bEnd);
-                        } else {
-                            overlap = time.isBefore(bEnd) && slotEnd.isAfter(bStart);
-                        }
+                        boolean overlap = timesOverlap(time, slotEnd, bStart, bEnd);
 
                         if (overlap) {
                             logger.info("Slot {} is blocked by specific blockage {}-{}", time, bStart, bEnd);
@@ -871,17 +857,7 @@ public class AppointmentService {
                 aStart = LocalTime.MIDNIGHT;
             }
 
-            boolean aEndsAtMidnight = aEnd.equals(LocalTime.MIDNIGHT);
-            boolean newEndsAtMidnight = endTime.equals(LocalTime.MIDNIGHT);
-
-            if (aEndsAtMidnight) {
-                if (newEndsAtMidnight) return true;
-                return startTime.isBefore(LocalTime.MAX) && endTime.isAfter(aStart);
-            } else if (newEndsAtMidnight) {
-                return startTime.isBefore(aEnd);
-            } else {
-                return startTime.isBefore(aEnd) && endTime.isAfter(aStart);
-            }
+            return timesOverlap(startTime, endTime, aStart, aEnd);
         });
         
         if (hasConflict) {
@@ -910,7 +886,7 @@ public class AppointmentService {
                         bEnd = bStart.plusMinutes(15);
                     }
                     
-                    if (startTime.isBefore(bEnd) && endTime.isAfter(bStart)) {
+                    if (timesOverlap(startTime, endTime, bStart, bEnd)) {
                         return false;
                     }
                 } catch (Exception e) {

@@ -3,15 +3,13 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterOutlet, Scroll } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { NavbarComponent } from './components/navbar/navbar.component';
-import { RamadanPopupComponent } from './components/ramadan-popup/ramadan-popup.component';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, NavbarComponent, RamadanPopupComponent],
+  imports: [CommonModule, RouterOutlet, NavbarComponent],
   template: `
     <app-navbar></app-navbar>
-    <app-ramadan-popup></app-ramadan-popup>
     <router-outlet></router-outlet>
   `,
   styles: [`
