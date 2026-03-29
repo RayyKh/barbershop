@@ -909,33 +909,32 @@ public class AppointmentService {
             throw new BadRequestException("Ce barbier n'est plus disponible");
         }
 
-        // Update Client Name if provided
-        if (clientName != null && !clientName.isBlank()) {
-            User user = appt.getUser();
-            if (user != null) {
-                user.setName(clientName);
-                userRepository.save(user);
-            }
-        }
+        User appointmentUser = appt.getUser();
+        if (appointmentUser != null) {
+            User targetUser = appointmentUser;
 
-        // Update Client Phone if provided
-        if (clientPhone != null && !clientPhone.isBlank()) {
-            User user = appt.getUser();
-            if (user != null) {
-                // Check if phone number is actually different to avoid unnecessary updates
-                if (!clientPhone.equals(user.getPhone())) {
-                    // Also check if the new phone number is already taken by another user
-                    Optional<User> existingUserWithNewPhone = userRepository.findByPhone(clientPhone);
-                    if (existingUserWithNewPhone.isPresent() && !existingUserWithNewPhone.get().getId().equals(user.getId())) {
-                        throw new ConflictException("Le numéro de téléphone " + clientPhone + " est déjà utilisé par un autre client.");
+            if (clientPhone != null && !clientPhone.isBlank()) {
+                String normalizedPhone = clientPhone.trim();
+                if (!normalizedPhone.equals(targetUser.getPhone())) {
+                    Optional<User> existingUserWithNewPhone = userRepository.findByPhone(normalizedPhone);
+                    if (existingUserWithNewPhone.isPresent() && !existingUserWithNewPhone.get().getId().equals(targetUser.getId())) {
+                        targetUser = existingUserWithNewPhone.get();
+                        appt.setUser(targetUser);
+                    } else {
+                        String previousPhone = targetUser.getPhone();
+                        targetUser.setPhone(normalizedPhone);
+                        if (previousPhone != null && previousPhone.equals(targetUser.getUsername())) {
+                            targetUser.setUsername(normalizedPhone);
+                        }
+                        targetUser = userRepository.save(targetUser);
                     }
-                    user.setPhone(clientPhone);
-                    // If username is based on phone, update it too
-                    if (user.getUsername().equals(appt.getUser().getPhone())) {
-                        user.setUsername(clientPhone);
-                    }
-                    userRepository.save(user);
                 }
+            }
+
+            if (clientName != null && !clientName.isBlank()) {
+                targetUser.setName(clientName.trim());
+                targetUser = userRepository.save(targetUser);
+                appt.setUser(targetUser);
             }
         }
 
