@@ -234,7 +234,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
     if (barber && date && selectedTime && selectedServices && selectedServices.length > 0) {
       const dateStr = this.formatDateLocal(date);
-      const totalDuration = selectedServices.reduce((acc, s) => acc + s.duration, 0);
+      const totalDuration = this.totalDurationForBarber(selectedServices, barber?.name);
       const slotsNeeded = Math.ceil(totalDuration / 15);
 
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
@@ -278,7 +278,7 @@ export class BookingComponent implements OnInit, OnDestroy {
 
     if (barber && date && selectedServices && selectedServices.length > 0) {
       const dateStr = this.formatDateLocal(date);
-      const totalDuration = selectedServices.reduce((acc, s) => acc + s.duration, 0);
+      const totalDuration = this.totalDurationForBarber(selectedServices, barber?.name);
 
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
         const now = new Date();
@@ -517,5 +517,19 @@ export class BookingComponent implements OnInit, OnDestroy {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private serviceDurationForBarber(service: Service, barberName?: string): number {
+    const name = (barberName || '').toLowerCase();
+    if (name === 'islem') {
+      const serviceName = (service?.name || '').toLowerCase();
+      if (serviceName === 'coupe') return 75;
+      if (serviceName === 'coupe + barbe dégradé + fixation') return 90;
+    }
+    return service?.duration || 0;
+  }
+
+  private totalDurationForBarber(services: Service[], barberName?: string): number {
+    return (services || []).reduce((acc, s) => acc + this.serviceDurationForBarber(s, barberName), 0);
   }
 }

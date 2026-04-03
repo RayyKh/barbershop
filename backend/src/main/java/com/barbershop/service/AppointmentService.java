@@ -55,6 +55,20 @@ public class AppointmentService {
     @Autowired
     private PushNotificationService pushNotificationService;
 
+    private int totalDurationForBarber(List<com.barbershop.entity.Service> services, Barber barber) {
+        String barberName = barber != null && barber.getName() != null ? barber.getName().toLowerCase() : "";
+        int total = 0;
+        for (com.barbershop.entity.Service s : services) {
+            int d = s.getDuration();
+            String n = s.getName() != null ? s.getName().toLowerCase() : "";
+            if (barberName.equals("islem")) {
+                if (n.equals("coupe")) d = 75;
+                else if (n.equals("coupe + barbe dégradé + fixation")) d = 90;
+            }
+            total += d;
+        }
+        return total;
+    }
     private int toMinuteOfDay(LocalTime time) {
         return time.getHour() * 60 + time.getMinute();
     }
@@ -239,7 +253,7 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
-        if (barber.getName() != null && (barber.getName().equalsIgnoreCase("Ahmed") || barber.getName().equalsIgnoreCase("omar"))) {
+        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
             throw new BadRequestException("Ce barbier n'est plus disponible pour la réservation");
         }
         
@@ -248,10 +262,7 @@ public class AppointmentService {
             throw new ResourceNotFoundException("No services selected");
         }
 
-        // Calculate total duration based on all selected services
-        int totalDuration = selectedServices.stream()
-                .mapToInt(com.barbershop.entity.Service::getDuration)
-                .sum();
+        int totalDuration = totalDurationForBarber(selectedServices, barber);
         
         LocalTime endTime = startTime.plusMinutes(totalDuration); 
 
@@ -740,8 +751,7 @@ public class AppointmentService {
             }
         }
 
-        // Calculate required duration
-        int requiredDuration = appt.getServices().stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
+        int requiredDuration = totalDurationForBarber(appt.getServices(), appt.getBarber());
         if (requiredDuration == 0) requiredDuration = 30; // Default
 
         // Best Effort Duration Adjustment
@@ -905,7 +915,7 @@ public class AppointmentService {
 
         Barber barber = barberRepository.findById(barberId)
                 .orElseThrow(() -> new ResourceNotFoundException("Barber not found"));
-        if (barber.getName() != null && (barber.getName().equalsIgnoreCase("Ahmed") || barber.getName().equalsIgnoreCase("omar"))) {
+        if (barber.getName() != null && barber.getName().equalsIgnoreCase("Ahmed")) {
             throw new BadRequestException("Ce barbier n'est plus disponible");
         }
 
@@ -965,7 +975,7 @@ public class AppointmentService {
             logger.info("Special Upgrade Rule applied for adminUpdateAppointment {}. Bypassing conflict checks.", id);
         }
 
-        int totalDuration = selectedServices.stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
+        int totalDuration = totalDurationForBarber(selectedServices, barber);
         LocalTime endTime = startTime.plusMinutes(totalDuration);
 
         // Temp change to avoid self-conflict

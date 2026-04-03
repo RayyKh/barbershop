@@ -819,7 +819,16 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
   getAppointmentDuration(appt: Appointment): number {
     if (!appt || !appt.services) return 0;
-    return appt.services.reduce((total, s) => total + (s.duration || 0), 0);
+    const isIslem = (appt.barber?.name || '').toLowerCase() === 'islem';
+    return appt.services.reduce((total, s) => {
+      let d = s.duration || 0;
+      const n = (s.name || '').toLowerCase();
+      if (isIslem) {
+        if (n === 'coupe') d = 75;
+        else if (n === 'coupe + barbe dégradé + fixation') d = 90;
+      }
+      return total + d;
+    }, 0);
   }
 
   getModifyDate(id: number): Date | null {
@@ -929,11 +938,21 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
       let totalDuration = 0;
       const selectedServiceIds = state.serviceIds || [];
       
+      const isIslem = (a.barber?.name || '').toLowerCase() === 'islem';
+
       if (selectedServiceIds.length > 0 && this.services.length > 0) {
         // Calculate from selected services
         selectedServiceIds.forEach(sid => {
           const s = this.services.find(srv => srv.id === sid);
-          if (s) totalDuration += s.duration;
+          if (s) {
+            let d = s.duration || 0;
+            const n = (s.name || '').toLowerCase();
+            if (isIslem) {
+              if (n === 'coupe') d = 75;
+              else if (n === 'coupe + barbe dégradé + fixation') d = 90;
+            }
+            totalDuration += d;
+          }
         });
       } else if (a.services && a.services.length > 0) {
         // Fallback to appointment services if something is wrong
@@ -951,12 +970,10 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
       
       const newSlotsUI: any[] = [];
       
-      fullDaySlots.forEach((totalMin, index) => {
+      fullDaySlots.forEach((totalMin) => {
         const isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
         
         if (isPast) return; // Masquer les créneaux passés
-
-        const isLastSlot = index === fullDaySlots.length - 1;
         
         let canFit = true;
         
@@ -969,8 +986,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
         // Strict Check: Ensure ALL needed slots are available.
         // This prevents a 15-min slot from expanding into a booked slot.
-        const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
-        for (let j = 0; j < effectiveSlotsNeeded; j++) {
+        for (let j = 0; j < slotsNeeded; j++) {
           const targetMinutes = totalMin + (j * 15);
           if (!freeSlotsInMinutes.includes(targetMinutes)) {
             canFit = false;

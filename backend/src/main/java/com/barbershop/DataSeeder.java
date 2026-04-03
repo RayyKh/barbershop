@@ -57,7 +57,11 @@ public class DataSeeder implements CommandLineRunner {
             u.setPassword(passwordEncoder.encode(rawPassword));
             return userRepository.save(u);
         });
-        Barber b = barberRepository.findAll().stream().filter(x -> name.equalsIgnoreCase(x.getName())).findFirst().orElse(new Barber());
+        Barber b = barberRepository.findByUser(linkedUser)
+                .orElseGet(() -> barberRepository.findAll().stream()
+                        .filter(x -> name.equalsIgnoreCase(x.getName()))
+                        .findFirst()
+                        .orElse(new Barber()));
         b.setName(name);
         b.setSpeciality(speciality);
         b.setPhoto(photo);
@@ -134,19 +138,19 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         saveOrUpdateBarber(
-                "omar",
+                "Islem",
                 "Fade Technicien",
-                "achref.jpeg",
-                "Barber professionnel, technique, rapide et créatif, garantissant des coupes précises et modernes.",
+                "islem.jpeg",
+                "Barbier qui prend son temps à l’écoute, attentif à ce que tu veux vraiment, avec une bonne ambiance et de vraies discussions",
                 "omar",
                 "aladinbarbershop2026#"
         );
 
         saveOrUpdateBarber(
                 "achref",
-                "Achref – Le Magicien",
+                "Le Magicien",
                 "omar2.jpeg",
-                "Achref se distingue par sa précision et son sens du détail. Il prend son temps, écoute son client et transforme chaque coupe en véritable œuvre.",
+                "Il se distingue par sa précision et son sens du détail. Il prend son temps, écoute son client et transforme chaque coupe en véritable œuvre.",
                 "achref",
                 "aladinbarbershop2026#"
         );

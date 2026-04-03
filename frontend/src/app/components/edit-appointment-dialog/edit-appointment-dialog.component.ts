@@ -147,10 +147,19 @@ export class EditAppointmentDialogComponent implements OnInit {
         const fullDaySlots = Array.from(slotsSet).sort((a, b) => a - b);
         
         // Calculate needed duration for NEW selected services
-        let totalDuration = 30; // Default
+        let totalDuration = 30;
         if (serviceIds && serviceIds.length > 0) {
             const selectedServices = this.services.filter(s => serviceIds.includes(s.id));
-            totalDuration = selectedServices.reduce((acc, s) => acc + s.duration, 0);
+            const isIslem = (this.barbers.find(b => b.id === barberId)?.name || '').toLowerCase() === 'islem';
+            totalDuration = selectedServices.reduce((acc, s) => {
+              let d = s.duration || 0;
+              const n = (s.name || '').toLowerCase();
+              if (isIslem) {
+                if (n === 'coupe') d = 75;
+                else if (n === 'coupe + barbe dégradé + fixation') d = 90;
+              }
+              return acc + d;
+            }, 0);
         }
         const slotsNeeded = Math.ceil(totalDuration / 15);
 

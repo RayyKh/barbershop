@@ -197,8 +197,8 @@ export class ApiService {
   getBarbers(includeDeactivated: boolean = false): Observable<Barber[]> {
     return this.http.get<Barber[]>(`${this.baseUrl}/barbers`).pipe(
       map((barbers) => {
-        // Exclure Ahmed et Omar côté frontend par défaut (clients)
-        const deactivated = ['ahmed', 'omar'];
+        // Exclure Ahmed côté frontend par défaut (clients)
+        const deactivated = ['ahmed'];
         const filtered = includeDeactivated ? barbers : barbers.filter(b => !deactivated.includes(b.name?.toLowerCase() || ''));
         const enriched = filtered.map(b => {
           if (b.name === 'Aladin') {

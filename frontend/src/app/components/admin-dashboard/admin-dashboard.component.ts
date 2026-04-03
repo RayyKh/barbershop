@@ -330,8 +330,17 @@ export class AdminDashboardComponent implements OnInit {
     
     const dateStr = this.formatDateLocal(date);
     const selectedServices = this.lockForm.get('services')?.value as Service[];
+    const isIslem = (barber.name || '').toLowerCase() === 'islem';
     const totalDuration = selectedServices && selectedServices.length > 0 
-      ? selectedServices.reduce((acc, s) => acc + s.duration, 0)
+      ? selectedServices.reduce((acc, s) => {
+          let d = s.duration || 0;
+          const n = (s.name || '').toLowerCase();
+          if (isIslem) {
+            if (n === 'coupe') d = 75;
+            else if (n === 'coupe + barbe dégradé + fixation') d = 90;
+          }
+          return acc + d;
+        }, 0)
       : 30; // Durée par défaut si aucun service sélectionné
 
     this.api.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
@@ -362,20 +371,16 @@ export class AdminDashboardComponent implements OnInit {
       const slotsNeeded = Math.ceil(totalDuration / 15);
       const newSlotsUI: SlotUI[] = [];
 
-      fullDaySlots.forEach((totalMin, index) => {
+      fullDaySlots.forEach((totalMin) => {
         let isPast = (dateStr === todayStr && totalMin <= (currentHour * 60 + currentMinute + 5));
         if (this.currentUser && this.currentUser.role === 'ADMIN') {
           isPast = false;
         }
         
-        const isLastSlot = index === fullDaySlots.length - 1;
-        
         let canFit = true;
         
         // Vérifier si toute la durée du service rentre
-        const effectiveSlotsNeeded = isLastSlot ? 1 : slotsNeeded;
-        
-        for (let j = 0; j < effectiveSlotsNeeded; j++) {
+        for (let j = 0; j < slotsNeeded; j++) {
           const targetMinutes = totalMin + (j * 15);
           if (!freeSlotsInMinutes.includes(targetMinutes)) {
             canFit = false;
