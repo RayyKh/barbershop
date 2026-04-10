@@ -170,6 +170,13 @@ export class BookingComponent implements OnInit, OnDestroy {
     return total;
   }
 
+  get totalSelectedDuration(): number {
+    const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
+    if (!selected || !selected.length) return 0;
+    const barber = this.bookingFormGroup.get('barberCtrl')?.value as Barber;
+    return this.totalDurationForBarber(selected, barber?.name);
+  }
+
   updateValidators() {
     const timeCtrl = this.bookingFormGroup.get('timeCtrl');
     
@@ -187,6 +194,16 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
   
   onBarberChange() {
+      const selectedServices = (this.bookingFormGroup.get('servicesCtrl')?.value as Service[]) || [];
+      const allowedServices = selectedServices.filter(service => !this.isServiceDisabledForSelectedBarber(service));
+
+      if (allowedServices.length !== selectedServices.length) {
+        this.bookingFormGroup.patchValue({
+          servicesCtrl: allowedServices,
+          timeCtrl: ''
+        });
+      }
+
       this.fetchSlots();
   }
 
@@ -531,5 +548,14 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   private totalDurationForBarber(services: Service[], barberName?: string): number {
     return (services || []).reduce((acc, s) => acc + this.serviceDurationForBarber(s, barberName), 0);
+  }
+
+  isServiceDisabledForSelectedBarber(service: Service): boolean {
+    const barber = this.bookingFormGroup.get('barberCtrl')?.value as Barber;
+    const barberName = (barber?.name || '').toLowerCase();
+    const serviceName = (service?.name || '').toLowerCase();
+    const isRestrictedService = serviceName === 'coupe + barbe + brushing';
+    const isRestrictedBarber = barberName === 'aladin' || barberName === 'islem';
+    return isRestrictedService && isRestrictedBarber;
   }
 }

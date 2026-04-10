@@ -204,16 +204,16 @@ export class ApiService {
           if (b.name === 'Aladin') {
             return {
               ...b,
-              speciality: b.speciality || 'Barber – Expert en Détails',
-              description: b.description || 'Perfectionniste dans les moindres détails : contours, barbe, finitions et rasage. Chaque coupe est soignée jusqu’à la dernière touche.',
+              speciality: 'Expert en Détails',
+              description: 'Perfectionniste dans les moindres détails : contours, barbe, finitions et rasage. Chaque coupe est soignée jusqu’à la dernière touche.',
               photo: b.photo || 'ala.jpeg'
             };
           }
           if (b.name === 'Hamouda') {
             return {
               ...b,
-              speciality: b.speciality || 'Barber – Style & Créativité',
-              description: b.description || 'Passionné par les tendances et la créativité. Il propose des looks uniques et modernes, avec une touche artistique qui fait la différence.',
+              speciality: 'Style & Créativité',
+              description: 'Passionné par les tendances et la créativité. Il propose des looks uniques et modernes, avec une touche artistique qui fait la différence.',
               photo: b.photo || 'hamouda.jpeg'
             };
           }

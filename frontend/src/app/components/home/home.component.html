@@ -92,7 +92,7 @@
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" *ngIf="!barber.photo" alt="{{ barber.name }}">
         </div>
         <div class="barber-info">
-          <h3>{{ barber.name }}</h3>
+          <h3>{{ barber.name | uppercase }}</h3>
           <p class="specialty">{{ barber.speciality }}</p>
           <p class="description" *ngIf="barber.description">{{ barber.description }}</p>
         </div>
@@ -104,7 +104,7 @@
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
         </div>
         <div class="barber-info">
-          <h3>Hamouda</h3>
+          <h3>HAMOUDA</h3>
           <p class="specialty">Barbier</p>
         </div>
       </div>
@@ -113,7 +113,7 @@
             <img src="https://images.unsplash.com/photo-1621605815971-fbc98d665033?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80" alt="Barber">
         </div>
         <div class="barber-info">
-          <h3>Aladin</h3>
+          <h3>ALADIN</h3>
           <p class="specialty">Barbier</p>
         </div>
       </div>

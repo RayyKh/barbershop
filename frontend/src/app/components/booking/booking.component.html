@@ -20,43 +20,7 @@
              Removing [autoFocus]="false" as it caused a build error. -->
         <mat-stepper orientation="vertical" linear #stepper class="custom-stepper" (selectionChange)="onStepChange($event)">
           
-          <!-- Step 1: Services -->
-          <mat-step [stepControl]="bookingFormGroup.get('servicesCtrl')!">
-            <ng-template matStepLabel>Choisir vos services</ng-template>
-            <div class="step-content">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Services</mat-label>
-                <mat-select formControlName="servicesCtrl" multiple panelClass="gold-theme-panel">
-                  <mat-option *ngFor="let service of services" [value]="service">
-                    <div class="service-option">
-                      <span class="service-name">{{service.name}}&nbsp;</span>
-                      <span class="service-price">{{service.price}} DT</span>
-                    </div>
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
-              
-              <div class="total-summary" *ngIf="totalSelectedPrice > 0">
-                <p>Total estimé : <strong>{{totalSelectedPrice}} DT</strong></p>
-              </div>
-
-              <!-- Loyalty Reward Application -->
-              <div class="loyalty-reward-selection" *ngIf="canApplyReward">
-                <mat-checkbox formControlName="useRewardCtrl" color="primary">
-                  <div class="reward-info">
-                    <mat-icon>card_giftcard</mat-icon>
-                    <span>Utiliser ma récompense (50% de réduction + Masque Noir gratuit)</span>
-                  </div>
-                </mat-checkbox>
-              </div>
-
-              <div class="actions">
-                <button mat-raised-button color="primary" matStepperNext [disabled]="bookingFormGroup.get('servicesCtrl')?.value?.length === 0">Suivant</button>
-              </div>
-            </div>
-          </mat-step>
-
-          <!-- Step 2: Barber -->
+          <!-- Step 1: Barber -->
           <mat-step [stepControl]="bookingFormGroup.get('barberCtrl')!">
             <ng-template matStepLabel>Choisir un barbier</ng-template>
             <div class="step-content">
@@ -69,8 +33,44 @@
                 </mat-select>
               </mat-form-field>
               <div class="actions">
+                <button mat-raised-button color="primary" matStepperNext [disabled]="!bookingFormGroup.get('barberCtrl')?.value">Suivant</button>
+              </div>
+            </div>
+          </mat-step>
+
+          <!-- Step 2: Services -->
+          <mat-step [stepControl]="bookingFormGroup.get('servicesCtrl')!">
+            <ng-template matStepLabel>Choisir vos services</ng-template>
+            <div class="step-content">
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Services</mat-label>
+                <mat-select formControlName="servicesCtrl" multiple panelClass="gold-theme-panel">
+                  <mat-option *ngFor="let service of services" [value]="service" [disabled]="isServiceDisabledForSelectedBarber(service)">
+                    <div class="service-option">
+                      <span class="service-name">{{service.name}}&nbsp;</span>
+                      <span class="service-price">{{service.price}} DT</span>
+                    </div>
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <div class="total-summary" *ngIf="totalSelectedPrice > 0">
+                <p>Total estimé : <strong>{{totalSelectedPrice}} DT</strong></p>
+                <p>Durée : <strong>{{ totalSelectedDuration }} min</strong></p>
+              </div>
+
+              <div class="loyalty-reward-selection" *ngIf="canApplyReward">
+                <mat-checkbox formControlName="useRewardCtrl" color="primary">
+                  <div class="reward-info">
+                    <mat-icon>card_giftcard</mat-icon>
+                    <span>Utiliser ma récompense (50% de réduction + Masque Noir gratuit)</span>
+                  </div>
+                </mat-checkbox>
+              </div>
+
+              <div class="actions">
                 <button mat-button matStepperPrevious>Retour</button>
-                <button mat-raised-button color="primary" matStepperNext>Suivant</button>
+                <button mat-raised-button color="primary" matStepperNext [disabled]="bookingFormGroup.get('servicesCtrl')?.value?.length === 0">Suivant</button>
               </div>
             </div>
           </mat-step>

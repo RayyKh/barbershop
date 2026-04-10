@@ -1,5 +1,5 @@
-import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Component, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { ApiService, Barber } from '../../services/api.service';
 
@@ -14,7 +14,7 @@ import { ApiService, Barber } from '../../services/api.service';
         <mat-card *ngFor="let barber of barbers" class="card">
           <img mat-card-image [src]="barber.photo" alt="Photo of {{barber.name}}">
           <mat-card-header>
-            <mat-card-title>{{barber.name}}</mat-card-title>
+            <mat-card-title>{{ barber.name | uppercase }}</mat-card-title>
             <mat-card-subtitle>{{barber.speciality}}</mat-card-subtitle>
           </mat-card-header>
         </mat-card>
