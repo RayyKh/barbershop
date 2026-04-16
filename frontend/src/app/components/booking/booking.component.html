@@ -28,7 +28,14 @@
                 <mat-label>Barbier</mat-label>
                 <mat-select formControlName="barberCtrl" (selectionChange)="onBarberChange()">
                   <mat-option *ngFor="let barber of barbers" [value]="barber">
-                    {{barber.name}}
+                    <div class="barber-option">
+                      <img
+                        class="barber-option-photo"
+                        [src]="'assets/' + barber.photo"
+                        [alt]="barber.name"
+                        onerror="this.src='assets/ala.jpeg'">
+                      <span>{{barber.name}}</span>
+                    </div>
                   </mat-option>
                 </mat-select>
               </mat-form-field>
