@@ -94,20 +94,19 @@
                 <mat-datepicker #picker></mat-datepicker>
               </mat-form-field>
       
-              <div *ngIf="allSlotsUI.length > 0" class="slots-container">
+              <div *ngIf="visibleSlotsUI.length > 0" class="slots-container">
                 <h3>Créneaux horaires :</h3>
                 <div class="slots-grid">
-                  <div *ngFor="let slot of allSlotsUI" 
+                  <div *ngFor="let slot of visibleSlotsUI" 
                        class="slot-item"
                        [class.available]="slot.isAvailable"
-                       [class.unavailable]="!slot.isAvailable"
                        [class.selected]="bookingFormGroup.get('timeCtrl')?.value === slot.time"
-                       (click)="slot.isAvailable ? selectSlot(slot.time) : null">
+                       (click)="selectSlot(slot.time)">
                     {{slot.time}}
                   </div>
                 </div>
               </div>
-              <div *ngIf="allSlotsUI.length === 0 && bookingFormGroup.get('dateCtrl')?.value && !isAdmin" class="no-slots">
+              <div *ngIf="visibleSlotsUI.length === 0 && bookingFormGroup.get('dateCtrl')?.value && !isAdmin" class="no-slots">
                   <p>Aucun créneau disponible pour cette date.</p>
               </div>
 

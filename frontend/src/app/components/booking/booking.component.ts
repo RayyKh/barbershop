@@ -73,6 +73,10 @@ export class BookingComponent implements OnInit, OnDestroy {
 
   isAdmin = false;
 
+  get visibleSlotsUI(): SlotUI[] {
+    return this.allSlotsUI.filter(slot => slot.isAvailable);
+  }
+
   constructor(
     private _formBuilder: FormBuilder,
     private apiService: ApiService,
