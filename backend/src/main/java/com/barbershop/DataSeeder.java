@@ -1,5 +1,11 @@
 package com.barbershop;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
 import com.barbershop.entity.Barber;
 import com.barbershop.entity.Product;
 import com.barbershop.entity.Service;
@@ -8,10 +14,6 @@ import com.barbershop.repository.BarberRepository;
 import com.barbershop.repository.ProductRepository;
 import com.barbershop.repository.ServiceRepository;
 import com.barbershop.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 @Component
 public class DataSeeder implements CommandLineRunner {
@@ -30,6 +32,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private void saveOrUpdateService(String name, String description, Double price, Integer duration) {
         Service service = serviceRepository.findByName(name).orElse(new Service());
@@ -82,6 +87,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
+        ensureRewardAppliedColumnDefaults();
+        ensureUserRewardsColumnsDefaults();
+
         // Create or Update Super Admin
         User admin = userRepository.findByUsername("superadmin123").orElse(new User());
         admin.setName("Super Admin");
@@ -173,6 +181,44 @@ public class DataSeeder implements CommandLineRunner {
             productRepository.save(new Product(null, "Lorenti Tokyo & Seoul Hair Styling Hard Wax", "La cire dure est conçue pour offrir une performance durable.", 15.0, "4th.jpeg"));
             productRepository.save(new Product(null, "Huile de conditionnement pour cheveux et barbes E Elegance", "fournit une hydratation et une nourriture intenses pour les cheveux et la barbe.", 20.0, "5th.jpeg"));
             productRepository.save(new Product(null, "LORENTI TOKYO & SEOUL Color Hair Wax Black No.10", "cette cire capillaire donne aux cheveux clairs une couleur vive et intense qui dure toute la journée.", 15.0, "6th.jpeg"));
+        }
+    }
+
+    private void ensureRewardAppliedColumnDefaults() {
+        try {
+            Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.columns " +
+                    "WHERE table_schema = DATABASE() " +
+                    "AND table_name = 'appointment' " +
+                    "AND column_name = 'reward_applied'",
+                    Integer.class
+            );
+
+            if (exists != null && exists == 0) {
+                jdbcTemplate.execute("ALTER TABLE appointment ADD COLUMN reward_applied TINYINT(1) NOT NULL DEFAULT 0");
+                System.out.println("Migration DB: colonne reward_applied ajoutée avec DEFAULT 0.");
+                return;
+            }
+
+            jdbcTemplate.execute("UPDATE appointment SET reward_applied = 0 WHERE reward_applied IS NULL");
+            jdbcTemplate.execute("ALTER TABLE appointment MODIFY COLUMN reward_applied TINYINT(1) NOT NULL DEFAULT 0");
+            System.out.println("Migration DB: colonne reward_applied forcée à NOT NULL DEFAULT 0.");
+        } catch (Exception ex) {
+            System.err.println("Migration DB warning (reward_applied): " + ex.getMessage());
+        }
+    }
+
+    private void ensureUserRewardsColumnsDefaults() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN available_rewards INT NOT NULL DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN total_appointments INT NOT NULL DEFAULT 0");
+            jdbcTemplate.execute("ALTER TABLE users MODIFY COLUMN used_rewards INT NOT NULL DEFAULT 0");
+            jdbcTemplate.execute("UPDATE users SET available_rewards = 0 WHERE available_rewards IS NULL");
+            jdbcTemplate.execute("UPDATE users SET total_appointments = 0 WHERE total_appointments IS NULL");
+            jdbcTemplate.execute("UPDATE users SET used_rewards = 0 WHERE used_rewards IS NULL");
+            System.out.println("Migration DB: colonnes rewards/users forcées à NOT NULL DEFAULT 0.");
+        } catch (Exception ex) {
+            System.err.println("Migration DB warning (users rewards): " + ex.getMessage());
         }
     }
 }
