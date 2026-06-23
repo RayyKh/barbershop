@@ -309,18 +309,21 @@ export class BookingComponent implements OnInit, OnDestroy {
 
         // 1. Définir la plage horaire complète
         const dayOfWeek = (date instanceof Date) ? date.getDay() : new Date(date).getDay();
+        const isMonday = dayOfWeek === 1;
+
         let startHour = 10;
+        let startMinute = 30;
         let endHour = 21;
 
         // Horaires spécifiques barbiers
         const name = barber.name.toLowerCase();
-        if (dayOfWeek === 1) { // Lundi
+        if (isMonday) {
           startHour = 12;
+          startMinute = 0;
           endHour = 18;
-        } else {
-          if (name.includes("hamouda")) startHour = 12;
-          else if (name.includes("ahmed")) startHour = 11;
-          else startHour = 10;
+        } else if (name.includes("hamouda")) {
+          startHour = 12;
+          startMinute = 0;
         }
 
         const [y, mMonth, day] = dateStr.split('-').map(Number);
@@ -356,15 +359,15 @@ export class BookingComponent implements OnInit, OnDestroy {
            }
         } else {
            // Comportement pour Admin ou pour Client (hors fenêtre spéciale 20 mars)
-           if (forceOpenFrom10) {
+           if (!isMonday && forceOpenFrom10) {
              startHour = 10;
-           } else if (forceOpenFrom12) {
+           } else if (!isMonday && forceOpenFrom12) {
              startHour = 12;
            }
 
-           if (forceLateEvening || isMarch16) {
+           if (!isMonday && (forceLateEvening || isMarch16)) {
              endHour = 24;
-           } else if (isRamadan && !isMarch22 && !isClosedForClient) {
+           } else if (!isMonday && isRamadan && !isMarch22 && !isClosedForClient) {
              endHour = 22;
            }
 
@@ -393,6 +396,7 @@ export class BookingComponent implements OnInit, OnDestroy {
                 if ((nightTo3 || nightTo6) && h >= (nightTo6 ? 7 : 4) && h < 10) continue;
 
                 for (let m = 0; m < 60; m += 15) {
+                  if (h === startHour && m < startMinute) continue;
                   const totalMin = h * 60 + m;
                   if (march11To15EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
                   slotsSet.add(totalMin);
