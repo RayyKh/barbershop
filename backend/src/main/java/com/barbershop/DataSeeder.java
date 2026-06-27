@@ -85,6 +85,13 @@ public class DataSeeder implements CommandLineRunner {
                 });
     }
 
+    private void deleteBarberIfExists(String name) {
+        barberRepository.findAll().stream()
+                .filter(x -> x.getName() != null && x.getName().equalsIgnoreCase(name))
+                .findFirst()
+                .ifPresent(barberRepository::delete);
+    }
+
     @Override
     public void run(String... args) throws Exception {
         ensureRewardAppliedColumnDefaults();
@@ -164,6 +171,7 @@ public class DataSeeder implements CommandLineRunner {
         );
         
         updateBarberPhoto("Hamouda", "hamouda2.jpeg");
+        deleteBarberIfExists("Mahdi");
 
         // Create or Update Default Products
         if (productRepository.count() < 10) {
