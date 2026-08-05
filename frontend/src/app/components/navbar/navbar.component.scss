@@ -60,6 +60,30 @@ $white: #ffffff;
   flex: 1 1 auto;
 }
 
+.lang-switch.desktop-only {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 10px;
+
+  .lang-btn {
+    min-width: 38px;
+    height: 30px;
+    line-height: 30px;
+    padding: 0 8px;
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 6px;
+    color: $gold !important;
+    font-size: 0.7rem;
+
+    &.active {
+      background: $gold;
+      color: $black !important;
+      border-color: $gold;
+    }
+  }
+}
+
 .nav-links.desktop-only {
   display: flex;
   align-items: center;
@@ -102,6 +126,11 @@ $white: #ffffff;
   button {
     color: $gold;
   }
+}
+
+.mobile-lang-switch {
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  margin-bottom: 4px;
 }
 
 // Global responsive adjustments

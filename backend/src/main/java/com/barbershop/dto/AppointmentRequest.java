@@ -1,13 +1,26 @@
 package com.barbershop.dto;
 
-import lombok.Data;
 import java.time.LocalTime;
+
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import lombok.Data;
 
 @Data
 public class AppointmentRequest {
+    @NotNull
     private Long barberId;
+
+    @NotEmpty
     private java.util.List<Long> serviceIds;
+
+    @NotBlank
+    @Pattern(regexp = "^\\d{2}/\\d{2}/\\d{4}$")
     private String date;
+
+    @NotNull
     private LocalTime startTime;
     
     // User details for guest booking
@@ -15,7 +28,6 @@ public class AppointmentRequest {
     private String userFirstName;
     private String userPhone;
     private String userEmail;
-    private boolean useReward;
 
     public Long getBarberId() { return barberId; }
     public java.util.List<Long> getServiceIds() { return serviceIds; }
@@ -25,6 +37,4 @@ public class AppointmentRequest {
     public String getUserFirstName() { return userFirstName; }
     public String getUserPhone() { return userPhone; }
     public String getUserEmail() { return userEmail; }
-    public boolean isUseReward() { return useReward; }
-    public void setUseReward(boolean useReward) { this.useReward = useReward; }
 }

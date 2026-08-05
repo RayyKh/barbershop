@@ -12,7 +12,7 @@ import { ApiService, Barber } from '../../services/api.service';
       <h2>Nos Barbiers</h2>
       <div class="cards">
         <mat-card *ngFor="let barber of barbers" class="card">
-          <img mat-card-image [src]="barber.photo" alt="Photo of {{barber.name}}">
+          <img mat-card-image [src]="'assets/' + barber.photo" alt="Photo of {{barber.name}}" onerror="this.src='assets/ala.jpeg'">
           <mat-card-header>
             <mat-card-title>{{ barber.name | uppercase }}</mat-card-title>
             <mat-card-subtitle>{{barber.speciality}}</mat-card-subtitle>

@@ -11,6 +11,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
+import { BookingTranslatePipe } from '../../i18n/booking-translate.pipe';
+import { BookingTranslationService } from '../../i18n/booking-translation.service';
 import { ApiService, Appointment, Service } from '../../services/api.service';
 
 @Component({
@@ -29,58 +31,20 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
     MatChipsModule, 
     MatCardModule, 
     MatSnackBarModule, 
-    MatIconModule
+    MatIconModule,
+    BookingTranslatePipe
   ],
   template: `
     <div class="container">
-      <!-- Loyalty Progress Section -->
-      <mat-card class="loyalty-card" *ngIf="isAuthenticated && user">
-        <mat-card-content>
-          <div class="loyalty-header">
-            <h3>Votre Fidélité</h3>
-            <div class="reward-badge" *ngIf="user.availableRewards > 0">
-              <mat-icon>card_giftcard</mat-icon>
-              <span>{{ user.availableRewards }} Récompense(s) disponible(s) !</span>
-            </div>
-          </div>
-          
-          <div class="loyalty-stats">
-            <div class="stat-item">
-              <span class="stat-value">{{ user.totalAppointments || 0 }}</span>
-              <span class="stat-label">Rendez-vous terminés</span>
-            </div>
-            <div class="stat-item progress-container">
-              <div class="progress-info">
-                <span>Progression vers la prochaine récompense</span>
-                <span>{{ (user.totalAppointments || 0) % 5 }}/5</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" [style.width.%]="((user.totalAppointments || 0) % 5) * 20"></div>
-              </div>
-              <p class="loyalty-tip" *ngIf="user.availableRewards > 0">
-                50% de réduction + Masque Noir gratuit sur votre prochaine réservation !
-              </p>
-              <p class="loyalty-tip" *ngIf="user.availableRewards === 0">
-                Encore {{ 5 - ((user.totalAppointments || 0) % 5) }} rendez-vous pour votre prochaine récompense !
-              </p>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value">{{ user.usedRewards || 0 }}</span>
-              <span class="stat-label">Récompenses utilisées</span>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
-
       <mat-card class="client-card">
         <mat-card-header>
-          <mat-card-title>Mes Rendez-vous</mat-card-title>
-          <mat-card-subtitle>Consultez, annulez ou modifiez vos réservations</mat-card-subtitle>
+          <mat-card-title>{{ t('my.title') }}</mat-card-title>
+          <mat-card-subtitle>{{ t('my.subtitle') }}</mat-card-subtitle>
           
           <div class="user-identity-chip" *ngIf="isAuthenticated && user">
             <mat-icon>person</mat-icon>
             <span>{{ user.name }} ({{ user.phone }})</span>
-            <button mat-icon-button (click)="logout()" title="Changer d'utilisateur">
+            <button mat-icon-button (click)="logout()" [title]="t('my.changeUser')">
               <mat-icon>logout</mat-icon>
             </button>
           </div>
@@ -91,14 +55,14 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
         <div class="search-section" *ngIf="!isAuthenticated">
            <form [formGroup]="idForm" (ngSubmit)="identify()" class="inline-search-form">
               <mat-form-field appearance="outline" class="search-field">
-                <mat-label>Votre Numéro de Téléphone</mat-label>
-                <input matInput formControlName="phone" placeholder="Ex: 20123456">
+                <mat-label>{{ t('my.phone.label') }}</mat-label>
+                <input matInput formControlName="phone" [placeholder]="t('my.phone.placeholder')">
                 <mat-icon matPrefix>phone</mat-icon>
                 <button mat-icon-button matSuffix type="submit" [disabled]="idForm.invalid">
                   <mat-icon>arrow_forward</mat-icon>
                 </button>
               </mat-form-field>
-              <p class="search-hint">Saisissez votre numéro pour accéder à vos rendez-vous.</p>
+              <p class="search-hint">{{ t('my.phone.hint') }}</p>
            </form>
         </div>
       
@@ -107,80 +71,79 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
         <table mat-table [dataSource]="appointments" class="mat-elevation-z8">
           
           <ng-container matColumnDef="date">
-            <th mat-header-cell *matHeaderCellDef> Date </th>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.date') }} </th>
             <td mat-cell *matCellDef="let element"> {{formatDisplayDate(element.date) | date}} </td>
           </ng-container>
 
           <ng-container matColumnDef="time">
-            <th mat-header-cell *matHeaderCellDef> Heure </th>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.time') }} </th>
             <td mat-cell *matCellDef="let element"> {{element.startTime.substring(0, 5)}} </td>
           </ng-container>
 
           <ng-container matColumnDef="service">
-            <th mat-header-cell *matHeaderCellDef> Services </th>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.services') }} </th>
             <td mat-cell *matCellDef="let element">
-              <div *ngFor="let s of element.services">• {{s.name}}</div>
-              <div class="total-price" [class.free]="element.rewardApplied">
+              <div *ngFor="let s of element.services">• {{ translateServiceName(s.name) }}</div>
+              <div class="total-price">
                 {{element.totalPrice}} DT
-                <span class="reward-tag" *ngIf="element.rewardApplied">OFFERT (Fidélité)</span>
               </div>
             </td>
           </ng-container>
 
           <ng-container matColumnDef="barber">
-            <th mat-header-cell *matHeaderCellDef> Barbier </th>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.barber') }} </th>
             <td mat-cell *matCellDef="let element"> {{element.barber.name}} </td>
           </ng-container>
 
           <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef> Statut </th>
-            <td mat-cell *matCellDef="let element"> {{element.status}} </td>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.status') }} </th>
+            <td mat-cell *matCellDef="let element"> {{ translateStatus(element.status) }} </td>
           </ng-container>
 
           <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef> Actions </th>
+            <th mat-header-cell *matHeaderCellDef> {{ t('my.table.actions') }} </th>
             <td mat-cell *matCellDef="let element">
               <div class="action-buttons">
                 <button mat-button color="warn" 
                         *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'"
                         (click)="cancel(element.id)">
-                  Annuler
+                  {{ t('my.action.cancel') }}
                 </button>
                 <button mat-button color="primary"
                         *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'"
                         (click)="toggleModify(element.id)">
-                  Modifier
+                  {{ t('my.action.modify') }}
                 </button>
               </div>
 
               <div class="modify-panel" *ngIf="isModifying(element.id)">
                 
                 <div class="services-selection" *ngIf="services.length > 0">
-                    <label class="grid-label">Services:</label>
+                    <label class="grid-label">{{ t('my.modify.services') }}</label>
                     <div class="service-chips">
                         <div *ngFor="let s of services" 
                              class="service-chip"
                              [class.selected]="isServiceSelected(element.id, s.id)"
                              (click)="toggleService(element.id, s.id)">
-                            {{s.name}}
+                            {{ translateServiceName(s.name) }}
                         </div>
                     </div>
                 </div>
 
                 <div class="warning-msg" *ngIf="isOriginalTimeInvalid(element.id)">
                     <mat-icon inline>error_outline</mat-icon>
-                    <span>Attention: La durée sélectionnée rend votre créneau actuel indisponible. Veuillez choisir un autre horaire.</span>
+                    <span>{{ t('my.modify.warning') }}</span>
                 </div>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Nouvelle date</mat-label>
+                  <mat-label>{{ t('my.modify.newDate') }}</mat-label>
                   <input matInput [matDatepicker]="picker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
                   <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                   <mat-datepicker #picker></mat-datepicker>
                 </mat-form-field>
 
                 <div class="hours-grid-container" *ngIf="getModifyUiSlots(element.id).length > 0">
-                  <label class="grid-label">Créneaux horaires:</label>
+                  <label class="grid-label">{{ t('my.modify.slots') }}</label>
                   <div class="slots-grid">
                     <div *ngFor="let slot of getModifyUiSlots(element.id)" 
                          class="slot-item"
@@ -194,10 +157,10 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
                 </div>
                 
                 <div *ngIf="getModifyUiSlots(element.id).length === 0" class="no-slots-msg">
-                   Veuillez sélectionner une date.
+                   {{ t('my.modify.pickDate') }}
                 </div>
 
-                <button mat-raised-button color="primary" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
+                <button mat-raised-button color="primary" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">{{ t('my.action.confirm') }}</button>
               </div>
             </td>
           </ng-container>
@@ -213,62 +176,62 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
           <mat-card class="mobile-appointment-card" *ngFor="let element of appointments">
             <mat-card-content>
               <div class="card-row">
-                <span class="label">Date:</span>
+                <span class="label">{{ t('my.mobile.date') }}</span>
                 <span class="value">{{formatDisplayDate(element.date) | date}}</span>
               </div>
               <div class="card-row">
-                <span class="label">Heure:</span>
+                <span class="label">{{ t('my.mobile.time') }}</span>
                 <span class="value">{{element.startTime.substring(0, 5)}}</span>
               </div>
               <div class="card-row">
-                <span class="label">Services:</span>
+                <span class="label">{{ t('my.mobile.services') }}</span>
                 <span class="value">
-                  <div *ngFor="let s of element.services" style="text-align: right">• {{s.name}}</div>
+                  <div *ngFor="let s of element.services" style="text-align: right">• {{ translateServiceName(s.name) }}</div>
                   <div style="text-align: right; font-weight: bold; color: #d4af37; margin-top: 4px;">{{element.totalPrice}} DT</div>
                 </span>
               </div>
               <div class="card-row">
-                <span class="label">Barbier:</span>
+                <span class="label">{{ t('my.mobile.barber') }}</span>
                 <span class="value">{{element.barber.name}}</span>
               </div>
               <div class="card-row">
-                <span class="label">Statut:</span>
-                <span class="value status-badge" [ngClass]="element.status.toLowerCase()">{{element.status}}</span>
+                <span class="label">{{ t('my.mobile.status') }}</span>
+                <span class="value status-badge" [ngClass]="element.status.toLowerCase()">{{ translateStatus(element.status) }}</span>
               </div>
               
               <div class="card-actions" *ngIf="element.status === 'BOOKED' || element.status === 'MODIFIED'">
-                <button mat-raised-button color="warn" (click)="cancel(element.id)">Annuler</button>
-                <button mat-raised-button color="primary" (click)="toggleModify(element.id)">Modifier</button>
+                <button mat-raised-button color="warn" (click)="cancel(element.id)">{{ t('my.action.cancel') }}</button>
+                <button mat-raised-button color="primary" (click)="toggleModify(element.id)">{{ t('my.action.modify') }}</button>
               </div>
 
               <div class="modify-panel mobile" *ngIf="isModifying(element.id)">
                 
                 <div class="services-selection" *ngIf="services.length > 0">
-                    <label class="grid-label">Services:</label>
+                    <label class="grid-label">{{ t('my.modify.services') }}</label>
                     <div class="service-chips">
                         <div *ngFor="let s of services" 
                              class="service-chip"
                              [class.selected]="isServiceSelected(element.id, s.id)"
                              (click)="toggleService(element.id, s.id)">
-                            {{s.name}}
+                            {{ translateServiceName(s.name) }}
                         </div>
                     </div>
                 </div>
 
                 <div class="warning-msg" *ngIf="isOriginalTimeInvalid(element.id)">
                     <mat-icon inline>error_outline</mat-icon>
-                    <span>Attention: La durée sélectionnée rend votre créneau actuel indisponible. Veuillez choisir un autre horaire.</span>
+                    <span>{{ t('my.modify.warning') }}</span>
                 </div>
 
                 <mat-form-field appearance="outline" class="full-width">
-                  <mat-label>Nouvelle date</mat-label>
+                  <mat-label>{{ t('my.modify.newDate') }}</mat-label>
                   <input matInput [matDatepicker]="mobilePicker" (dateChange)="onModifyDateChange($event, element)" [value]="getModifyDate(element.id)">
                   <mat-datepicker-toggle matIconSuffix [for]="mobilePicker"></mat-datepicker-toggle>
                   <mat-datepicker #mobilePicker></mat-datepicker>
                 </mat-form-field>
 
                 <div class="hours-grid-container" *ngIf="getModifyUiSlots(element.id).length > 0">
-                  <label class="grid-label">Créneaux horaires:</label>
+                  <label class="grid-label">{{ t('my.modify.slots') }}</label>
                   <div class="slots-grid">
                     <div *ngFor="let slot of getModifyUiSlots(element.id)" 
                          class="slot-item"
@@ -282,10 +245,10 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
                 </div>
                 
                 <div *ngIf="getModifyUiSlots(element.id).length === 0" class="no-slots-msg">
-                   Veuillez sélectionner une date.
+                   {{ t('my.modify.pickDate') }}
                 </div>
 
-                <button mat-raised-button color="primary" class="full-width" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">Confirmer</button>
+                <button mat-raised-button color="primary" class="full-width" [disabled]="!getModifyTime(element.id)" (click)="applyModify(element)">{{ t('my.action.confirm') }}</button>
               </div>
             </mat-card-content>
           </mat-card>
@@ -293,7 +256,7 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
       </div>
       
       <div *ngIf="appointments.length === 0" class="empty-state">
-          <p>Vous n'avez aucun rendez-vous (ou vous n'êtes pas connecté).</p>
+          <p>{{ t('my.empty') }}</p>
       </div>
         </mat-card-content>
       </mat-card>
@@ -304,42 +267,6 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
     .container { max-width: 1200px; margin: 0 auto; padding: 120px 20px 40px; }
     .client-card { color: #fff; background: #000 !important; border: 1px solid #d4af37 !important; border-radius: 12px; }
     
-    .loyalty-card { 
-      color: #fff; 
-      background: #121212 !important; 
-      border: 1px solid #d4af37 !important; 
-      border-radius: 12px; 
-      margin-bottom: 24px;
-      padding: 8px;
-    }
-    .loyalty-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    .loyalty-header h3 { color: #d4af37; margin: 0; font-family: 'Playfair Display', serif; font-size: 1.5rem; }
-    .reward-badge { 
-      display: flex; 
-      align-items: center; 
-      gap: 8px; 
-      background: rgba(212, 175, 55, 0.2); 
-      color: #d4af37; 
-      padding: 8px 16px; 
-      border-radius: 20px; 
-      border: 1px solid #d4af37;
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-      70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-    }
-    .loyalty-stats { display: flex; gap: 24px; align-items: flex-start; }
-    .stat-item { display: flex; flex-direction: column; align-items: center; text-align: center; }
-    .stat-value { font-size: 2rem; font-weight: bold; color: #d4af37; }
-    .stat-label { font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-    .progress-container { flex: 1; align-items: stretch; text-align: left; }
-    .progress-info { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #fff; }
-    .progress-bar-bg { background: rgba(255,255,255,0.1); height: 12px; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
-    .progress-bar-fill { background: linear-gradient(90deg, #d4af37, #f1c40f); height: 100%; transition: width 0.5s ease-out; }
-    .loyalty-tip { font-size: 0.85rem; color: #d4af37; font-style: italic; margin: 0; }
-
     .client-card mat-card-header { margin-bottom: 20px; }
     .client-card mat-card-header mat-card-title { color: #d4af37; font-size: 1.8rem; font-family: 'Playfair Display', serif; }
     
@@ -380,18 +307,6 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
     
     .action-buttons { display: flex; gap: 8px; }
     .total-price { color: #d4af37; font-weight: bold; margin-top: 4px; font-size: 1.1rem; }
-    .total-price.free { color: #2ecc71; text-decoration: line-through; opacity: 0.7; font-size: 0.9rem; }
-    .reward-tag { 
-      display: inline-block; 
-      background: #2ecc71; 
-      color: #fff; 
-      padding: 2px 8px; 
-      border-radius: 4px; 
-      font-size: 0.75rem; 
-      margin-left: 8px; 
-      text-decoration: none !important;
-      opacity: 1 !important;
-    }
     .modify-panel { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
     
     .services-selection { margin-bottom: 12px; }
@@ -502,10 +417,6 @@ import { ApiService, Appointment, Service } from '../../services/api.service';
       .client-card mat-card-header mat-card-title { font-size: 1.4rem; }
       .id-form-row mat-form-field { min-width: 100%; }
       .user-identity-chip { margin-left: 0; margin-top: 10px; width: 100%; justify-content: space-between; }
-      .loyalty-header { flex-direction: column; align-items: flex-start; }
-      .loyalty-stats { flex-direction: column; gap: 16px; width: 100%; }
-      .stat-item { width: 100%; flex-direction: row; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
-      .stat-value { font-size: 1.4rem; }
     }
 
     .appointment-cards { display: flex; flex-direction: column; gap: 16px; }
@@ -581,7 +492,12 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
   contactPhone: string = '';
   private refreshInterval: any;
 
-  constructor(private apiService: ApiService, private snackBar: MatSnackBar, private fb: FormBuilder) {
+  constructor(
+    private apiService: ApiService,
+    private snackBar: MatSnackBar,
+    private fb: FormBuilder,
+    private i18n: BookingTranslationService
+  ) {
     // Initialisation du formulaire d'identification
     this.idForm = this.fb.group({
       firstName: [''], // Optionnel, gardé pour la forme
@@ -595,7 +511,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     });
 
     this.apiService.appointmentBooked$.subscribe(() => {
-      this.snackBar.open('Nouveau rendez-vous ajouté', 'OK', { duration: 3000 });
+      this.snackBar.open(this.t('my.snack.added'), this.t('common.ok'), { duration: 3000 });
       this.reloadAppointments();
     });
 
@@ -653,11 +569,11 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
                id: 0 
              }; 
           }
-          this.snackBar.open('Bienvenue !', 'Fermer', { duration: 3000 });
+          this.snackBar.open(this.t('my.snack.welcome'), this.t('common.close'), { duration: 3000 });
         },
         error: (err) => {
           console.error('Erreur lors de la récupération des rendez-vous', err);
-          this.snackBar.open('Aucun rendez-vous trouvé pour ce numéro.', 'Fermer', { duration: 3000 });
+          this.snackBar.open(this.t('my.snack.none'), this.t('common.close'), { duration: 3000 });
         }
       });
     }
@@ -690,7 +606,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     this.contactEmail = savedEmail || '';
     this.contactPhone = savedPhone || '';
 
-    // Refresh user profile if logged in to get latest loyalty points
+    // Refresh user profile if logged in
     if (token) {
       console.log('Refreshing user profile for logged in user...');
       this.apiService.getCurrentUser().subscribe({
@@ -751,7 +667,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
 
         this.appointments = updatedAppointments;
 
-        // Extract latest user info from the most recent appointment to ensure loyalty points are updated.
+        // Extract latest user info from the most recent appointment.
         // We do this if we are not logged in, OR if the logged-in user is an ADMIN (to allow testing the client dashboard).
         const isGuestMode = !token;
         const isAdminMode = this.user && (this.user.role === 'ADMIN' || (this.user.roles && this.user.roles.includes('ROLE_ADMIN')));
@@ -780,9 +696,9 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
   
 
   cancel(id: number) {
-    if (confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) {
+    if (confirm(this.t('my.confirm.cancel'))) {
       this.apiService.cancelAppointment(id).subscribe(() => {
-        this.snackBar.open('Rendez-vous annulé', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t('my.snack.cancelled'), this.t('common.ok'), { duration: 3000 });
         this.reloadAppointments();
       });
     }
@@ -860,7 +776,7 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
         state.serviceIds.splice(index, 1);
       } else {
         // Prevent deselecting all services (at least one required)
-        this.snackBar.open('Vous devez sélectionner au moins un service.', 'OK', { duration: 2000 });
+        this.snackBar.open(this.t('my.snack.selectOneService'), this.t('common.ok'), { duration: 2000 });
         return;
       }
     } else {
@@ -1072,17 +988,46 @@ export class MyAppointmentsComponent implements OnInit, OnDestroy {
     this.apiService.modifyAppointment(a.id, dateStr, state.time, state.serviceIds).subscribe({
       next: () => {
         delete this.modifying[a.id];
-        this.snackBar.open('Rendez-vous modifié', 'OK', { duration: 3000 });
+        this.snackBar.open(this.t('my.snack.modified'), this.t('common.ok'), { duration: 3000 });
         this.reloadAppointments();
       },
       error: (err) => {
-        let errorMsg = 'Erreur modification';
+        let errorMsg = this.t('my.snack.modifyError');
         if (err.error && typeof err.error === 'string') errorMsg = err.error;
         else if (err.error && err.error.message) errorMsg = err.error.message;
         else if (err.message) errorMsg = err.message;
         
-        this.snackBar.open(errorMsg, 'OK', { duration: 5000 });
+        this.snackBar.open(errorMsg, this.t('common.ok'), { duration: 5000 });
       }
     });
+  }
+
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
+
+  translateServiceName(name: string): string {
+    const map: Record<string, string> = {
+      'coupe': 'service.coupe',
+      'barbe': 'service.barbe',
+      'barbe (courte)': 'service.barbeCourte',
+      'coupe + barbe': 'service.coupeBarbe',
+      'coupe + barbe + brushing': 'service.coupeBarbeBrushing',
+      'coupe + barbe dégradé + fixation': 'service.coupeBarbeDegradeFixation',
+      'tresse': 'service.tresse',
+      'mèches': 'service.meches',
+      'meches': 'service.meches',
+      'epilation à la cire': 'service.epilationCire',
+      'épilation à la cire': 'service.epilationCire',
+      'masque noir': 'service.masqueNoir',
+      'fixation': 'service.fixation',
+      'brushing': 'service.brushing'
+    };
+    const key = map[(name || '').trim().toLowerCase()];
+    return key ? this.t(key) : name;
+  }
+
+  translateStatus(status: string): string {
+    return this.t(`status.${status}`) || status;
   }
 }

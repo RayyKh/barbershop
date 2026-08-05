@@ -6,16 +6,21 @@
 
     <span class="spacer"></span>
 
+    <div class="lang-switch desktop-only" *ngIf="!isAdminRoute">
+      <button mat-button class="lang-btn" [class.active]="currentLang === 'fr'" (click)="setLang('fr')">FR</button>
+      <button mat-button class="lang-btn" [class.active]="currentLang === 'en'" (click)="setLang('en')">EN</button>
+    </div>
+
     <div class="nav-links desktop-only">
-      <a mat-button (click)="navigateToSection('top')">ACCUEIL</a>
-      <a mat-button (click)="navigateToSection('services-section')">SERVICES</a>
-      <a mat-button (click)="navigateToSection('barbers')">BARBIERS</a>
-      <a mat-button (click)="navigateToSection('products')">PRODUITS</a>
-      <a mat-button [routerLink]="['/my-appointments']" routerLinkActive="active-link">MES RDV</a>
-      <a mat-button (click)="navigateToSection('feedbacks')">FEEDBACKS</a>
-      <a mat-button (click)="navigateToSection('videos')">VIDÉOS</a>
+      <a mat-button (click)="navigateToSection('top')">{{ !isAdminRoute ? t('nav.home') : 'ACCUEIL' }}</a>
+      <a mat-button (click)="navigateToSection('services-section')">{{ !isAdminRoute ? t('nav.services') : 'SERVICES' }}</a>
+      <a mat-button (click)="navigateToSection('barbers')">{{ !isAdminRoute ? t('nav.barbers') : 'BARBIERS' }}</a>
+      <a mat-button (click)="navigateToSection('products')">{{ !isAdminRoute ? t('nav.products') : 'PRODUITS' }}</a>
+      <a mat-button [routerLink]="['/my-appointments']" routerLinkActive="active-link">{{ !isAdminRoute ? t('nav.myAppointments') : 'MES RDV' }}</a>
+      <a mat-button (click)="navigateToSection('feedbacks')">{{ !isAdminRoute ? t('nav.feedbacks') : 'FEEDBACKS' }}</a>
+      <a mat-button (click)="navigateToSection('videos')">{{ !isAdminRoute ? t('nav.videos') : 'VIDEOS' }}</a>
       <a mat-button (click)="navigateToSection('booking')" class="book-btn">
-        RÉSERVER
+        {{ !isAdminRoute ? t('nav.book') : 'RESERVER' }}
       </a>
     </div>
 
@@ -25,37 +30,47 @@
         <mat-icon>menu</mat-icon>
       </button>
       <mat-menu #menu="matMenu" class="mobile-nav-menu">
+        <div class="mobile-lang-switch" *ngIf="!isAdminRoute">
+          <button mat-menu-item (click)="setLang('fr')">
+            <mat-icon *ngIf="currentLang === 'fr'">check</mat-icon>
+            <span>FR</span>
+          </button>
+          <button mat-menu-item (click)="setLang('en')">
+            <mat-icon *ngIf="currentLang === 'en'">check</mat-icon>
+            <span>EN</span>
+          </button>
+        </div>
         <a mat-menu-item (click)="navigateToSection('top')">
           <mat-icon>home</mat-icon>
-          <span>ACCUEIL</span>
+          <span>{{ !isAdminRoute ? t('nav.home') : 'ACCUEIL' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('services-section')">
           <mat-icon>content_cut</mat-icon>
-          <span>SERVICES</span>
+          <span>{{ !isAdminRoute ? t('nav.services') : 'SERVICES' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('barbers')">
           <mat-icon>group</mat-icon>
-          <span>BARBIERS</span>
+          <span>{{ !isAdminRoute ? t('nav.barbers') : 'BARBIERS' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('products')">
           <mat-icon>inventory_2</mat-icon>
-          <span>PRODUITS</span>
+          <span>{{ !isAdminRoute ? t('nav.products') : 'PRODUITS' }}</span>
         </a>
         <a mat-menu-item [routerLink]="['/my-appointments']">
           <mat-icon>event_note</mat-icon>
-          <span>MES RDV</span>
+          <span>{{ !isAdminRoute ? t('nav.myAppointments') : 'MES RDV' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('feedbacks')">
           <mat-icon>star</mat-icon>
-          <span>FEEDBACKS</span>
+          <span>{{ !isAdminRoute ? t('nav.feedbacks') : 'FEEDBACKS' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('videos')">
           <mat-icon>play_circle</mat-icon>
-          <span>VIDÉOS</span>
+          <span>{{ !isAdminRoute ? t('nav.videos') : 'VIDEOS' }}</span>
         </a>
         <a mat-menu-item (click)="navigateToSection('booking')" class="mobile-book-item">
           <mat-icon color="primary">calendar_today</mat-icon>
-          <span>RÉSERVER</span>
+          <span>{{ !isAdminRoute ? t('nav.book') : 'RESERVER' }}</span>
         </a>
       </mat-menu>
     </div>

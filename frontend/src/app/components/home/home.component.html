@@ -10,7 +10,7 @@
       [muted]="true"
       class="hero-video">
       <source src="assets/videos/hero.mp4" type="video/mp4">
-      Votre navigateur ne supporte pas la vidéo.
+      {{ 'home.video.unsupported' | bt }}
     </video>
   </div>
   <div class="hero-overlay"></div>
@@ -18,11 +18,11 @@
     <div class="reveal-wrapper">
       <h1 class="text-reveal">Aladin BarberShop</h1>
     </div>
-    <p class="subtitle fade-in-up delay-2">L'Art de l'Élégance Masculine</p>
-    <p class="description fade-in-up delay-3">Une expérience de coiffure unique, où tradition et modernité se rencontrent.</p>
+    <p class="subtitle fade-in-up delay-2">{{ 'home.hero.subtitle' | bt }}</p>
+    <p class="description fade-in-up delay-3">{{ 'home.hero.description' | bt }}</p>
     <div class="cta-buttons fade-in-up delay-4">
-      <button mat-raised-button color="primary" (click)="scrollToBooking()" class="cta-btn">RÉSERVER MAINTENANT</button>
-      <button mat-stroked-button class="cta-btn-outline" (click)="scrollToBooking()">DÉCOUVRIR</button>
+      <button mat-raised-button color="primary" (click)="scrollToBooking()" class="cta-btn">{{ 'home.hero.bookNow' | bt }}</button>
+      <button mat-stroked-button class="cta-btn-outline" (click)="scrollToBooking()">{{ 'home.hero.discover' | bt }}</button>
     </div>
   </div>
 </div>
@@ -31,9 +31,9 @@
 <div class="section services-section" id="services-section">
   <div class="container">
     <div class="section-header" appScrollReveal>
-      <h2>Nos Services</h2>
+      <h2>{{ 'home.services.title' | bt }}</h2>
       <div class="divider"></div>
-      <p>Des soins sur mesure pour votre barbe et vos cheveux</p>
+      <p>{{ 'home.services.subtitle' | bt }}</p>
     </div>
 
     <div class="price-list-wrapper" appScrollReveal [delay]="200">
@@ -46,7 +46,7 @@
 <div class="section why-us-section" id="why-us">
   <div class="container">
     <div class="section-header light-text" appScrollReveal>
-      <h2>Pourquoi Nous Choisir</h2>
+      <h2>{{ 'home.why.title' | bt }}</h2>
       <div class="divider gold"></div>
     </div>
     
@@ -55,22 +55,22 @@
         <div class="icon-circle">
           <mat-icon>star</mat-icon>
         </div>
-        <h3>Expertise</h3>
-        <p>Des barbiers passionnés avec plus de 9 ans d'expérience.</p>
+        <h3>{{ 'home.why.expertise.title' | bt }}</h3>
+        <p>{{ 'home.why.expertise.desc' | bt }}</p>
       </div>
       <div class="feature-item" appScrollReveal [delay]="200">
         <div class="icon-circle">
           <mat-icon>weekend</mat-icon>
         </div>
-        <h3>Confort</h3>
-        <p>Un salon luxueux conçu pour votre détente absolue.</p>
+        <h3>{{ 'home.why.comfort.title' | bt }}</h3>
+        <p>{{ 'home.why.comfort.desc' | bt }}</p>
       </div>
       <div class="feature-item" appScrollReveal [delay]="300">
         <div class="icon-circle">
           <mat-icon>verified</mat-icon>
         </div>
-        <h3>Produits Premium</h3>
-        <p>Utilisation exclusive de produits haut de gamme.</p>
+        <h3>{{ 'home.why.premium.title' | bt }}</h3>
+        <p>{{ 'home.why.premium.desc' | bt }}</p>
       </div>
     </div>
   </div>
@@ -80,9 +80,9 @@
 <div class="section barbers-section" id="barbers">
   <div class="container">
     <div class="section-header" appScrollReveal>
-      <h2>Nos Experts</h2>
+      <h2>{{ 'home.experts.title' | bt }}</h2>
       <div class="divider"></div>
-      <p>Rencontrez l'équipe qui sublimera votre style</p>
+      <p>{{ 'home.experts.subtitle' | bt }}</p>
     </div>
 
     <div class="barbers-grid">
@@ -105,7 +105,7 @@
         </div>
         <div class="barber-info">
           <h3>HAMOUDA</h3>
-          <p class="specialty">Barbier</p>
+          <p class="specialty">{{ 'home.fallback.barber' | bt }}</p>
         </div>
       </div>
       <div class="barber-card" *ngIf="barbers.length === 0" appScrollReveal [delay]="200">
@@ -114,7 +114,7 @@
         </div>
         <div class="barber-info">
           <h3>ALADIN</h3>
-          <p class="specialty">Barbier</p>
+          <p class="specialty">{{ 'home.fallback.barber' | bt }}</p>
         </div>
       </div>
     </div>
@@ -125,9 +125,9 @@
 <div class="section booking-section-wrapper" id="booking">
   <div class="container">
     <div class="section-header light-text" appScrollReveal>
-      <h2>Réservez Votre Rendez-vous</h2>
+      <h2>{{ 'home.booking.title' | bt }}</h2>
       <div class="divider gold"></div>
-      <p>Simple, Rapide et Efficace</p>
+      <p>{{ 'home.booking.subtitle' | bt }}</p>
     </div>
     
     <div class="booking-container-embed" appScrollReveal [delay]="200">
@@ -147,12 +147,12 @@
 <div class="section gallery-section" id="gallery">
   <div class="container">
     <div class="section-header light-text" appScrollReveal>
-      <h2>GALLERY</h2>
+      <h2>{{ 'home.gallery.title' | bt }}</h2>
       <div class="divider gold"></div>
     </div>
 
     <div class="gallery-slider" appScrollReveal [delay]="200">
-      <button class="nav prev" (click)="prevGallery()" aria-label="Précédent">
+      <button class="nav prev" (click)="prevGallery()" [attr.aria-label]="'home.gallery.prev' | bt">
         <mat-icon>chevron_left</mat-icon>
       </button>
 
@@ -164,7 +164,7 @@
         </div>
       </div>
 
-      <button class="nav next" (click)="nextGallery()" aria-label="Suivant">
+      <button class="nav next" (click)="nextGallery()" [attr.aria-label]="'home.gallery.next' | bt">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </div>
@@ -179,9 +179,9 @@
 <div class="section feedbacks-section" id="feedbacks">
   <div class="container">
     <div class="section-header" appScrollReveal>
-      <h2>Feedbacks</h2>
+      <h2>{{ 'home.feedbacks.title' | bt }}</h2>
       <div class="divider"></div>
-      <p>Ce que disent nos clients</p>
+      <p>{{ 'home.feedbacks.subtitle' | bt }}</p>
     </div>
 
     <div class="feedbacks-grid">
@@ -202,7 +202,7 @@
 <div class="section videos-section" id="videos">
   <div class="container">
     <div class="section-header light-text" appScrollReveal>
-      <h2>Nos Vidéos</h2>
+      <h2>{{ 'home.videos.title' | bt }}</h2>
       
     </div>
 
@@ -230,20 +230,20 @@
     <div class="footer-content">
       <div class="footer-col brand">
         <h3>AladinBarberShop</h3>
-        <p>L'excellence au service de votre style.</p>
+        <p>{{ 'home.footer.tagline' | bt }}</p>
       </div>
       <div class="footer-col hours">
-        <h3>Horaires</h3>
-        <p><mat-icon>schedule</mat-icon> Mardi - Dimanche: 10h - 20h</p>
-        <p><mat-icon>schedule</mat-icon> Lundi: 12h - 18h</p>
+        <h3>{{ 'home.footer.hours' | bt }}</h3>
+        <p><mat-icon>schedule</mat-icon> {{ 'home.footer.hours.week' | bt }}</p>
+        <p><mat-icon>schedule</mat-icon> {{ 'home.footer.hours.monday' | bt }}</p>
       </div>
       <div class="footer-col contact">
-        <h3>Contact</h3>
+        <h3>{{ 'home.footer.contact' | bt }}</h3>
         <p><mat-icon>place</mat-icon>20 Rue Jilani Merchen, Ez Zahra 2034, Tunisie</p>
         <p><mat-icon>call</mat-icon> +216 27365496</p>
       </div>
       <div class="footer-col maps">
-        <h3>Localisation</h3>
+        <h3>{{ 'home.footer.location' | bt }}</h3>
         <div class="map-container">
           <iframe 
             src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3196.99425530581!2d10.308715674201158!3d36.74670897071574!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x12fd49003cb2fb89%3A0x4bcccc957da7f3f6!2sBarbershop%20-%20Aladin!5e0!3m2!1sfr!2stn!4v1770142647634!5m2!1sfr!2stn" 
@@ -269,8 +269,8 @@
       </a>
     </div>
     <div class="copyright">
-      <p>&copy; 2026 AladinBarberShop. Tous droits réservés. <span class="tag">RK Digital</span></p>
-      <a routerLink="/admin" class="admin-footer-link">Espace Pro</a>
+      <p>&copy; 2026 AladinBarberShop. {{ 'home.footer.rights' | bt }} <span class="tag">RK Digital</span></p>
+      <a routerLink="/admin" class="admin-footer-link">{{ 'home.footer.pro' | bt }}</a>
     </div>
   </div>
 </footer>

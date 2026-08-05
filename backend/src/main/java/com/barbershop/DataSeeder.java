@@ -119,6 +119,7 @@ public class DataSeeder implements CommandLineRunner {
         deleteService("Coupe (cheveux courts)");
         deleteService("Coupe + Barbe avec machine (Zéro)");
         deleteService("Coupe + Barbe Dégradé");
+        deleteService("Coupe d'enfant (jusqu'à 5 ans)");
 
         // Create or Update Default Services
         // Services principaux
@@ -131,9 +132,6 @@ public class DataSeeder implements CommandLineRunner {
         saveOrUpdateService("Coupe + Barbe + Brushing", "Style complet", 20.0, 60);
         saveOrUpdateService("Coupe + Barbe + Masque Noir", "Soin complet", 20.0, 60);
         
-        // Enfant
-        saveOrUpdateService("Coupe d'enfant (jusqu'à 5 ans)", "Coupe junior", 7.0, 30);
-        
         // Soins
         saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Masque Noir)", "Soin relaxant", 25.0, 60);
         saveOrUpdateService("Soin du visage (Vapozone, Scrub, Gommage, Argile Verte, Mask Gold, Patchs pour les yeux)", "Soin prestige", 50.0, 60);
@@ -142,6 +140,8 @@ public class DataSeeder implements CommandLineRunner {
         // Autres services (Durée par défaut 15 min)
         saveOrUpdateService("Patchs pour les yeux", "Soin contour des yeux", 5.0, 15);
         saveOrUpdateService("Brushing", "Mise en forme", 7.0, 15);
+        saveOrUpdateService("Tresse", "Coiffure tresse", 50.0, 150);
+        saveOrUpdateService("Mèches", "Coloration mèches", 60.0, 150);
         saveOrUpdateService("Masque Noir", "Soin purifiant", 8.0, 15);
         saveOrUpdateService("Épilation à la cire", "Nettoyage précis", 3.0, 15);
 
@@ -167,6 +167,15 @@ public class DataSeeder implements CommandLineRunner {
                 "omar2.jpeg",
                 "Il se distingue par sa précision et son sens du détail. Il prend son temps, écoute son client et transforme chaque coupe en véritable œuvre.",
                 "achref",
+                "aladinbarbershop2026#"
+        );
+
+        saveOrUpdateBarber(
+                "Dhia",
+                "Spécialiste des dégradés",
+                "dhia.jpeg",
+                "Barbier spécialisé dans les dégradés de haute qualité. Rapide, précis et à l’écoute de chaque client. Chaque coupe est réalisée avec soin pour un résultat propre, moderne et adapté à votre style.",
+                "dhia",
                 "aladinbarbershop2026#"
         );
         

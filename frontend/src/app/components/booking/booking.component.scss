@@ -69,10 +69,70 @@
   margin-bottom: 16px;
 }
 
+.barbers-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.barber-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  text-align: center;
+  width: 100%;
+  min-height: 124px;
+}
+
+.barber-tile.selected {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.barber-tile-photo {
+  width: 68px;
+  height: 68px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.barber-tile-name {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  white-space: normal;
+  word-break: break-word;
+}
+
 /* Styles pour s'assurer que le panel mat-select ne couvre pas les actions */
 ::ng-deep .gold-theme-panel {
     /* Suppression du margin-top pour laisser Angular Material gérer la position par défaut (au-dessus du trigger si possible) */
     max-height: 250px !important;
+}
+
+::ng-deep .mat-datepicker-content .mat-calendar-previous-button,
+::ng-deep .mat-datepicker-content .mat-calendar-next-button,
+::ng-deep .mat-datepicker-content .mat-calendar-period-button,
+::ng-deep .mat-datepicker-content .mat-calendar-arrow {
+  color: #ffffff !important;
+}
+
+::ng-deep .mat-datepicker-content .mat-calendar-previous-button svg,
+::ng-deep .mat-datepicker-content .mat-calendar-next-button svg,
+::ng-deep .mat-datepicker-content .mat-calendar-period-button svg,
+::ng-deep .mat-datepicker-content .mat-calendar-arrow svg {
+  fill: #ffffff !important;
 }
 
 .step-content {
@@ -287,40 +347,6 @@
   }
 }
 
-.loyalty-reward-selection {
-    margin: 20px 0;
-    padding: 15px;
-    background: rgba(212, 175, 55, 0.15);
-    border: 1px solid #d4af37;
-    border-radius: 8px;
-    animation: pulse-border 2s infinite;
-
-    .reward-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #d4af37;
-        font-weight: 500;
-
-        mat-icon {
-            font-size: 24px;
-            width: 24px;
-            height: 24px;
-        }
-    }
-
-    ::ng-deep .mdc-checkbox .mdc-checkbox__native-control:enabled:checked ~ .mdc-checkbox__background {
-        background-color: #d4af37 !important;
-        border-color: #d4af37 !important;
-    }
-}
-
-@keyframes pulse-border {
-    0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-}
-
 .additional-selection {
   opacity: 0.7;
   font-size: 0.85rem;
@@ -409,6 +435,28 @@
 
   .step-content {
     padding: 0; /* Zéro padding pour le contenu de l'étape */
+  }
+
+  .barbers-picker-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .barber-tile {
+    padding: 8px;
+    gap: 6px;
+    min-height: 108px;
+  }
+
+  .barber-tile-photo {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+  }
+
+  .barber-tile-name {
+    font-size: 0.82rem;
+    line-height: 1.15;
   }
 
   /* Élargir le champ de sélection lui-même */

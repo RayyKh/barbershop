@@ -2,9 +2,9 @@ package com.barbershop.controller;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +37,7 @@ import com.barbershop.service.AppointmentService;
 @RequestMapping("/api/appointments")
 public class AppointmentController {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppointmentController.class);
+    private static final DateTimeFormatter BOOKING_DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/uuuu");
 
     @Autowired
     private AppointmentService appointmentService;
@@ -47,7 +48,7 @@ public class AppointmentController {
     private final java.util.concurrent.CopyOnWriteArrayList<SseEmitter> emitters = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     @PostMapping("/book")
-    public Appointment bookAppointment(@RequestBody AppointmentRequest request) {
+    public Appointment bookAppointment(@jakarta.validation.Valid @RequestBody AppointmentRequest request) {
         // Logic to handle user:
         // 1. If authenticated, use that user.
         // 2. If not, check if user details provided match existing user (by email/phone)
@@ -68,35 +69,18 @@ public class AppointmentController {
         // If not logged in, or logged in as admin (who might be booking for someone else),
         // try to find or create a user based on the request details.
         if (user == null || isLoggedAsAdmin) {
-            User guestUser = null;
-            
-            // 1. Try to find by phone (most reliable for a barber shop)
-            if (request.getUserPhone() != null && !request.getUserPhone().isBlank()) {
-                guestUser = userRepository.findByPhone(request.getUserPhone()).orElse(null);
-            }
-            
-            // 2. Create new if still not found
-            if (guestUser == null) {
-                guestUser = new User();
-                guestUser.setName(request.getUserName());
-                guestUser.setFirstName(request.getUserFirstName());
-                guestUser.setPhone(request.getUserPhone());
-                guestUser.setRole(User.Role.CLIENT);
-                // Use phone as username for guests
-                guestUser.setUsername(request.getUserPhone());
-                userRepository.save(guestUser);
-            } else if (isLoggedAsAdmin) {
-                // If admin found an existing user, we use that instead of the admin user
-                user = guestUser;
-            }
-            
+            User guestUser = resolveOrCreateGuestUser(
+                    request.getUserName(),
+                    request.getUserFirstName(),
+                    request.getUserPhone()
+            );
             if (user == null || isLoggedAsAdmin) {
                 user = guestUser;
             }
         }
 
         LocalDate bookingDate = parseBookingDate(request.getDate());
-        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), bookingDate, request.getStartTime(), request.isUseReward(), isLoggedAsAdmin);
+        Appointment appt = appointmentService.bookAppointment(user.getId(), request.getBarberId(), request.getServiceIds(), bookingDate, request.getStartTime(), isLoggedAsAdmin);
         notifyEmitters(appt);
         return appt;
     }
@@ -107,17 +91,69 @@ public class AppointmentController {
         }
         String trimmed = rawDate.trim();
         try {
-            if (trimmed.length() == 10 && trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
-                return LocalDate.parse(trimmed);
+            if (trimmed.matches("\\d{2}/\\d{2}/\\d{4}")) {
+                return LocalDate.parse(trimmed, BOOKING_DATE_FORMATTER);
             }
-            if (trimmed.length() >= 10 && trimmed.charAt(10) == 'T') {
-                OffsetDateTime odt = OffsetDateTime.parse(trimmed);
-                return odt.atZoneSameInstant(ZoneId.of("Africa/Tunis")).toLocalDate();
-            }
-            return LocalDate.parse(trimmed.substring(0, 10));
+            throw new IllegalArgumentException("Format de date invalide (JJ/MM/AAAA): " + rawDate);
         } catch (DateTimeParseException | IndexOutOfBoundsException ex) {
             throw new IllegalArgumentException("Format de date invalide: " + rawDate, ex);
         }
+    }
+
+    private User resolveOrCreateGuestUser(String name, String firstName, String phone) {
+        String normalizedPhone = normalizePhone(phone);
+        if (normalizedPhone == null) {
+            throw new IllegalArgumentException("Numéro de téléphone invalide");
+        }
+
+        User guestUser = userRepository.findByPhone(normalizedPhone)
+                .orElseGet(() -> userRepository.findByUsername(normalizedPhone).orElse(null));
+
+        if (guestUser == null) {
+            try {
+                User newUser = new User();
+                newUser.setName(name != null ? name.trim() : null);
+                newUser.setFirstName(firstName != null ? firstName.trim() : null);
+                newUser.setPhone(normalizedPhone);
+                newUser.setRole(User.Role.CLIENT);
+                newUser.setUsername(normalizedPhone);
+                guestUser = userRepository.save(newUser);
+            } catch (Exception ex) {
+                // Handle race/constraint conflicts by re-fetching existing row
+                guestUser = userRepository.findByPhone(normalizedPhone)
+                        .orElseGet(() -> userRepository.findByUsername(normalizedPhone)
+                                .orElseThrow(() -> new RuntimeException(ex)));
+            }
+        }
+
+        boolean dirty = false;
+        if (guestUser.getPhone() == null || !guestUser.getPhone().equals(normalizedPhone)) {
+            guestUser.setPhone(normalizedPhone);
+            dirty = true;
+        }
+        if (guestUser.getUsername() == null || guestUser.getUsername().isBlank()) {
+            guestUser.setUsername(normalizedPhone);
+            dirty = true;
+        }
+        if ((guestUser.getName() == null || guestUser.getName().isBlank()) && name != null && !name.isBlank()) {
+            guestUser.setName(name.trim());
+            dirty = true;
+        }
+        if ((guestUser.getFirstName() == null || guestUser.getFirstName().isBlank()) && firstName != null && !firstName.isBlank()) {
+            guestUser.setFirstName(firstName.trim());
+            dirty = true;
+        }
+        if (guestUser.getRole() == null) {
+            guestUser.setRole(User.Role.CLIENT);
+            dirty = true;
+        }
+        return dirty ? userRepository.save(guestUser) : guestUser;
+    }
+
+    private String normalizePhone(String phone) {
+        if (phone == null) return null;
+        String digits = phone.replaceAll("\\D", "");
+        return digits.isBlank() ? null : digits;
     }
 
     @GetMapping("/available")
@@ -253,8 +289,9 @@ public class AppointmentController {
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String phone,
-            @RequestParam(required = false) List<Long> serviceIds
+            @RequestParam(required = false, name = "serviceIds") List<String> serviceIdsRaw
     ) {
+        List<Long> serviceIds = parseServiceIds(serviceIdsRaw);
         Appointment appt = appointmentService.lockSlot(barberId, date, startTime, firstName, name, phone, serviceIds);
         notifyEmitters(appt);
         return appt;
@@ -379,5 +416,29 @@ public class AppointmentController {
                 emitters.remove(emitter);
             }
         }
+    }
+
+    private List<Long> parseServiceIds(List<String> rawValues) {
+        if (rawValues == null || rawValues.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> parsed = new ArrayList<>();
+        for (String raw : rawValues) {
+            if (raw == null || raw.isBlank()) continue;
+
+            String[] chunks = raw.split(",");
+            for (String chunk : chunks) {
+                if (chunk == null || chunk.isBlank()) continue;
+                String cleaned = chunk.trim().replaceAll("[^0-9]", "");
+                if (cleaned.isBlank()) continue;
+                try {
+                    parsed.add(Long.parseLong(cleaned));
+                } catch (NumberFormatException ignored) {
+                    // Ignore malformed IDs instead of failing the entire request
+                }
+            }
+        }
+        return parsed;
     }
 }

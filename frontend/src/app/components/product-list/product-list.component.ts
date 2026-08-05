@@ -3,12 +3,13 @@ import { Component, OnInit } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { Router } from '@angular/router';
+import { BookingTranslatePipe } from '../../i18n/booking-translate.pipe';
 import { ApiService, Product } from '../../services/api.service';
 
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, BookingTranslatePipe],
   templateUrl: './product-list.component.html',
   styleUrls: ['./product-list.component.scss']
 })

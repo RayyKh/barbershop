@@ -1,16 +1,16 @@
 <div class="booking-container">
-  <app-loader [visible]="isLoading" message="Finalisation de votre rendez-vous..."></app-loader>
+  <app-loader [visible]="isLoading" [message]="'booking.loader.message' | bt"></app-loader>
   <mat-card class="booking-card">
     <mat-card-header>
-      <mat-card-title>Réserver votre Moment</mat-card-title>
-      <mat-card-subtitle>Une expérience unique vous attend</mat-card-subtitle>
+      <mat-card-title>{{ 'booking.title' | bt }}</mat-card-title>
+      <mat-card-subtitle>{{ 'booking.subtitle' | bt }}</mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
       <div *ngIf="isBookingSuccess" class="success-container fade-in-up">
         <ng-lottie [options]="options" height="200px" width="200px"></ng-lottie>
-        <h2 class="success-title">Réservation Réussie !</h2>
-        <p>Redirection vers l'accueil...</p>
+        <h2 class="success-title">{{ 'booking.success.title' | bt }}</h2>
+        <p>{{ 'booking.success.redirect' | bt }}</p>
       </div>
 
       <form [formGroup]="bookingFormGroup" *ngIf="!isBookingSuccess">
@@ -22,39 +22,39 @@
           
           <!-- Step 1: Barber -->
           <mat-step [stepControl]="bookingFormGroup.get('barberCtrl')!">
-            <ng-template matStepLabel>Choisir un barbier</ng-template>
+            <ng-template matStepLabel>{{ 'booking.step.barber' | bt }}</ng-template>
             <div class="step-content">
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Barbier</mat-label>
-                <mat-select formControlName="barberCtrl" (selectionChange)="onBarberChange()">
-                  <mat-option *ngFor="let barber of barbers" [value]="barber">
-                    <div class="barber-option">
-                      <img
-                        class="barber-option-photo"
-                        [src]="'assets/' + barber.photo"
-                        [alt]="barber.name"
-                        onerror="this.src='assets/ala.jpeg'">
-                      <span>{{barber.name}}</span>
-                    </div>
-                  </mat-option>
-                </mat-select>
-              </mat-form-field>
+              <div class="barbers-picker-grid">
+                <button
+                  type="button"
+                  class="barber-tile"
+                  *ngFor="let barber of barbers"
+                  [class.selected]="bookingFormGroup.get('barberCtrl')?.value?.id === barber.id"
+                  (click)="selectBarber(barber)">
+                  <img
+                    class="barber-tile-photo"
+                    [src]="'assets/' + barber.photo"
+                    [alt]="barber.name"
+                    onerror="this.src='assets/ala.jpeg'">
+                  <div class="barber-tile-name">{{ barber.name }}</div>
+                </button>
+              </div>
               <div class="actions">
-                <button mat-raised-button color="primary" matStepperNext [disabled]="!bookingFormGroup.get('barberCtrl')?.value">Suivant</button>
+                <button mat-raised-button color="primary" matStepperNext [disabled]="!bookingFormGroup.get('barberCtrl')?.value">{{ 'booking.btn.next' | bt }}</button>
               </div>
             </div>
           </mat-step>
 
           <!-- Step 2: Services -->
           <mat-step [stepControl]="bookingFormGroup.get('servicesCtrl')!">
-            <ng-template matStepLabel>Choisir vos services</ng-template>
+            <ng-template matStepLabel>{{ 'booking.step.services' | bt }}</ng-template>
             <div class="step-content">
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Services</mat-label>
+                <mat-label>{{ 'booking.field.services' | bt }}</mat-label>
                 <mat-select formControlName="servicesCtrl" multiple panelClass="gold-theme-panel">
-                  <mat-option *ngFor="let service of services" [value]="service" [disabled]="isServiceDisabledForSelectedBarber(service)">
+                  <mat-option *ngFor="let service of visibleServices" [value]="service">
                     <div class="service-option">
-                      <span class="service-name">{{service.name}}&nbsp;</span>
+                      <span class="service-name">{{translateServiceName(service.name)}}&nbsp;</span>
                       <span class="service-price">{{service.price}} DT</span>
                     </div>
                   </mat-option>
@@ -62,52 +62,57 @@
               </mat-form-field>
 
               <div class="total-summary" *ngIf="totalSelectedPrice > 0">
-                <p>Total estimé : <strong>{{totalSelectedPrice}} DT</strong></p>
-                <p>Durée : <strong>{{ totalSelectedDuration }} min</strong></p>
-              </div>
-
-              <div class="loyalty-reward-selection" *ngIf="canApplyReward">
-                <mat-checkbox formControlName="useRewardCtrl" color="primary">
-                  <div class="reward-info">
-                    <mat-icon>card_giftcard</mat-icon>
-                    <span>Utiliser ma récompense (50% de réduction + Masque Noir gratuit)</span>
-                  </div>
-                </mat-checkbox>
+                <p>{{ 'booking.totalEstimated' | bt }} <strong>{{totalSelectedPrice}} DT</strong></p>
+                <p>{{ 'booking.totalDuration' | bt }} <strong>{{ totalSelectedDuration }} min</strong></p>
               </div>
 
               <div class="actions">
-                <button mat-button matStepperPrevious>Retour</button>
-                <button mat-raised-button color="primary" matStepperNext [disabled]="bookingFormGroup.get('servicesCtrl')?.value?.length === 0">Suivant</button>
+                <button mat-button matStepperPrevious>{{ 'booking.btn.back' | bt }}</button>
+                <button mat-raised-button color="primary" matStepperNext [disabled]="bookingFormGroup.get('servicesCtrl')?.value?.length === 0">{{ 'booking.btn.next' | bt }}</button>
               </div>
             </div>
           </mat-step>
     
           <!-- Step 2: Date & Time -->
           <mat-step [stepControl]="bookingFormGroup.get('dateCtrl')!">
-            <ng-template matStepLabel>Choisir une date et une heure</ng-template>
+            <ng-template matStepLabel>{{ 'booking.step.dateTime' | bt }}</ng-template>
             
             <div class="step-content">
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Date</mat-label>
-                <input matInput [matDatepicker]="picker" formControlName="dateCtrl" (dateChange)="onDateChange()" [min]="minDate">
+                <mat-label>{{ 'booking.field.date' | bt }}</mat-label>
+                <input
+                  matInput
+                  [matDatepicker]="picker"
+                  formControlName="dateCtrl"
+                  (dateChange)="onDateChange()"
+                  [min]="minDate"
+                  readonly
+                  inputmode="none"
+                  autocomplete="off"
+                  (keydown)="$event.preventDefault()"
+                  (paste)="$event.preventDefault()"
+                  (cut)="$event.preventDefault()"
+                  (drop)="$event.preventDefault()"
+                  (click)="picker.open()">
                 <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
               </mat-form-field>
       
               <div *ngIf="visibleSlotsUI.length > 0" class="slots-container">
-                <h3>Créneaux horaires :</h3>
+                <h3>{{ 'booking.slots.title' | bt }}</h3>
                 <div class="slots-grid">
                   <div *ngFor="let slot of visibleSlotsUI" 
                        class="slot-item"
                        [class.available]="slot.isAvailable"
+                       [class.unavailable]="!slot.isAvailable"
                        [class.selected]="bookingFormGroup.get('timeCtrl')?.value === slot.time"
-                       (click)="selectSlot(slot.time)">
+                       (click)="slot.isAvailable && selectSlot(slot.time)">
                     {{slot.time}}
                   </div>
                 </div>
               </div>
               <div *ngIf="visibleSlotsUI.length === 0 && bookingFormGroup.get('dateCtrl')?.value && !isAdmin" class="no-slots">
-                  <p>Aucun créneau disponible pour cette date.</p>
+                  <p>{{ 'booking.slots.empty' | bt }}</p>
               </div>
 
               <!-- Admin Manual Time Entry -->
@@ -124,63 +129,63 @@
               </div>
       
               <div class="actions">
-                <button mat-button matStepperPrevious>Retour</button>
-                <button mat-raised-button color="primary" matStepperNext [disabled]="(!bookingFormGroup.get('timeCtrl')?.value && !bookingFormGroup.get('manualTimeCtrl')?.value)">Suivant</button>
+                <button mat-button matStepperPrevious>{{ 'booking.btn.back' | bt }}</button>
+                <button mat-raised-button color="primary" matStepperNext [disabled]="(!bookingFormGroup.get('timeCtrl')?.value && !bookingFormGroup.get('manualTimeCtrl')?.value)">{{ 'booking.btn.next' | bt }}</button>
               </div>
             </div>
           </mat-step>
     
           <!-- Step 3: User Info -->
           <mat-step [stepControl]="bookingFormGroup.get('userCtrl')!">
-            <ng-template matStepLabel>Vos coordonnées</ng-template>
+            <ng-template matStepLabel>{{ 'booking.step.user' | bt }}</ng-template>
             
             <div class="step-content" formGroupName="userCtrl">
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Nom</mat-label>
+                <mat-label>{{ 'booking.field.name' | bt }}</mat-label>
                 <input matInput formControlName="name" required>
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Téléphone</mat-label>
+                <mat-label>{{ 'booking.field.phone' | bt }}</mat-label>
                 <input matInput formControlName="phone" required  type="tel" pattern="[0-9]*" inputmode="numeric">
                 <mat-error *ngIf="bookingFormGroup.get('userCtrl.phone')?.hasError('required')">
-                  Le numéro de téléphone est obligatoire
+                  {{ 'booking.phone.required' | bt }}
                 </mat-error>
                 <mat-error *ngIf="bookingFormGroup.get('userCtrl.phone')?.hasError('pattern')">
-                  Veuillez saisir un numéro de téléphone valide (8 chiffres minimum)
+                  {{ 'booking.phone.pattern' | bt }}
                 </mat-error>
               </mat-form-field>
       
               <div class="actions">
-                <button mat-button matStepperPrevious>Retour</button>
-                <button mat-raised-button color="primary" matStepperNext>Suivant</button>
+                <button mat-button matStepperPrevious>{{ 'booking.btn.back' | bt }}</button>
+                <button mat-raised-button color="primary" matStepperNext>{{ 'booking.btn.next' | bt }}</button>
               </div>
             </div>
           </mat-step>
     
           <!-- Step 4: Confirm -->
           <mat-step>
-            <ng-template matStepLabel>Confirmation</ng-template>
+            <ng-template matStepLabel>{{ 'booking.step.confirm' | bt }}</ng-template>
             <div class="step-content summary">
-              <h3>Résumé de votre réservation</h3>
+              <h3>{{ 'booking.summary.title' | bt }}</h3>
               
               <div class="summary-section">
-                <p><strong>Services:</strong></p>
+                <p><strong>{{ 'booking.summary.services' | bt }}</strong></p>
                 <ul>
                   <li *ngFor="let s of bookingFormGroup.get('servicesCtrl')?.value">
-                    {{s.name}} ({{s.price}} DT)
+                    {{translateServiceName(s.name)}} ({{s.price}} DT)
                   </li>
                 </ul>
-                <p class="summary-total">Total : <strong>{{totalSelectedPrice}} DT</strong></p>
+                <p class="summary-total">{{ 'booking.summary.total' | bt }} <strong>{{totalSelectedPrice}} DT</strong></p>
               </div>
 
-              <p><strong>Barbier:</strong> {{bookingFormGroup.get('barberCtrl')?.value?.name}}</p>
-              <p><strong>Date:</strong> {{bookingFormGroup.get('dateCtrl')?.value | date:'dd/MM/yyyy'}} à {{bookingFormGroup.get('timeCtrl')?.value}}</p>
-              <p><strong>Client:</strong> {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
+              <p><strong>{{ 'booking.summary.barber' | bt }}</strong> {{bookingFormGroup.get('barberCtrl')?.value?.name}}</p>
+              <p><strong>{{ 'booking.summary.date' | bt }}</strong> {{bookingFormGroup.get('dateCtrl')?.value | date:'dd/MM/yyyy'}} {{ 'booking.summary.at' | bt }} {{bookingFormGroup.get('timeCtrl')?.value}}</p>
+              <p><strong>{{ 'booking.summary.client' | bt }}</strong> {{bookingFormGroup.get('userCtrl')?.value?.name}}</p>
               
               <div class="actions">
-                <button mat-button matStepperPrevious>Retour</button>
-                <button mat-raised-button color="primary" (click)="book()">Confirmer</button>
+                <button mat-button matStepperPrevious>{{ 'booking.btn.back' | bt }}</button>
+                <button mat-raised-button color="primary" (click)="book()">{{ 'booking.btn.confirm' | bt }}</button>
               </div>
             </div>
           </mat-step>

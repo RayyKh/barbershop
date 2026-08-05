@@ -9,9 +9,6 @@ export interface User {
   firstName?: string;
   email?: string;
   phone: string;
-  totalAppointments?: number;
-  availableRewards?: number;
-  usedRewards?: number;
   roles?: string[];
   role?: 'ADMIN' | 'CLIENT';
 }
@@ -43,7 +40,6 @@ export interface Appointment {
   services: Service[];
   totalPrice: number;
   adminViewed?: boolean;
-  rewardApplied?: boolean;
 }
 
 export interface AppointmentRequest {
@@ -55,7 +51,6 @@ export interface AppointmentRequest {
   userFirstName?: string;
   userPhone?: string;
   userEmail?: string;
-  useReward?: boolean;
   force?: boolean;
 }
 
@@ -265,12 +260,16 @@ export class ApiService {
   }
 
   lockSlot(barberId: number, date: string, startTime: string, firstName?: string, name?: string, phone?: string, serviceIds?: number[]): Observable<Appointment> {
-    const params = new URLSearchParams({ barberId: String(barberId), date, startTime });
-    if (firstName) params.set('firstName', firstName);
-    if (name) params.set('name', name);
-    if (phone) params.set('phone', phone);
-    if (serviceIds && serviceIds.length > 0) {
-      params.set('serviceIds', serviceIds.join(','));
+    const normalizedTime = this.normalizeTimeForApi(startTime);
+    const params = new URLSearchParams({ barberId: String(barberId), date, startTime: normalizedTime });
+    if (firstName && firstName.trim()) params.set('firstName', firstName.trim());
+    if (name && name.trim()) params.set('name', name.trim());
+    if (phone && phone.trim()) params.set('phone', phone.trim());
+
+    const safeServiceIds = this.normalizeIdList(serviceIds);
+    if (safeServiceIds.length > 0) {
+      // Repeated query params are robustly parsed by Spring as List<Long>
+      safeServiceIds.forEach(id => params.append('serviceIds', String(id)));
     }
     return this.http.post<Appointment>(`${this.baseUrl}/appointments/lock?${params.toString()}`, {});
   }
@@ -408,5 +407,19 @@ export class ApiService {
         return res;
       })
     );
+  }
+
+  private normalizeTimeForApi(time: string): string {
+    const raw = (time || '').trim();
+    if (/^\d{2}:\d{2}$/.test(raw)) return `${raw}:00`;
+    if (/^\d{2}:\d{2}:\d{2}$/.test(raw)) return raw;
+    return raw;
+  }
+
+  private normalizeIdList(ids?: Array<number | string | null | undefined>): number[] {
+    if (!ids || ids.length === 0) return [];
+    return ids
+      .map((id) => Number.parseInt(String(id ?? '').trim(), 10))
+      .filter((id) => Number.isFinite(id) && id > 0);
   }
 }

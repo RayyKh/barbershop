@@ -518,9 +518,12 @@ export class AdminDashboardComponent implements OnInit {
     if (this.lockForm.valid) {
       const val = this.lockForm.value;
       const dateStr = this.formatDateLocal(val.date as Date);
-      const serviceIds = val.services.map((s: any) => s.id);
+      const serviceIds = (val.services || [])
+        .map((s: any) => Number.parseInt(String(s?.id ?? '').trim(), 10))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
+      const safeTime = typeof val.time === 'string' ? val.time.trim() : '';
       
-      this.api.lockSlot(val.barber.id, dateStr, val.time, val.firstName, val.name, val.phone, serviceIds).subscribe({
+      this.api.lockSlot(val.barber.id, dateStr, safeTime, val.firstName, val.name, val.phone, serviceIds).subscribe({
         next: () => {
           this.snackBar.open('Créneau verrouillé avec succès', 'OK', { duration: 3000 });
           this.lockForm.reset({ barber: this.barbers[0], date: new Date(), services: [], time: null, firstName: '', name: '', phone: '' });
@@ -601,45 +604,11 @@ export class AdminDashboardComponent implements OnInit {
       next: () => {
         this.snackBar.open('Rendez-vous marqué comme terminé', 'OK', { duration: 3000 });
         this.applyFilters();
-        
-        // Open WhatsApp automatically
-        this.openWhatsApp(a);
       },
       error: (err) => {
         this.snackBar.open('Erreur: ' + err.message, 'Fermer', { duration: 3000 });
       }
     });
-  }
-
-  private openWhatsApp(a: Appointment) {
-    if (!a.user || !a.user.phone) return;
-
-    let phone = a.user.phone.replace(/\D/g, ''); // Remove non-digits
-    
-    // Handle Tunisian number format
-    if (phone.length === 8) {
-      phone = '216' + phone;
-    } else if (phone.startsWith('00216')) {
-      phone = phone.substring(2);
-    } else if (phone.startsWith('216') && phone.length === 11) {
-      // Already correct
-    } else {
-      // Default case, maybe international number already formatted or local without code
-      // If length is 8, we added 216. If not, we leave it as is assuming it's correct or we can't guess.
-      if (!phone.startsWith('216') && phone.length === 8) { 
-         phone = '216' + phone; 
-      }
-    }
-
-    const name = a.user.firstName || a.user.name || 'Client';
-    const message = `Merci pour votre visite cher ${name}, à la prochaine 😊`;
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-
-    // Open in new tab
-    const win = window.open(url, '_blank');
-    if (!win) {
-      this.snackBar.open('Pop-up bloqué. Veuillez autoriser les pop-ups pour WhatsApp.', 'OK', { duration: 5000 });
-    }
   }
 
   deleteAppointment(a: Appointment) {

@@ -69,6 +69,44 @@ public class AppointmentService {
         }
         return total;
     }
+
+    private boolean isServiceAllowedForBarber(com.barbershop.entity.Service service, Barber barber) {
+        String barberName = barber != null && barber.getName() != null ? barber.getName().toLowerCase() : "";
+        String serviceName = service != null && service.getName() != null ? service.getName().toLowerCase() : "";
+
+        if (serviceName.equals("coupe d'enfant (jusqu'à 5 ans)")) {
+            return false;
+        }
+
+        if (serviceName.equals("tresse")) {
+            return barberName.equals("islem");
+        }
+
+        if (serviceName.equals("mèches") || serviceName.equals("meches")) {
+            return barberName.equals("islem") || barberName.equals("achref") || barberName.equals("hamouda");
+        }
+
+        if (serviceName.equals("brushing")) {
+            return !barberName.equals("aladin");
+        }
+
+        if (serviceName.equals("coupe + barbe + brushing")) {
+            return !barberName.equals("aladin") && !barberName.equals("islem");
+        }
+
+        return true;
+    }
+
+    private void validateServicesForBarber(List<com.barbershop.entity.Service> services, Barber barber) {
+        List<String> invalidServices = services.stream()
+                .filter(service -> !isServiceAllowedForBarber(service, barber))
+                .map(com.barbershop.entity.Service::getName)
+                .toList();
+        if (!invalidServices.isEmpty()) {
+            throw new BadRequestException("Services non disponibles pour ce barbier: " + String.join(", ", invalidServices));
+        }
+    }
+
     private int toMinuteOfDay(LocalTime time) {
         return time.getHour() * 60 + time.getMinute();
     }
@@ -245,7 +283,7 @@ public class AppointmentService {
     }
 
     @Transactional
-    public synchronized Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean useReward, boolean isBookedByAdmin) {
+    public synchronized Appointment bookAppointment(Long userId, Long barberId, List<Long> serviceIds, LocalDate date, LocalTime startTime, boolean isBookedByAdmin) {
         // Force flush and check for conflicts again to ensure atomicity in concurrent requests
         // (Even with synchronized, double-check is safer if running in multiple instances or during high load)
         
@@ -261,6 +299,7 @@ public class AppointmentService {
         if (selectedServices.isEmpty()) {
             throw new ResourceNotFoundException("No services selected");
         }
+        validateServicesForBarber(selectedServices, barber);
 
         int totalDuration = totalDurationForBarber(selectedServices, barber);
         
@@ -279,35 +318,7 @@ public class AppointmentService {
         appointment.setServices(selectedServices);
         
         double total = selectedServices.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
-        boolean rewardApplied = false;
-
-        if (useReward) {
-            if (user.getAvailableRewards() > 0) {
-                // New Reward Logic: 50% off total + Free "Masque Noir"
-                double newTotal = 0.0;
-                
-                for (com.barbershop.entity.Service s : selectedServices) {
-                    if (s.getName().toLowerCase().contains("masque noir")) {
-                        // Masque Noir is free
-                        newTotal += 0.0;
-                    } else {
-                        // All other services are 50% off
-                        newTotal += (s.getPrice() * 0.5);
-                    }
-                }
-                
-                total = newTotal;
-                
-                rewardApplied = true;
-                user.setAvailableRewards(user.getAvailableRewards() - 1);
-                user.setUsedRewards(user.getUsedRewards() + 1);
-                userRepository.save(user);
-                logger.info("Reward applied for user {}. 50% discount + Free Masque Noir. New total: {}", user.getName(), total);
-            }
-        }
-
         appointment.setTotalPrice(total);
-        appointment.setRewardApplied(rewardApplied);
         
         appointment.setDate(date);
         appointment.setStartTime(startTime);
@@ -340,17 +351,6 @@ public class AppointmentService {
     public Appointment cancelAppointment(Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
-        
-        // If reward was applied, refund it
-        if (appointment.isRewardApplied()) {
-            User user = appointment.getUser();
-            if (user != null) {
-                user.setAvailableRewards(user.getAvailableRewards() + 1);
-                user.setUsedRewards(Math.max(0, user.getUsedRewards() - 1));
-                userRepository.save(user);
-                logger.info("Reward refunded to user {} due to cancellation of appointment {}", user.getName(), appointmentId);
-            }
-        }
         
         appointment.setStatus(AppointmentStatus.CANCELLED);
         return appointmentRepository.save(appointment);
@@ -453,20 +453,18 @@ public class AppointmentService {
         } else {
             LocalTime startOfDay;
             LocalTime endOfDay;
+            Optional<Barber> barberOpt = barberRepository.findById(barberId);
+            boolean isHamouda = barberOpt
+                    .map(Barber::getName)
+                    .map(String::toLowerCase)
+                    .map(name -> name.contains("hamouda"))
+                    .orElse(false);
 
             if (date.getDayOfWeek() == DayOfWeek.MONDAY) {
-                startOfDay = LocalTime.of(12, 0);
+                startOfDay = isHamouda ? LocalTime.of(12, 0) : LocalTime.of(10, 30);
                 endOfDay = LocalTime.of(18, 0);
             } else {
-                Optional<Barber> barberOpt = barberRepository.findById(barberId);
-                if (barberOpt.isPresent()) {
-                    String name = barberOpt.get().getName().toLowerCase();
-                    if (name.contains("hamouda")) startOfDay = LocalTime.of(12, 0);
-                    else if (name.contains("ahmed")) startOfDay = LocalTime.of(11, 0);
-                    else startOfDay = LocalTime.of(10, 0);
-                } else {
-                    startOfDay = LocalTime.of(10, 0);
-                }
+                startOfDay = isHamouda ? LocalTime.of(12, 0) : LocalTime.of(10, 30);
                 endOfDay = LocalTime.of(21, 0);
             }
 
@@ -736,17 +734,6 @@ public class AppointmentService {
                 // Recalculate price
                 double total = selectedServices.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
                 
-                if (appt.isRewardApplied()) {
-                     double newTotal = 0.0;
-                     for (com.barbershop.entity.Service s : selectedServices) {
-                        if (s.getName().toLowerCase().contains("masque noir")) {
-                            // Masque Noir is free
-                        } else {
-                            newTotal += (s.getPrice() * 0.5);
-                        }
-                    }
-                    total = newTotal;
-                }
                 appt.setTotalPrice(total);
             }
         }
@@ -952,6 +939,7 @@ public class AppointmentService {
         if (selectedServices.isEmpty()) {
             throw new BadRequestException("At least one service must be selected");
         }
+        validateServicesForBarber(selectedServices, barber);
 
         // Règle spéciale de surclassement (Upgrade Rule)
         boolean isSpecialUpgrade = false;
@@ -1022,52 +1010,8 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
         
-        AppointmentStatus oldStatus = appointment.getStatus();
         appointment.setStatus(status);
         
-        // Loyalty Logic: When status changes to DONE
-        if (status == AppointmentStatus.DONE && oldStatus != AppointmentStatus.DONE) {
-            User user = appointment.getUser();
-            if (user != null) {
-                user.setTotalAppointments(user.getTotalAppointments() + 1);
-                
-                // Check for reward (every 5 appointments)
-                if (user.getTotalAppointments() % 5 == 0) {
-                    user.setAvailableRewards(user.getAvailableRewards() + 1);
-                    logger.info("User {} reached 5 appointments! Reward added. Total: {}, Available: {}", 
-                        user.getName(), user.getTotalAppointments(), user.getAvailableRewards());
-                }
-                userRepository.save(user);
-            }
-        }
-        
-        // Loyalty Logic: If status changes to CANCELLED, refund reward if applied
-        if (status == AppointmentStatus.CANCELLED && oldStatus != AppointmentStatus.CANCELLED) {
-            if (appointment.isRewardApplied()) {
-                User user = appointment.getUser();
-                if (user != null) {
-                    user.setAvailableRewards(user.getAvailableRewards() + 1);
-                    user.setUsedRewards(Math.max(0, user.getUsedRewards() - 1));
-                    userRepository.save(user);
-                    logger.info("Reward refunded to user {} due to status change to CANCELLED for appointment {}", user.getName(), appointmentId);
-                }
-            }
-        }
-        
-        // Loyalty Logic: If status was DONE and changes to something else (cancellation after done, though rare)
-        if (oldStatus == AppointmentStatus.DONE && status != AppointmentStatus.DONE) {
-            User user = appointment.getUser();
-            if (user != null) {
-                user.setTotalAppointments(Math.max(0, user.getTotalAppointments() - 1));
-                
-                // If the appointment that was cancelled was the 5th one, remove the reward
-                if ((user.getTotalAppointments() + 1) % 5 == 0) {
-                    user.setAvailableRewards(Math.max(0, user.getAvailableRewards() - 1));
-                }
-                userRepository.save(user);
-            }
-        }
-
         return appointmentRepository.save(appointment);
     }
 
@@ -1094,6 +1038,7 @@ public class AppointmentService {
                     services.add(s);
                 });
             }
+            validateServicesForBarber(services, barber);
             totalPrice = services.stream().mapToDouble(com.barbershop.entity.Service::getPrice).sum();
             int durationSum = services.stream().mapToInt(com.barbershop.entity.Service::getDuration).sum();
             if (durationSum > 0) {
@@ -1109,15 +1054,25 @@ public class AppointmentService {
         Appointment appointment = new Appointment();
         
         if (name != null && !name.isBlank() && phone != null && !phone.isBlank()) {
-            User user = userRepository.findByPhone(phone).orElseGet(() -> {
-                User newUser = new User();
-                newUser.setFirstName(firstName);
-                newUser.setName(name);
-                newUser.setPhone(phone);
-                newUser.setRole(User.Role.CLIENT);
-                newUser.setUsername(phone);
-                return userRepository.save(newUser);
-            });
+            String normalizedPhone = phone.replaceAll("\\D", "");
+            User user = userRepository.findByPhone(normalizedPhone)
+                    .orElseGet(() -> userRepository.findByUsername(normalizedPhone).orElse(null));
+            if (user == null) {
+                try {
+                    User newUser = new User();
+                    newUser.setFirstName(firstName != null ? firstName.trim() : null);
+                    newUser.setName(name.trim());
+                    newUser.setPhone(normalizedPhone);
+                    newUser.setRole(User.Role.CLIENT);
+                    newUser.setUsername(normalizedPhone);
+                    user = userRepository.save(newUser);
+                } catch (Exception ex) {
+                    // In case of unique/race conflict, re-read existing user
+                    user = userRepository.findByPhone(normalizedPhone)
+                            .orElseGet(() -> userRepository.findByUsername(normalizedPhone)
+                                    .orElseThrow(() -> new RuntimeException(ex)));
+                }
+            }
             appointment.setUser(user);
             appointment.setStatus(AppointmentStatus.BOOKED); // Initialement BOOKED pour permettre de marquer DONE plus tard
             appointment.setAdminViewed(false); // Afficher comme NEW pour l'admin
@@ -1150,30 +1105,6 @@ public class AppointmentService {
     public void deleteAppointment(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found"));
-        
-        // Handle Loyalty Logic for Deletion
-        User user = appointment.getUser();
-        if (user != null) {
-            // 1. Always refund reward if it was applied (regardless of status, if we delete it, we revert the usage)
-            if (appointment.isRewardApplied()) {
-                user.setAvailableRewards(user.getAvailableRewards() + 1);
-                user.setUsedRewards(Math.max(0, user.getUsedRewards() - 1));
-                logger.info("Reward refunded to user {} due to deletion of appointment {}", user.getName(), id);
-            }
-            
-            // 2. If appointment was DONE, revert the loyalty point and any reward triggered by it
-            if (appointment.getStatus() == AppointmentStatus.DONE) {
-                user.setTotalAppointments(Math.max(0, user.getTotalAppointments() - 1));
-                
-                // If the removed appointment was a milestone (e.g. 5th, 10th), remove the earned reward
-                // We just decremented, so we check if (newTotal + 1) % 5 == 0
-                if ((user.getTotalAppointments() + 1) % 5 == 0) {
-                    user.setAvailableRewards(Math.max(0, user.getAvailableRewards() - 1));
-                    logger.info("Loyalty reward removed from user {} due to deletion of DONE appointment {}", user.getName(), id);
-                }
-            }
-            userRepository.save(user);
-        }
         
         appointmentRepository.deleteById(id);
     }

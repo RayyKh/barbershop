@@ -3,10 +3,10 @@ import { ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild, inject } fr
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatNativeDateModule } from '@angular/material/core';
+import { MAT_DATE_FORMATS, MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatListModule } from '@angular/material/list';
@@ -16,6 +16,9 @@ import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { Router } from '@angular/router';
 import { AnimationOptions, LottieComponent } from 'ngx-lottie';
 import { Subscription, interval } from 'rxjs';
+import { BookingTranslatePipe } from '../../i18n/booking-translate.pipe';
+import { BookingTranslationService } from '../../i18n/booking-translation.service';
+import { BookingLang } from '../../i18n/booking-translations';
 import { ApiService, AppointmentRequest, Barber, Service, User } from '../../services/api.service';
 import { LoaderComponent } from '../loader/loader.component';
 
@@ -24,6 +27,18 @@ export interface SlotUI {
   isAvailable: boolean;
   isPast: boolean;
 }
+
+const BOOKING_DATE_FORMATS = {
+  parse: {
+    dateInput: { day: '2-digit', month: '2-digit', year: 'numeric' }
+  },
+  display: {
+    dateInput: { day: '2-digit', month: '2-digit', year: 'numeric' },
+    monthYearLabel: { month: 'short', year: 'numeric' },
+    dateA11yLabel: { day: '2-digit', month: '2-digit', year: 'numeric' },
+    monthYearA11yLabel: { month: 'long', year: 'numeric' }
+  }
+};
 
 @Component({
   selector: 'app-booking',
@@ -37,15 +52,20 @@ export interface SlotUI {
     MatListModule,
     MatCardModule,
     MatDatepickerModule,
+    MatDividerModule,
     MatNativeDateModule,
     MatInputModule,
     MatSelectModule,
     MatChipsModule,
     MatSnackBarModule,
     MatIconModule,
-    MatCheckboxModule,
+    BookingTranslatePipe,
     LottieComponent,
     LoaderComponent
+  ],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'fr-FR' },
+    { provide: MAT_DATE_FORMATS, useValue: BOOKING_DATE_FORMATS }
   ],
   templateUrl: './booking.component.html',
   styleUrls: ['./booking.component.scss']
@@ -74,21 +94,26 @@ export class BookingComponent implements OnInit, OnDestroy {
   isAdmin = false;
 
   get visibleSlotsUI(): SlotUI[] {
-    return this.allSlotsUI.filter(slot => slot.isAvailable);
+    return this.allSlotsUI;
+  }
+
+  get visibleServices(): Service[] {
+    return this.services.filter(service => this.isServiceAllowedForSelectedBarber(service));
   }
 
   constructor(
     private _formBuilder: FormBuilder,
     private apiService: ApiService,
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private i18n: BookingTranslationService
   ) {
     this.bookingFormGroup = this._formBuilder.group({
       servicesCtrl: [[], Validators.required],
       barberCtrl: ['', Validators.required],
       dateCtrl: [new Date(), Validators.required],
       timeCtrl: ['', Validators.required],
-      useRewardCtrl: [false],
+      manualTimeCtrl: [''],
       userCtrl: this._formBuilder.group({
         name: ['', Validators.required],
         firstName: [''], // Optionnel ou retiré, mais gardé pour compatibilité backend si nécessaire
@@ -144,34 +169,18 @@ export class BookingComponent implements OnInit, OnDestroy {
     this.slotsRefreshSub?.unsubscribe();
   }
 
-  get canApplyReward(): boolean {
-    if (!this.user || (this.user.availableRewards || 0) <= 0) return false;
-    const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
-    return !!selected && selected.length > 0;
+  get currentLang(): BookingLang {
+    return this.i18n.currentLang;
+  }
+
+  setLang(lang: BookingLang): void {
+    this.i18n.setLanguage(lang);
   }
 
   get totalSelectedPrice(): number {
     const selected = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
     if (!selected || !selected.length) return 0;
-    
-    let total = 0;
-    const useReward = this.bookingFormGroup.get('useRewardCtrl')?.value && this.canApplyReward;
-
-    if (useReward) {
-      selected.forEach(s => {
-        if (s.name.toLowerCase().includes('masque noir')) {
-          // Free
-          total += 0;
-        } else {
-          // 50% off
-          total += (s.price * 0.5);
-        }
-      });
-    } else {
-      total = selected.reduce((acc, s) => acc + s.price, 0);
-    }
-    
-    return total;
+    return selected.reduce((acc, s) => acc + s.price, 0);
   }
 
   get totalSelectedDuration(): number {
@@ -209,6 +218,11 @@ export class BookingComponent implements OnInit, OnDestroy {
       }
 
       this.fetchSlots();
+  }
+
+  selectBarber(barber: Barber) {
+    this.bookingFormGroup.patchValue({ barberCtrl: barber });
+    this.onBarberChange();
   }
 
   onServicesChange() {
@@ -254,7 +268,7 @@ export class BookingComponent implements OnInit, OnDestroy {
     const selectedServices = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
 
     if (barber && date && selectedTime && selectedServices && selectedServices.length > 0) {
-      const dateStr = this.formatDateLocal(date);
+      const dateStr = this.formatDateIso(date);
       const totalDuration = this.totalDurationForBarber(selectedServices, barber?.name);
       const slotsNeeded = Math.ceil(totalDuration / 15);
 
@@ -284,7 +298,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         }
         
         if (!isStillAvailable) {
-          this.snackBar.open('Désolé, ce créneau n\'est plus disponible (durée insuffisante ou déjà réservé). Veuillez en choisir un autre.', 'OK', { duration: 5000 });
+          this.snackBar.open(this.i18n.t('booking.snack.slotUnavailable'), this.i18n.t('common.ok'), { duration: 5000 });
           this.stepper.selectedIndex = 2;
           this.fetchSlots();
         }
@@ -298,12 +312,12 @@ export class BookingComponent implements OnInit, OnDestroy {
     const selectedServices = this.bookingFormGroup.get('servicesCtrl')?.value as Service[];
 
     if (barber && date && selectedServices && selectedServices.length > 0) {
-      const dateStr = this.formatDateLocal(date);
+      const dateStr = this.formatDateIso(date);
       const totalDuration = this.totalDurationForBarber(selectedServices, barber?.name);
 
       this.apiService.getAvailableSlots(barber.id, dateStr).subscribe(slots => {
         const now = new Date();
-        const todayStr = this.formatDateLocal(now);
+        const todayStr = this.formatDateIso(now);
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
 
@@ -314,6 +328,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         let startHour = 10;
         let startMinute = 30;
         let endHour = 21;
+        let endMinute = 0;
 
         // Horaires spécifiques barbiers
         const name = barber.name.toLowerCase();
@@ -324,6 +339,12 @@ export class BookingComponent implements OnInit, OnDestroy {
         } else if (name.includes("hamouda")) {
           startHour = 12;
           startMinute = 0;
+        }
+        if (name.includes("dhia")) {
+          startHour = 10;
+          startMinute = 30;
+          endHour = 19;
+          endMinute = 30;
         }
 
         const [y, mMonth, day] = dateStr.split('-').map(Number);
@@ -367,8 +388,10 @@ export class BookingComponent implements OnInit, OnDestroy {
 
            if (!isMonday && (forceLateEvening || isMarch16)) {
              endHour = 24;
+             endMinute = 0;
            } else if (!isMonday && isRamadan && !isMarch22 && !isClosedForClient) {
              endHour = 22;
+             endMinute = 0;
            }
 
            if (this.isAdmin && isMarch2026 && day <= 19) {
@@ -391,13 +414,16 @@ export class BookingComponent implements OnInit, OnDestroy {
               }
 
               // Plage horaire standard
-              for (let h = startHour; h < endHour; h++) {
+              const endHourExclusive = endMinute === 0 ? endHour : endHour + 1;
+              const endTotalMin = endHour * 60 + endMinute;
+              for (let h = startHour; h < endHourExclusive; h++) {
                 if (!nightTo3 && !nightTo6 && h >= 1 && h < 10) continue;
                 if ((nightTo3 || nightTo6) && h >= (nightTo6 ? 7 : 4) && h < 10) continue;
 
                 for (let m = 0; m < 60; m += 15) {
                   if (h === startHour && m < startMinute) continue;
                   const totalMin = h * 60 + m;
+                  if (endMinute !== 0 && totalMin >= endTotalMin) continue;
                   if (march11To15EarlyClose && totalMin > 1290 && totalMin < 1440) continue;
                   slotsSet.add(totalMin);
                 }
@@ -465,31 +491,41 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   selectSlot(slot: string) {
+      const selected = this.allSlotsUI.find(s => s.time === slot);
+      if (!selected || !selected.isAvailable) return;
       this.bookingFormGroup.patchValue({ timeCtrl: slot });
   }
 
   book() {
     if (this.bookingFormGroup.invalid) {
       this.bookingFormGroup.markAllAsTouched();
-      this.snackBar.open('Veuillez remplir tous les champs obligatoires.', 'Fermer', { duration: 3000 });
+      this.snackBar.open(this.i18n.t('booking.snack.fillRequired'), this.i18n.t('common.close'), { duration: 3000 });
       return;
     }
 
     const formValue = this.bookingFormGroup.value;
     
-    // Determine time
+    // Determine time (admin can override with manual input)
     let time = formValue.timeCtrl;
+    if (this.isAdmin && formValue.manualTimeCtrl) {
+      time = formValue.manualTimeCtrl;
+    }
     const timeStr = time.length === 5 ? time + ':00' : time;
+
+    const bookingDate = this.formatDateFr(formValue.dateCtrl);
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(bookingDate)) {
+      this.snackBar.open(this.i18n.t('booking.snack.error'), this.i18n.t('common.close'), { duration: 3000 });
+      return;
+    }
 
     const request: AppointmentRequest = {
       serviceIds: formValue.servicesCtrl.map((s: Service) => s.id),
       barberId: formValue.barberCtrl.id,
-      date: this.formatDateLocal(formValue.dateCtrl),
+      date: bookingDate,
       startTime: timeStr,
       userName: formValue.userCtrl.name,
       userFirstName: formValue.userCtrl.firstName,
-      userPhone: formValue.userCtrl.phone,
-      useReward: formValue.useRewardCtrl
+      userPhone: formValue.userCtrl.phone
     };
 
     this.isLoading = true;
@@ -500,14 +536,7 @@ export class BookingComponent implements OnInit, OnDestroy {
         try {
           localStorage.setItem('lastUserPhone', request.userPhone || '');
         } catch {}
-        this.snackBar.open('Rendez-vous confirmé !', 'OK', { duration: 3000 });
-        
-        // Update user rewards in session storage if used
-        if (request.useReward && this.user) {
-          this.user.availableRewards = (this.user.availableRewards || 0) - 1;
-          this.user.usedRewards = (this.user.usedRewards || 0) + 1;
-          sessionStorage.setItem('user', JSON.stringify(this.user));
-        }
+        this.snackBar.open(this.i18n.t('booking.snack.confirmed'), this.i18n.t('common.ok'), { duration: 3000 });
 
         this.isBookingSuccess = true;
         this.cdr.detectChanges();
@@ -518,7 +547,7 @@ export class BookingComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.isLoading = false;
-        this.snackBar.open(err.error?.message || 'Erreur lors de la réservation', 'Fermer', {
+        this.snackBar.open(err.error?.message || this.i18n.t('booking.snack.error'), this.i18n.t('common.close'), {
           duration: 5000,
           panelClass: ['error-snackbar']
         });
@@ -526,7 +555,28 @@ export class BookingComponent implements OnInit, OnDestroy {
     });
   }
 
-  private formatDateLocal(d: any): string {
+  translateServiceName(name: string): string {
+    const map: Record<string, string> = {
+      'coupe': 'service.coupe',
+      'barbe': 'service.barbe',
+      'barbe (courte)': 'service.barbeCourte',
+      'coupe + barbe': 'service.coupeBarbe',
+      'coupe + barbe + brushing': 'service.coupeBarbeBrushing',
+      'coupe + barbe dégradé + fixation': 'service.coupeBarbeDegradeFixation',
+      'tresse': 'service.tresse',
+      'mèches': 'service.meches',
+      'meches': 'service.meches',
+      'epilation à la cire': 'service.epilationCire',
+      'épilation à la cire': 'service.epilationCire',
+      'masque noir': 'service.masqueNoir',
+      'fixation': 'service.fixation',
+      'brushing': 'service.brushing'
+    };
+    const key = map[(name || '').trim().toLowerCase()];
+    return key ? this.i18n.t(key) : name;
+  }
+
+  private formatDateIso(d: any): string {
     if (!d) return '';
     
     // Si c'est déjà une chaîne YYYY-MM-DD simple (10 caractères, sans T ou Z)
@@ -544,6 +594,21 @@ export class BookingComponent implements OnInit, OnDestroy {
     return `${year}-${month}-${day}`;
   }
 
+  private formatDateFr(d: any): string {
+    if (!d) return '';
+    if (typeof d === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
+      return d;
+    }
+
+    const date = (d instanceof Date) ? d : new Date(d);
+    if (isNaN(date.getTime())) return '';
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear());
+    return `${day}/${month}/${year}`;
+  }
+
   private serviceDurationForBarber(service: Service, barberName?: string): number {
     const name = (barberName || '').toLowerCase();
     if (name === 'islem') {
@@ -559,11 +624,34 @@ export class BookingComponent implements OnInit, OnDestroy {
   }
 
   isServiceDisabledForSelectedBarber(service: Service): boolean {
+    return !this.isServiceAllowedForSelectedBarber(service);
+  }
+
+  private isServiceAllowedForSelectedBarber(service: Service): boolean {
     const barber = this.bookingFormGroup.get('barberCtrl')?.value as Barber;
     const barberName = (barber?.name || '').toLowerCase();
     const serviceName = (service?.name || '').toLowerCase();
-    const isRestrictedService = serviceName === 'coupe + barbe + brushing';
-    const isRestrictedBarber = barberName === 'aladin' || barberName === 'islem';
-    return isRestrictedService && isRestrictedBarber;
+
+    if (serviceName === "coupe d'enfant (jusqu'à 5 ans)") {
+      return false;
+    }
+
+    if (serviceName === 'tresse') {
+      return barberName === 'islem';
+    }
+
+    if (serviceName === 'mèches' || serviceName === 'meches') {
+      return barberName === 'islem' || barberName === 'achref' || barberName === 'hamouda';
+    }
+
+    if (serviceName === 'brushing') {
+      return barberName !== 'aladin';
+    }
+
+    if (serviceName === 'coupe + barbe + brushing') {
+      return barberName !== 'aladin' && barberName !== 'islem';
+    }
+
+    return true;
   }
 }

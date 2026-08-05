@@ -1,10 +1,17 @@
 package com.barbershop.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "users") // 'user' is a reserved keyword in Postgres
@@ -34,11 +41,6 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role; // ADMIN, CLIENT
 
-    // Loyalty System Fields
-    private int totalAppointments = 0;
-    private int availableRewards = 0;
-    private int usedRewards = 0;
-
     public enum Role {
         ADMIN,
         CLIENT
@@ -60,11 +62,4 @@ public class User {
     public void setPassword(String password) { this.password = password; }
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
-
-    public int getTotalAppointments() { return totalAppointments; }
-    public void setTotalAppointments(int totalAppointments) { this.totalAppointments = totalAppointments; }
-    public int getAvailableRewards() { return availableRewards; }
-    public void setAvailableRewards(int availableRewards) { this.availableRewards = availableRewards; }
-    public int getUsedRewards() { return usedRewards; }
-    public void setUsedRewards(int usedRewards) { this.usedRewards = usedRewards; }
 }

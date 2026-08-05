@@ -4,9 +4,11 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { Router, RouterModule } from '@angular/router';
+import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../services/api.service';
+import { BookingTranslationService } from '../../i18n/booking-translation.service';
+import { BookingLang } from '../../i18n/booking-translations';
 
 @Component({
   selector: 'app-navbar',
@@ -18,12 +20,15 @@ import { ApiService } from '../../services/api.service';
 export class NavbarComponent implements OnInit, OnDestroy {
   newCount = 0;
   isScrolled = false;
+  isAdminRoute = false;
   private sub?: Subscription;
+  private routeSub?: Subscription;
 
   constructor(
     private api: ApiService, 
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private i18n: BookingTranslationService
   ) {}
 
   @HostListener('window:scroll', [])
@@ -38,6 +43,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.updateRouteMode(this.router.url);
+    this.routeSub = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) {
+        this.updateRouteMode(event.urlAfterRedirects);
+      }
+    });
+
     this.refreshCount();
     
     // Refresh count on any appointment change (local or remote via SSE)
@@ -79,6 +91,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.routeSub?.unsubscribe();
+  }
+
+  get currentLang(): BookingLang {
+    return this.i18n.currentLang;
+  }
+
+  setLang(lang: BookingLang): void {
+    this.i18n.setLanguage(lang);
+  }
+
+  t(key: string): string {
+    return this.i18n.t(key);
+  }
+
+  private updateRouteMode(url: string): void {
+    this.isAdminRoute = (url || '').startsWith('/admin');
   }
 
   private refreshCount() {

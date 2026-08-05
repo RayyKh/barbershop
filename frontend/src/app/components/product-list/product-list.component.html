@@ -1,18 +1,18 @@
 <div class="product-container" [class.on-home]="isHome">
   <div class="header-section">
-    <h2 class="title-dark">NOTRE VITRINE PRODUITS</h2>
+    <h2 class="title-dark">{{ 'products.title' | bt }}</h2>
     <div class="divider-gold"></div>
-    <p class="subtitle">Découvrez notre sélection de produits premium pour entretenir votre style à la maison.</p>
+    <p class="subtitle">{{ 'products.subtitle' | bt }}</p>
   </div>
 
   <div *ngIf="loading" class="loading-spinner">
     <div class="spinner"></div>
-    <p>Chargement de la vitrine...</p>
+    <p>{{ 'products.loading' | bt }}</p>
   </div>
 
   <div *ngIf="!loading && products.length === 0" class="no-products">
     <mat-icon>inventory_2</mat-icon>
-    <p>Aucun produit n'est disponible pour le moment.</p>
+    <p>{{ 'products.empty' | bt }}</p>
   </div>
 
   <div class="slider-wrapper" *ngIf="!loading && products.length > 0">
@@ -29,7 +29,7 @@
           <div class="product-image-container">
             <img [src]="'assets/' + product.photo" [alt]="product.name" onerror="this.src='assets/cirespider.jpg'">
             <div class="hover-overlay">
-              <span class="view-details">Disponible au salon</span>
+              <span class="view-details">{{ 'products.availableSalon' | bt }}</span>
             </div>
           </div>
           <mat-card-content>
@@ -37,7 +37,7 @@
             <p class="product-description">{{ product.description }}</p>
             <div class="product-footer">
               <span class="product-price">{{ product.price | number:'1.3-3' }} TND</span>
-              <span class="available-badge">En salon uniquement</span>
+              <span class="available-badge">{{ 'products.onlySalon' | bt }}</span>
             </div>
           </mat-card-content>
         </mat-card>

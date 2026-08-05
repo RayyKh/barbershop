@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { ScrollRevealDirective } from '../../directives/scroll-reveal.directive';
+import { BookingTranslatePipe } from '../../i18n/booking-translate.pipe';
 import { ApiService, Barber, Service } from '../../services/api.service';
 import { BookingComponent } from '../booking/booking.component';
 import { ProductListComponent } from '../product-list/product-list.component';
@@ -18,6 +19,7 @@ import { ProductListComponent } from '../product-list/product-list.component';
     MatCardModule, 
     MatIconModule, 
     RouterModule, 
+    BookingTranslatePipe,
     BookingComponent,
     ScrollRevealDirective,
     ProductListComponent

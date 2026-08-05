@@ -245,20 +245,14 @@
               <div>{{ a.barber.name }}</div>
               <div>
                 {{ a.user?.firstName || '' }} {{ a.user?.name || '-' }}
-                <div class="client-loyalty" *ngIf="a.user">
-                  <mat-icon title="Total rendez-vous">event_available</mat-icon>
-                  <span>{{ a.user!.totalAppointments || 0 }}</span>
-                  <mat-icon class="reward-icon" *ngIf="(a.user!.availableRewards || 0) > 0" [title]="a.user!.availableRewards + ' récompense(s) disponible(s)'">card_giftcard</mat-icon>
-                </div>
               </div>
               <div>{{ a.user?.phone || '-' }}</div>
               <div>
                 <div class="services-list">
                   <div *ngFor="let s of a.services">• {{s.name}}</div>
                 </div>
-                <div class="total-amount" [class.free]="a.rewardApplied">
+                <div class="total-amount">
                   {{a.totalPrice}} DT
-                  <span class="reward-applied-tag" *ngIf="a.rewardApplied">FIDÉLITÉ</span>
                 </div>
               </div>
                 <div class="status-cell">
@@ -297,10 +291,6 @@
                     <span class="label">Client:</span>
                     <span class="value">
                       {{ a.user?.firstName || '' }} {{ a.user?.name || '-' }}
-                      <span class="client-loyalty-mini" *ngIf="a.user">
-                        ({{ a.user!.totalAppointments || 0 }} <mat-icon>event_available</mat-icon>)
-                        <mat-icon class="reward-icon" *ngIf="(a.user!.availableRewards || 0) > 0">card_giftcard</mat-icon>
-                      </span>
                     </span>
                   </div>
                   <div class="admin-card-row">
@@ -311,9 +301,8 @@
                     <span class="label">Services:</span>
                     <div class="value">
                       <div *ngFor="let s of a.services">• {{ s.name }}</div>
-                      <div class="total-amount" [class.free]="a.rewardApplied" style="font-weight: bold; color: #d4af37; margin-top: 4px;">
+                      <div class="total-amount" style="font-weight: bold; color: #d4af37; margin-top: 4px;">
                         {{ a.totalPrice }} DT
-                        <span class="reward-applied-tag" *ngIf="a.rewardApplied">FIDÉLITÉ</span>
                       </div>
                     </div>
                   </div>

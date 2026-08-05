@@ -1,12 +1,8 @@
 package com.barbershop.controller;
 
-import com.barbershop.dto.JwtResponse;
-import com.barbershop.dto.LoginRequest;
-import com.barbershop.dto.MessageResponse;
-import com.barbershop.dto.SignupRequest;
-import com.barbershop.entity.User;
-import com.barbershop.repository.UserRepository;
-import com.barbershop.security.JwtUtils;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,10 +10,19 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.barbershop.dto.JwtResponse;
+import com.barbershop.dto.LoginRequest;
+import com.barbershop.dto.MessageResponse;
+import com.barbershop.dto.SignupRequest;
+import com.barbershop.entity.User;
+import com.barbershop.repository.UserRepository;
+import com.barbershop.security.JwtUtils;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -56,10 +61,7 @@ public class AuthController {
                     user.getId(),
                     user.getUsername(),
                     user.getEmail(),
-                    roles,
-                    user.getTotalAppointments(),
-                    user.getAvailableRewards(),
-                    user.getUsedRewards()));
+                    roles));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(401).body(new MessageResponse("Authentication failed: " + e.getMessage()));
@@ -112,10 +114,7 @@ public class AuthController {
                             user.getId(),
                             user.getUsername(),
                             user.getEmail(),
-                            roles,
-                            user.getTotalAppointments(),
-                            user.getAvailableRewards(),
-                            user.getUsedRewards()));
+                            roles));
                 })
                 .orElseGet(() -> ResponseEntity.status(401).body(new MessageResponse("User not found")));
     }
